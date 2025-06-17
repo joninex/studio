@@ -1,3 +1,4 @@
+
 // src/lib/actions/order.actions.ts
 "use server";
 
@@ -16,7 +17,7 @@ let mockOrders: Order[] = [
     clientId: "CLI001", 
     branchInfo: "Taller Principal (Admin)",
     deviceBrand: "Samsung", deviceModel: "Galaxy S21", deviceIMEI: "123456789012345", declaredFault: "Pantalla rota", 
-    unlockPatternInfo: "1234", 
+    unlockPatternInfo: "Registrado en sistema", 
     checklist: CHECKLIST_ITEMS.reduce((acc, item) => { 
         if (item.id === 'consumoV') {
             (acc as any)[item.id] = "0.5A";
@@ -42,7 +43,6 @@ let mockOrders: Order[] = [
     commentsHistory: [
       { id: 'cmt-1', userId: 'tech123', userName: 'Carlos Técnico', description: 'Se confirma pantalla rota, posible daño en flex de display.', timestamp: new Date(Date.now() - 1.5 * 24 * 60 * 60 * 1000).toISOString()}
     ],
-    // Snapshotted store settings (will now reflect updated DEFAULT_STORE_SETTINGS with "JO-SERVICE")
     orderCompanyName: DEFAULT_STORE_SETTINGS.companyName,
     orderCompanyLogoUrl: DEFAULT_STORE_SETTINGS.companyLogoUrl,
     orderCompanyCuit: DEFAULT_STORE_SETTINGS.companyCuit,
@@ -50,7 +50,6 @@ let mockOrders: Order[] = [
     orderCompanyContactDetails: DEFAULT_STORE_SETTINGS.companyContactDetails,
     orderWarrantyConditions: DEFAULT_STORE_SETTINGS.warrantyConditions,
     
-    // Snapshotted specific legal texts
     orderSnapshottedUnlockDisclaimer: DEFAULT_STORE_SETTINGS.unlockDisclaimerText,
     orderSnapshottedAbandonmentPolicyText: DEFAULT_STORE_SETTINGS.abandonmentPolicyText,
     orderSnapshottedDataLossPolicyText: DEFAULT_STORE_SETTINGS.dataLossPolicyText,
@@ -75,7 +74,7 @@ let mockOrders: Order[] = [
     clientId: "CLI002", 
     branchInfo: "Sucursal Norte",
     deviceBrand: "Apple", deviceModel: "iPhone 12", deviceIMEI: "987654321098765", declaredFault: "No carga la batería", 
-    unlockPatternInfo: "No tiene", 
+    unlockPatternInfo: "Registrado en sistema", 
     checklist: CHECKLIST_ITEMS.reduce((acc, item) => {
       (acc as any)[item.id] = (item.type === 'boolean') ? 'si' : (item.type === 'enum_saleConHuella' ? 'no_tiene' : '');
       if(item.id === 'pin_carga') (acc as any)[item.id] = 'no';
@@ -93,7 +92,7 @@ let mockOrders: Order[] = [
       { id: 'cmt-2b', userId: 'tech123', userName: 'Carlos Técnico', description: 'Repuesto solicitado. En espera.', timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()},
       { id: 'cmt-2c', userId: 'tech123', userName: 'Carlos Técnico', description: 'Repuesto recibido. Iniciando reparación.', timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString()}
     ],
-    orderCompanyName: "JO-SERVICE (Ejemplo)", // Example of a direct setting
+    orderCompanyName: "JO-SERVICE (Ejemplo)",
     orderCompanyLogoUrl: DEFAULT_STORE_SETTINGS.companyLogoUrl,
     orderCompanyCuit: DEFAULT_STORE_SETTINGS.companyCuit,
     orderCompanyAddress: "Av. Corrientes 123, CABA",
@@ -156,7 +155,6 @@ export async function createOrder(
     
     orderWarrantyConditions: settingsToSnapshot.warrantyConditions,
     
-    // Snapshot specific legal texts
     orderSnapshottedUnlockDisclaimer: settingsToSnapshot.unlockDisclaimerText,
     orderSnapshottedAbandonmentPolicyText: settingsToSnapshot.abandonmentPolicyText,
     orderSnapshottedDataLossPolicyText: settingsToSnapshot.dataLossPolicyText,
@@ -340,7 +338,8 @@ export async function updateOrder(
   const updatedOrderData: Order = {
     ...currentOrder,
     ...validatedFields.data, 
-    unlockPatternInfo: validatedFields.data.unlockPatternInfo || currentOrder.unlockPatternInfo, 
+    // Ensure unlockPatternInfo is always a string, falling back to current if not provided in validatedFields.data
+    unlockPatternInfo: validatedFields.data.unlockPatternInfo ?? currentOrder.unlockPatternInfo, 
     lastUpdatedBy: userId, 
     updatedAt: new Date().toISOString(),
   };
@@ -361,5 +360,3 @@ export async function updateOrder(
 
   return { success: true, message: "Orden actualizada exitosamente.", order: JSON.parse(JSON.stringify(mockOrders[orderIndex])) };
 }
-
-```

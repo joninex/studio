@@ -1,4 +1,3 @@
-
 // src/app/(app)/dashboard/page.tsx
 "use client";
 
@@ -9,13 +8,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/providers/AuthProvider";
 import { getOrders } from "@/lib/actions/order.actions";
-import type { Order, OrderStatus } from "@/types"; 
-import { BarChart, FileText, Users, Wrench, PackageCheck, AlertTriangle, FileClock, Construction, Truck, List, ArrowRight } from "lucide-react"; 
-import { LoadingSpinner } from "@/components/shared/LoadingSpinner"; 
+import type { Order, OrderStatus } from "@/types";
+import { BarChart, FileText, Users, Wrench, PackageCheck, AlertTriangle, FileClock, Construction, Truck, List, ArrowRight, AlertOctagon } from "lucide-react";
+import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import { Badge } from "@/components/ui/badge";
-import { format } from "date-fns";
+import { format, differenceInDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
+
+const DELAY_THRESHOLD_DAYS = 7; // Consider an order delayed if not updated in 7 days
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -26,7 +27,7 @@ export default function DashboardPage() {
     async function fetchDashboardData() {
       setIsLoadingStats(true);
       try {
-        const fetchedOrders = await getOrders(); 
+        const fetchedOrders = await getOrders();
         setOrdersData(fetchedOrders);
       } catch (error) {
         console.error("Error fetching orders for dashboard:", error);
@@ -36,6 +37,8 @@ export default function DashboardPage() {
     }
     fetchDashboardData();
   }, []);
+
+  const finalStatuses: OrderStatus[] = ["Entregado", "Presupuesto Rechazado", "Sin Reparación"];
 
   const pendingStatuses: OrderStatus[] = [
     "Recibido", "En Diagnóstico", "Presupuestado", "Presupuesto Aprobado"
@@ -54,18 +57,31 @@ export default function DashboardPage() {
   const readyForPickupCount = ordersData.filter(
     (order) => order.status === "Listo para Entrega"
   ).length;
-  
+
   const notCompletedOrRejectedStatuses: OrderStatus[] = ["Presupuesto Rechazado", "Sin Reparación"];
   const rejectedOrNoSolutionCount = ordersData.filter(
     (order) => notCompletedOrRejectedStatuses.includes(order.status)
   ).length;
 
+  const delayedOrders = useMemo(() => {
+    const now = new Date();
+    return ordersData.filter(order =>
+      !finalStatuses.includes(order.status) &&
+      differenceInDays(now, new Date(order.updatedAt)) > DELAY_THRESHOLD_DAYS
+    ).sort((a, b) => new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime()); // oldest delay first
+  }, [ordersData]);
+
+  const delayedOrdersCount = delayedOrders.length;
+  const recentDelayedOrders = delayedOrders.slice(0, 5);
+
+
   const quickStats = [
-    { title: "Órdenes Pendientes", value: pendingOrdersCount, icon: FileClock, color: "text-blue-500", bgColor: "bg-blue-100", description: "Requieren atención inicial o aprobación." },
-    { title: "En Reparación / Proceso", value: inRepairOrdersCount, icon: Wrench, color: "text-yellow-500", bgColor: "bg-yellow-100", description: "En taller, espera de repuestos o QC." },
-    { title: "Listos para Retirar", value: readyForPickupCount, icon: PackageCheck, color: "text-green-500", bgColor: "bg-green-100", description: "Finalizados, esperando al cliente." },
-    { title: "Rechazados / Sin Solución", value: rejectedOrNoSolutionCount, icon: AlertTriangle, color: "text-red-500", bgColor: "bg-red-100", description: "Presupuestos no aprobados o sin reparación." },
+    { title: "Órdenes Pendientes", value: pendingOrdersCount, icon: FileClock, color: "text-blue-500", bgColor: "bg-blue-100", description: "Requieren atención o aprobación." },
+    { title: "En Reparación / Proceso", value: inRepairOrdersCount, icon: Wrench, color: "text-yellow-500", bgColor: "bg-yellow-100", description: "En taller, repuestos o QC." },
+    { title: "Listos para Retirar", value: readyForPickupCount, icon: PackageCheck, color: "text-green-500", bgColor: "bg-green-100", description: "Finalizados, esperando cliente." },
+    { title: "Demoradas (>7 días)", value: delayedOrdersCount, icon: AlertOctagon, color: "text-orange-500", bgColor: "bg-orange-100", description: "Requieren seguimiento urgente." },
   ];
+  // Note: "Rechazados / Sin Solución" was removed from quickStats to make space for "Demoradas". It can be added back if layout supports 5, or if another is less critical.
 
   const recentActivityOrders = useMemo(() => {
     return [...ordersData]
@@ -81,13 +97,13 @@ export default function DashboardPage() {
       case "Reparado":
       case "En Control de Calidad":
       case "Listo para Entrega":
-        return "default"; 
+        return "default";
       case "Entregado":
         return "secondary";
       case "Recibido":
       case "En Diagnóstico":
       case "Presupuestado":
-        return "outline"; 
+        return "outline";
       case "Presupuesto Rechazado":
       case "Sin Reparación":
         return "destructive";
@@ -135,8 +151,8 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card className="shadow-lg">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <Card className="shadow-lg lg:col-span-1">
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><FileText className="h-5 w-5 text-primary" />Accesos Rápidos</CardTitle>
           </CardHeader>
@@ -152,9 +168,13 @@ export default function DashboardPage() {
                 <Button variant="outline" className="w-full justify-start">Gestionar Usuarios</Button>
               </Link>
             )}
+            <Link href="/settings">
+              <Button variant="outline" className="w-full justify-start">Configuración de Tienda</Button>
+            </Link>
           </CardContent>
         </Card>
-        <Card className="shadow-lg">
+
+        <Card className="shadow-lg lg:col-span-1">
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><List className="h-5 w-5 text-primary" />Actividad Reciente</CardTitle>
           </CardHeader>
@@ -162,7 +182,7 @@ export default function DashboardPage() {
             {isLoadingStats ? (
               <div className="space-y-4">
                 {[...Array(3)].map((_, i) => (
-                  <div key={i} className="flex items-center gap-4 p-3 rounded-lg border bg-muted/30">
+                  <div key={`act-${i}`} className="flex items-center gap-4 p-3 rounded-lg border bg-muted/30">
                     <Skeleton className="h-10 w-10 rounded-md" />
                     <div className="flex-grow space-y-1.5">
                       <Skeleton className="h-4 w-3/4" />
@@ -209,7 +229,88 @@ export default function DashboardPage() {
             )}
           </CardContent>
         </Card>
+
+        <Card className="shadow-lg lg:col-span-1">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2"><AlertOctagon className="h-5 w-5 text-orange-500" />Órdenes Demoradas</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isLoadingStats ? (
+              <div className="space-y-4">
+                {[...Array(3)].map((_, i) => (
+                  <div key={`del-${i}`} className="flex items-center gap-4 p-3 rounded-lg border bg-muted/30">
+                    <Skeleton className="h-10 w-10 rounded-md" />
+                    <div className="flex-grow space-y-1.5">
+                      <Skeleton className="h-4 w-3/4" />
+                      <Skeleton className="h-3 w-1/2" />
+                    </div>
+                    <Skeleton className="h-6 w-24 rounded-md" />
+                  </div>
+                ))}
+              </div>
+            ) : recentDelayedOrders.length > 0 ? (
+              <div className="space-y-3">
+                {recentDelayedOrders.map((order) => {
+                  const daysDelayed = differenceInDays(new Date(), new Date(order.updatedAt));
+                  return (
+                    <Link key={order.id} href={`/orders/${order.id}`} className="block hover:bg-muted/50 p-3 rounded-lg border border-orange-500/50 transition-colors group">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex-grow">
+                          <p className="text-sm font-medium text-primary">
+                            Orden: {order.orderNumber}
+                            {order.clientName && order.clientName !== 'N/D' && ` - ${order.clientName} ${order.clientLastName || ''}`}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Última actualiz.: {format(new Date(order.updatedAt), "dd MMM yyyy", { locale: es })}
+                          </p>
+                        </div>
+                        <div className="flex flex-col items-end gap-1">
+                           <Badge variant={getStatusBadgeVariant(order.status)} className="text-xs whitespace-nowrap">{order.status}</Badge>
+                           <Badge variant="destructive" className="bg-orange-500 text-xs whitespace-nowrap">Demorada {daysDelayed} días</Badge>
+                           <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary"/>
+                        </div>
+                      </div>
+                    </Link>
+                  );
+                })}
+                 {delayedOrders.length > 5 && (
+                    <div className="mt-4 text-center">
+                        <Link href={`/orders?status_delayed=true`}> {/* This filter doesn't exist yet, but for future */}
+                            <Button variant="link" className="text-sm text-orange-600">Ver todas las demoradas</Button>
+                        </Link>
+                    </div>
+                 )}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-40 border-2 border-dashed rounded-md">
+                <CheckCircle className="h-12 w-12 text-green-500 opacity-50" /> {/* Changed Icon */}
+                <p className="text-muted-foreground mt-2">No hay órdenes demoradas.</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
+
+       <Card className="shadow-lg">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-red-500" />Rechazadas / Sin Solución</CardTitle>
+          </CardHeader>
+          <CardContent>
+             {isLoadingStats ? (
+                <div className="text-center p-4"><LoadingSpinner /> <p className="text-muted-foreground">Cargando...</p></div>
+             ) : rejectedOrNoSolutionCount > 0 ? (
+                <p className="text-2xl font-bold">{rejectedOrNoSolutionCount} <span className="text-sm font-normal text-muted-foreground">órdenes</span></p>
+             ) : (
+                <p className="text-muted-foreground">No hay órdenes en estos estados.</p>
+             )}
+              <Link href={`/orders?status=Presupuesto Rechazado&status=Sin Reparación`}> {/* Placeholder for multi-status filter */}
+                <Button variant="link" className="text-sm mt-2">Ver detalle</Button>
+              </Link>
+          </CardContent>
+        </Card>
     </div>
   );
 }
+
+// Ensure CheckCircle is imported if it's new
+import { CheckCircle } from "lucide-react";
