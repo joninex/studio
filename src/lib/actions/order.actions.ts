@@ -1,4 +1,3 @@
-
 // src/lib/actions/order.actions.ts
 "use server";
 
@@ -235,7 +234,14 @@ export async function createOrder(
   return { success: true, message: `Orden ${newOrderNumber} creada exitosamente.`, order: JSON.parse(JSON.stringify(newOrder)) };
 }
 
-export async function getOrders(filters?: { client?: string, orderNumber?: string, imei?: string, status?: string }): Promise<Order[]> {
+export async function getOrders(filters?: { 
+  client?: string, 
+  orderNumber?: string, 
+  imei?: string, 
+  status?: string,
+  limit?: number, 
+  sortBy?: 'createdAt' | 'updatedAt' | 'entryDate'
+}): Promise<Order[]> {
   await new Promise(resolve => setTimeout(resolve, 500)); 
   const clients = await getMockClients(); 
 
@@ -269,7 +275,29 @@ export async function getOrders(filters?: { client?: string, orderNumber?: strin
     };
   });
   
-  return JSON.parse(JSON.stringify(ordersWithClientNames.sort((a, b) => new Date(b.updatedAt || b.createdAt || 0).getTime() - new Date(a.updatedAt || a.createdAt || 0).getTime())));
+  let sortedOrders = ordersWithClientNames;
+
+  if (filters?.sortBy) {
+    if (filters.sortBy === 'createdAt') {
+      sortedOrders = ordersWithClientNames.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+    } else if (filters.sortBy === 'updatedAt') {
+      sortedOrders = ordersWithClientNames.sort((a, b) => new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime());
+    } else if (filters.sortBy === 'entryDate') {
+        sortedOrders = ordersWithClientNames.sort((a, b) => new Date(b.entryDate || 0).getTime() - new Date(a.entryDate || 0).getTime());
+    }
+  } else {
+    // Default sort: newest first by entryDate, then updatedAt, then createdAt
+    sortedOrders = ordersWithClientNames.sort((a, b) => 
+      new Date(b.entryDate || b.updatedAt || b.createdAt || 0).getTime() - 
+      new Date(a.entryDate || a.updatedAt || a.createdAt || 0).getTime()
+    );
+  }
+  
+  if (filters?.limit) {
+    sortedOrders = sortedOrders.slice(0, filters.limit);
+  }
+
+  return JSON.parse(JSON.stringify(sortedOrders));
 }
 
 export async function getOrderById(id: string): Promise<Order | null> {
