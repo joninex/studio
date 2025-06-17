@@ -114,25 +114,6 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
     });
   };
 
-  const handleAddComment = async () => {
-    if (!user || !newComment.trim()) return;
-    startTransition(async () => {
-      const result = await addOrderComment(order.id!, newComment.trim(), {uid: user.uid, name: user.name});
-      if (result.success && result.comment) {
-        setOrder(prevOrder => ({
-          ...prevOrder,
-          commentsHistory: [...prevOrder.commentsHistory, result.comment as OrderComment],
-          updatedAt: new Date().toISOString(), 
-          lastUpdatedBy: user.uid, 
-        }));
-        setNewComment("");
-        toast({ title: "Éxito", description: "Comentario agregado." });
-      } else {
-        toast({ variant: "destructive", title: "Error", description: result.message });
-      }
-    });
-  };
-
   const handlePrint = () => {
     window.print();
   };
@@ -143,8 +124,6 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
   
   let abandonmentWarning = "";
   if (daysSinceReady !== null && order.orderSnapshottedAbandonmentPolicyText) { 
-    // Use abandonment policy days from DEFAULT_STORE_SETTINGS for warning logic.
-    // The full text policy from the order (order.orderSnapshottedAbandonmentPolicyText) is printed.
     const abandonmentPolicyDaysTotal = DEFAULT_STORE_SETTINGS.abandonmentPolicyDays60 || 60; 
     const abandonmentPolicyFirstWarningDays = DEFAULT_STORE_SETTINGS.abandonmentPolicyDays30 || (abandonmentPolicyDaysTotal / 2);
     
@@ -221,6 +200,7 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
     <div className="space-y-6">
       {/* ----- PRINT ONLY VIEW ----- */}
       <div className="print-only hidden print:block print-container-full-page">
+        {/* Hoja 1 y 2 (Contenido existente) */}
         {/* Header */}
         <div className="print-header-container mb-4">
             <div className="flex justify-between items-start">
@@ -359,7 +339,6 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
                     {order.warrantyStartDate && <p><strong>Periodo:</strong> {format(parseISO(order.warrantyStartDate as string), "dd/MM/yyyy", { locale: es })} - {order.warrantyEndDate ? format(parseISO(order.warrantyEndDate as string), "dd/MM/yyyy", { locale: es }) : 'N/A'}</p>}
                     {order.warrantyCoveredItem && <p><strong>Pieza/Procedimiento Cubierto:</strong> {order.warrantyCoveredItem}</p>}
                     {order.warrantyNotes && <p><strong>Notas de Garantía Extendida:</strong> {order.warrantyNotes}</p>}
-                    {/* Display specific snapshotted warranty conditions IF they exist in the order, otherwise general store warranty if that exists */}
                     {order.orderWarrantyConditions && <p className="text-xs mt-1"><strong>Condiciones Generales de Garantía del Taller:</strong> {order.orderWarrantyConditions}</p>}
                     {order.orderSnapshottedWarrantyVoidConditionsText && <p className="text-xs mt-1"><strong>Condiciones de Anulación de Garantía:</strong> {order.orderSnapshottedWarrantyVoidConditionsText}</p>}
                 </div>
@@ -377,9 +356,7 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
             {order.orderSnapshottedHighRiskDeviceText && <div className="print-legal-item"><strong>Equipos con Riesgos Especiales:</strong> <p>{order.orderSnapshottedHighRiskDeviceText}</p></div>}
             {order.orderSnapshottedPartialDamageDisplayText && <div className="print-legal-item"><strong>Pantallas con Daño Parcial:</strong> <p>{order.orderSnapshottedPartialDamageDisplayText}</p></div>}
             {order.orderSnapshottedAbandonmentPolicyText && <div className="print-legal-item"><strong>Política de Retiro y Abandono:</strong> <p>{order.orderSnapshottedAbandonmentPolicyText}</p></div>}
-            {/* Display general warranty conditions from order if not part of extended warranty and specific void conditions not present */}
             {order.orderWarrantyConditions && !showWarrantyDetailsForPrint && !order.orderSnapshottedWarrantyVoidConditionsText && <div className="print-legal-item"><strong>Condiciones Generales de Garantía (Taller):</strong><p>{order.orderWarrantyConditions}</p></div>}
-            {/* Display pickup conditions from order */}
             {order.pickupConditions && <div className="print-legal-item"><strong>Condiciones Generales de Retiro:</strong><p>{order.pickupConditions}</p></div>}
         </div>
 
@@ -432,6 +409,92 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
             <p className="text-xs font-semibold">{order.orderCompanyName} - {order.orderCompanyContactDetails?.split('\n')[0]}</p>
              <p className="text-xs">{order.orderCompanyAddress}</p>
         </div>
+      
+        {/* ----- INICIO HOJA 3: COMPROBANTE DE RETIRO PARA EL CLIENTE ----- */}
+        <div className="print-page-break-before print-section-receipt">
+          <div className="receipt-header text-center mb-4">
+            {order.orderCompanyLogoUrl && !order.orderCompanyLogoUrl.includes('placehold.co') ? (
+              <Image
+                src={order.orderCompanyLogoUrl}
+                alt={order.orderCompanyName || "Company Logo"}
+                width={100} 
+                height={40}
+                className="print-logo mx-auto mb-2 object-contain"
+                data-ai-hint="company logo small"
+              />
+            ) : order.orderCompanyLogoUrl && order.orderCompanyLogoUrl.includes('placehold.co') ? (
+                <Image
+                    src={order.orderCompanyLogoUrl}
+                    alt="Placeholder Logo"
+                    width={100}
+                    height={40}
+                    className="print-logo mx-auto mb-2 object-contain"
+                    data-ai-hint="company logo small placeholder"
+                />
+            ) : null}
+            <h2 className="text-lg font-bold uppercase">{order.orderCompanyName || "Comprobante de Servicio"}</h2>
+            <p className="text-xs">{order.orderCompanyAddress}</p>
+            <p className="text-xs">{order.orderCompanyContactDetails?.split('\n')[0]}</p>
+          </div>
+
+          <div className="text-center border-y border-dashed border-black py-2 my-3">
+             <h3 className="text-xl font-bold">COMPROBANTE DE RETIRO</h3>
+             <p className="text-sm">Orden de Servicio N°: <span className="font-semibold">{order.orderNumber}</span></p>
+          </div>
+
+          <div className="receipt-details grid grid-cols-2 gap-x-4 gap-y-1 text-sm mb-3">
+            <div className="col-span-2">
+              <strong>Cliente:</strong> {clientData ? `${clientData.name} ${clientData.lastName}` : order.customerSignatureName || 'N/A'} (DNI: {clientData?.dni || 'N/A'})
+            </div>
+            <div><strong>Equipo:</strong> {order.deviceBrand} {order.deviceModel}</div>
+            <div><strong>IMEI/Serie:</strong> {order.deviceIMEI}</div>
+            <div className="col-span-2"><strong>Falla Declarada:</strong> {order.declaredFault}</div>
+            <div><strong>Fecha Ingreso:</strong> {format(parseISO(order.entryDate as string), "dd/MM/yyyy HH:mm", { locale: es })}</div>
+             {order.promisedDeliveryDate && 
+                <div><strong>Entrega Estimada:</strong> {format(parseISO(order.promisedDeliveryDate as string), "dd/MM/yyyy HH:mm", { locale: es })}</div>
+             }
+            <div><strong>Estado Actual:</strong> <span className="font-semibold">{order.status}</span></div>
+             {(order.costSparePart + order.costLabor > 0) && 
+                <div className="font-semibold"><strong>Total Presupuestado:</strong> ${(order.costSparePart + order.costLabor).toFixed(2)}</div>
+             }
+            {order.costPending > 0 && 
+                <div className="font-semibold text-red-600"><strong>Monto Pendiente:</strong> ${order.costPending.toFixed(2)}</div>
+            }
+          </div>
+          
+          <div className="text-center my-3">
+            <p className="text-sm font-semibold">Presentar este comprobante para retirar el equipo.</p>
+            {order.pickupConditions && <p className="text-xs mt-1 italic">Condiciones de Retiro: {order.pickupConditions}</p>}
+          </div>
+
+          <div className="receipt-signature-area mt-8 pt-6 border-t border-dashed border-black text-sm">
+            <p className="mb-1">Recibí conforme el equipo detallado en las condiciones indicadas y acepto los términos de servicio y garantía (si aplica).</p>
+            <div className="grid grid-cols-2 gap-x-6 mt-10">
+                <div>
+                    <div className="border-b border-black pb-6"></div>
+                    <p className="text-center mt-1">Firma del Cliente</p>
+                </div>
+                <div>
+                    <div className="border-b border-black pb-6"></div>
+                    <p className="text-center mt-1">Aclaración y DNI</p>
+                </div>
+            </div>
+            <p className="text-xs text-center mt-4">Fecha de Retiro: _____ / _____ / __________</p>
+          </div>
+
+          <div className="receipt-footer text-center mt-6 text-xs">
+            <p>Gracias por confiar en {order.orderCompanyName || "nosotros"}.</p>
+             <Image 
+                src="https://placehold.co/70x70.png?text=QR" 
+                alt="QR Code Placeholder" 
+                width={50} 
+                height={50} 
+                className="mt-2 mx-auto print-qr-code-small"
+                data-ai-hint="order QR code small"
+             />
+          </div>
+        </div>
+        {/* ----- FIN HOJA 3 ----- */}
       </div>
       {/* ----- END PRINT ONLY VIEW ----- */}
 
