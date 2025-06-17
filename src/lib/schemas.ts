@@ -7,7 +7,7 @@ import {
   CHECKLIST_ITEMS,
   WARRANTY_TYPES
 } from './constants';
-import type { UserRole, WarrantyType } from '@/types'; 
+import type { UserRole, WarrantyType, OrderStatus } from '@/types'; 
 
 export const LoginSchema = z.object({
   email: z.string().email({ message: "Por favor ingrese un email válido." }),
@@ -42,6 +42,8 @@ CHECKLIST_ITEMS.forEach(item => {
 });
 export const ChecklistSchema = z.object(checklistShapeObject);
 
+// Filter out the empty string for OrderStatus enum in Zod, as "" is not a valid status for an order itself.
+const validOrderStatuses = ORDER_STATUSES.filter(status => status !== "") as [OrderStatus, ...OrderStatus[]];
 
 export const OrderSchema = z.object({
   clientId: z.string().min(1, "ID de Cliente es requerido."),
@@ -82,13 +84,13 @@ export const OrderSchema = z.object({
   customerAccepted: z.boolean().optional().refine(val => val === true, { message: "El cliente debe aceptar los términos." }),
   customerSignatureName: z.string().min(1, "El nombre para la firma es requerido si se aceptan los términos.").optional().or(z.literal('')),
 
-  status: z.enum(ORDER_STATUSES as [string, ...string[]]).default("ingreso"),
+  status: z.enum(validOrderStatuses).default("Recibido"),
 
   // Warranty Fields
   hasWarranty: z.boolean().optional().default(false),
   warrantyType: z.enum(WARRANTY_TYPES as [WarrantyType, ...WarrantyType[]]).optional().nullable(),
-  warrantyStartDate: z.string().optional().nullable(), // Validate as date string if needed: .refine(val => !val || !isNaN(Date.parse(val)), { message: "Fecha inválida"})
-  warrantyEndDate: z.string().optional().nullable(),   // Validate as date string if needed
+  warrantyStartDate: z.string().optional().nullable(), 
+  warrantyEndDate: z.string().optional().nullable(),   
   warrantyCoveredItem: z.string().optional().nullable(),
   warrantyNotes: z.string().optional().nullable(),
 
@@ -107,7 +109,6 @@ export const OrderSchema = z.object({
     if (!data.warrantyStartDate) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: "La fecha de inicio de garantía es requerida.", path: ["warrantyStartDate"] });
     } else {
-        // Validate date format if it's a string. Can also use z.coerce.date()
         if (isNaN(Date.parse(data.warrantyStartDate))) {
              ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Fecha de inicio inválida.", path: ["warrantyStartDate"] });
         }

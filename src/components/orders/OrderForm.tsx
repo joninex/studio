@@ -24,9 +24,9 @@ import { Calendar } from "@/components/ui/calendar";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/providers/AuthProvider";
-import { AISuggestion, type Order, type StoreSettings, WarrantyType } from "@/types";
+import { AISuggestion, type Order, type StoreSettings, WarrantyType, OrderStatus } from "@/types";
 import { 
-  CHECKLIST_ITEMS, CLASSIFICATION_OPTIONS, ORDER_STATUSES, SPECIFIC_SECTORS_OPTIONS, 
+  CHECKLIST_ITEMS, CLASSIFICATION_OPTIONS, ORDER_STATUSES, 
   UNLOCK_PATTERN_OPTIONS, YES_NO_OPTIONS, DEFAULT_STORE_SETTINGS, WARRANTY_TYPE_OPTIONS, WARRANTY_TYPES
 } from "@/lib/constants";
 import { AlertCircle, Bot, CalendarIcon, DollarSign, Info, ListChecks, LucideSparkles, User, Wrench, LinkIcon, Building, UserSquare, ShieldCheck } from "lucide-react";
@@ -40,6 +40,9 @@ interface OrderFormProps {
 
 const NONE_CLASSIFICATION_VALUE = "__NONE_CLASSIFICATION_VALUE__";
 const NONE_WARRANTY_TYPE_VALUE = "";
+const NONE_UNLOCK_PATTERN_VALUE = ""; // For Select placeholder handling
+
+const validOrderStatusOptions = ORDER_STATUSES.filter(status => status !== "") as OrderStatus[];
 
 
 export function OrderForm({ orderId }: OrderFormProps) {
@@ -73,7 +76,7 @@ export function OrderForm({ orderId }: OrderFormProps) {
       costSparePart: 0, costLabor: 0, costPending: 0,
       classification: undefined, observations: "",
       customerAccepted: false, customerSignatureName: "",
-      status: "ingreso",
+      status: "Recibido", // Default to new "Recibido" status
       // Warranty defaults
       hasWarranty: false,
       warrantyType: NONE_WARRANTY_TYPE_VALUE as WarrantyType,
@@ -131,7 +134,7 @@ export function OrderForm({ orderId }: OrderFormProps) {
               costPending: Number(order.costPending || 0),
               classification: order.classification || undefined,
               unlockPatternInfo: order.unlockPatternInfo || undefined,
-              status: order.status || "ingreso",
+              status: order.status || "Recibido",
               branchInfo: order.branchInfo,
               // Warranty fields
               hasWarranty: order.hasWarranty || false,
@@ -174,12 +177,10 @@ export function OrderForm({ orderId }: OrderFormProps) {
           form.setValue('warrantyEndDate', format(endDate, "yyyy-MM-dd"));
         }
       } catch (error) {
-        // Could be an invalid date string from the picker initially
         console.error("Error calculating warranty end date:", error);
       }
     } else if (hasWarrantyWatch && warrantyTypeWatch === 'custom') {
       // If type is custom, don't auto-calculate, allow manual input.
-      // If it was previously auto-calculated, user might want to adjust it.
     } else if (!hasWarrantyWatch) {
         form.setValue('warrantyEndDate', null);
         form.setValue('warrantyStartDate', null);
@@ -205,6 +206,7 @@ export function OrderForm({ orderId }: OrderFormProps) {
         warrantyEndDate: values.hasWarranty && values.warrantyEndDate ? values.warrantyEndDate : null,
         warrantyCoveredItem: values.hasWarranty ? values.warrantyCoveredItem : "",
         warrantyNotes: values.hasWarranty ? values.warrantyNotes : "",
+        status: values.status || "Recibido", // Ensure status has a value
 
       };
 
@@ -258,7 +260,7 @@ export function OrderForm({ orderId }: OrderFormProps) {
                  <FormField control={form.control} name="clientId" render={({ field }) => (
                     <FormItem>
                         <FormLabel>ID del Cliente</FormLabel>
-                        <FormControl><Input placeholder="Ej: CLI001" {...field} /></FormControl>
+                        <FormControl><Input placeholder="Ej: CLI001 (Dist. May/Min)" {...field} /></FormControl>
                         <FormDescription>Ingrese el ID de un cliente existente. Próximamente: búsqueda y creación de clientes.</FormDescription>
                         <FormMessage />
                     </FormItem>
@@ -284,7 +286,11 @@ export function OrderForm({ orderId }: OrderFormProps) {
                 <FormField control={form.control} name="unlockPatternInfo" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Patrón o Clave de Desbloqueo</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || ""} defaultValue="">
+                    <Select 
+                        onValueChange={field.onChange} 
+                        value={field.value || NONE_UNLOCK_PATTERN_VALUE} 
+                        defaultValue={NONE_UNLOCK_PATTERN_VALUE}
+                    >
                       <FormControl><SelectTrigger><SelectValue placeholder="Seleccione una opción" /></SelectTrigger></FormControl>
                       <SelectContent>
                         {UNLOCK_PATTERN_OPTIONS.filter(opt => opt !== "").map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
@@ -424,7 +430,7 @@ export function OrderForm({ orderId }: OrderFormProps) {
                         <Select onValueChange={field.onChange} value={field.value || ""}>
                           <FormControl><SelectTrigger><SelectValue placeholder="Seleccione estado" /></SelectTrigger></FormControl>
                           <SelectContent>
-                            {ORDER_STATUSES.filter(opt => opt !== "").map(status => <SelectItem key={status} value={status}>{status}</SelectItem>)}
+                            {validOrderStatusOptions.map(status => <SelectItem key={status} value={status}>{status}</SelectItem>)}
                           </SelectContent>
                         </Select>
                         <FormMessage />

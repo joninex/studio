@@ -16,12 +16,13 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/providers/AuthProvider";
 import { addOrderComment, updateOrderStatus, updateOrderCosts } from "@/lib/actions/order.actions";
-import { getClientById } from "@/lib/actions/client.actions"; // Import new action
+import { getClientById } from "@/lib/actions/client.actions"; 
 import { CHECKLIST_ITEMS, ORDER_STATUSES } from "@/lib/constants";
 import { AlertCircle, Bot, CalendarDays, DollarSign, Edit, FileText, Info, ListChecks, MessageSquare, Printer, User as UserIcon, Wrench, PackageCheck, Smartphone, LinkIcon } from "lucide-react";
 import { Input } from "../ui/input";
 import { LoadingSpinner } from "../shared/LoadingSpinner";
 
+const validOrderStatusOptions = ORDER_STATUSES.filter(status => status !== "") as OrderStatus[];
 
 interface OrderDetailClientProps {
   order: Order;
@@ -109,7 +110,7 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
           ...prevOrder,
           commentsHistory: [...prevOrder.commentsHistory, result.comment as OrderComment],
           updatedAt: new Date().toISOString(), 
-          lastUpdatedBy: user.uid, // Should be user.name or a way to get it
+          lastUpdatedBy: user.uid, 
         }));
         setNewComment("");
         toast({ title: "Éxito", description: "Comentario agregado." });
@@ -123,7 +124,7 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
     window.print();
   };
 
-  const daysSinceReady = order.readyForPickupDate && order.status !== "entregado" && order.status !== "abandonado"
+  const daysSinceReady = order.readyForPickupDate && order.status !== "Entregado" && order.status !== "Sin Reparación" && order.status !== "Presupuesto Rechazado"
     ? differenceInDays(new Date(), new Date(order.readyForPickupDate))
     : null;
 
@@ -136,16 +137,21 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
 
   const getStatusBadgeVariant = (status: OrderStatus): "default" | "secondary" | "destructive" | "outline" => {
     switch (status) {
-      case "en reparación":
-      case "listo para retirar":
-        return "default";
-      case "entregado":
+      case "Presupuesto Aprobado":
+      case "En Espera de Repuestos":
+      case "En Reparación":
+      case "Reparado":
+      case "En Control de Calidad":
+      case "Listo para Entrega":
+        return "default"; 
+      case "Entregado":
         return "secondary";
-      case "en diagnóstico":
-      case "esperando pieza":
-      case "ingreso":
-        return "outline";
-      case "abandonado":
+      case "Recibido":
+      case "En Diagnóstico":
+      case "Presupuestado":
+        return "outline"; 
+      case "Presupuesto Rechazado":
+      case "Sin Reparación":
         return "destructive";
       default:
         return "outline";
@@ -349,7 +355,7 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
             <Select value={newStatus || ""} onValueChange={(value: OrderStatus) => setNewStatus(value)}>
               <SelectTrigger id="statusSelect"><SelectValue placeholder="Seleccionar estado" /></SelectTrigger>
               <SelectContent>
-                {ORDER_STATUSES.filter(opt => opt !== "").map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                {validOrderStatusOptions.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>

@@ -70,14 +70,19 @@ export type UnlockPatternInfo = "tiene" | "no tiene" | "no recuerda" | "no propo
 export type Classification = "rojo" | "verde" | "sin stock" | "";
 
 export type OrderStatus =
-  | "ingreso"
-  | "en diagnóstico"
-  | "en reparación"
-  | "esperando pieza"
-  | "listo para retirar"
-  | "entregado"
-  | "abandonado"
-  | "";
+  | "Recibido"
+  | "En Diagnóstico"
+  | "Presupuestado"
+  | "Presupuesto Aprobado"
+  | "En Espera de Repuestos"
+  | "En Reparación"
+  | "Reparado"
+  | "En Control de Calidad"
+  | "Listo para Entrega"
+  | "Entregado"
+  | "Presupuesto Rechazado"
+  | "Sin Reparación";
+  // "" is not a valid status for an order, it's used for UI (e.g. "select all")
 
 export interface Comment {
   id?: string;

@@ -8,10 +8,10 @@ import { PageHeader } from "@/components/shared/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/providers/AuthProvider";
-import { getOrders } from "@/lib/actions/order.actions"; // Import getOrders
-import type { Order } from "@/types"; // Import Order type
-import { BarChart, FileText, Users, Wrench, PackageCheck, AlertTriangle } from "lucide-react"; // Added icons
-import { LoadingSpinner } from "@/components/shared/LoadingSpinner"; // Import LoadingSpinner
+import { getOrders } from "@/lib/actions/order.actions";
+import type { Order, OrderStatus } from "@/types"; 
+import { BarChart, FileText, Users, Wrench, PackageCheck, AlertTriangle, ListFilter } from "lucide-react"; 
+import { LoadingSpinner } from "@/components/shared/LoadingSpinner"; 
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -22,11 +22,10 @@ export default function DashboardPage() {
     async function fetchDashboardData() {
       setIsLoadingStats(true);
       try {
-        const fetchedOrders = await getOrders(); // Fetch all orders
+        const fetchedOrders = await getOrders(); 
         setOrdersData(fetchedOrders);
       } catch (error) {
         console.error("Error fetching orders for dashboard:", error);
-        // Optionally, set an error state and display a message
       } finally {
         setIsLoadingStats(false);
       }
@@ -34,28 +33,35 @@ export default function DashboardPage() {
     fetchDashboardData();
   }, []);
 
+  const activeStatuses: OrderStatus[] = [
+    "Recibido", "En Diagnóstico", "Presupuestado", 
+    "Presupuesto Aprobado", "En Espera de Repuestos", 
+    "En Reparación", "Reparado", "En Control de Calidad"
+  ];
   const activeOrdersCount = ordersData.filter(
-    (order) => order.status !== "Entregado" && order.status !== "Abandonado"
+    (order) => activeStatuses.includes(order.status)
   ).length;
 
+  const repairedStatuses: OrderStatus[] = ["Reparado", "En Control de Calidad", "Listo para Entrega", "Entregado"];
   const repairedTotalCount = ordersData.filter(
-    (order) => order.status === "Reparado" || order.status === "Listo para Retirar" || order.status === "Entregado"
+    (order) => repairedStatuses.includes(order.status)
   ).length;
 
   const pendingPickupCount = ordersData.filter(
-    (order) => order.status === "Listo para Retirar"
+    (order) => order.status === "Listo para Entrega"
   ).length;
   
-  const abandonedCount = ordersData.filter(
-    (order) => order.status === "Abandonado"
+  const nonCompletedStatuses: OrderStatus[] = ["Presupuesto Rechazado", "Sin Reparación"];
+  const abandonedOrRejectedCount = ordersData.filter(
+    (order) => nonCompletedStatuses.includes(order.status)
   ).length;
 
 
   const quickStats = [
-    { title: "Órdenes Activas", value: activeOrdersCount, icon: FileText, color: "text-blue-500", bgColor: "bg-blue-100" },
-    { title: "Equipos Reparados (Total)", value: repairedTotalCount, icon: Wrench, color: "text-green-500", bgColor: "bg-green-100" },
+    { title: "Órdenes Activas", value: activeOrdersCount, icon: ListFilter, color: "text-blue-500", bgColor: "bg-blue-100" },
+    { title: "Equipos Procesados (Total)", value: repairedTotalCount, icon: Wrench, color: "text-green-500", bgColor: "bg-green-100" },
     { title: "Pendientes de Retiro", value: pendingPickupCount, icon: PackageCheck, color: "text-orange-500", bgColor: "bg-orange-100" },
-    { title: "Equipos Abandonados", value: abandonedCount, icon: AlertTriangle, color: "text-red-500", bgColor: "bg-red-100" },
+    { title: "Rechazados/Sin Reparación", value: abandonedOrRejectedCount, icon: AlertTriangle, color: "text-red-500", bgColor: "bg-red-100" },
   ];
 
   return (
@@ -121,7 +127,6 @@ export default function DashboardPage() {
             <CardTitle className="flex items-center gap-2"><BarChart className="h-5 w-5 text-primary" />Actividad Reciente</CardTitle>
           </CardHeader>
           <CardContent>
-            {/* Placeholder for activity feed or chart */}
             <div className="flex flex-col items-center justify-center h-48 border-2 border-dashed rounded-md">
                 <Image src="https://placehold.co/300x150.png" alt="Gráfico de Actividad" width={300} height={150} data-ai-hint="activity chart" className="opacity-50"/>
                 <p className="text-muted-foreground mt-2">Próximamente: Gráficos de actividad.</p>

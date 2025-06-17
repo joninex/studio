@@ -9,15 +9,20 @@ export const USER_ROLES = {
 export const USER_ROLES_VALUES = Object.values(USER_ROLES) as [UserRole, ...UserRole[]];
 
 
-export const ORDER_STATUSES: OrderStatus[] = [
-  "ingreso",
-  "en diagnóstico",
-  "en reparación",
-  "esperando pieza",
-  "listo para retirar",
-  "entregado",
-  "abandonado",
-  "", 
+export const ORDER_STATUSES: Array<OrderStatus | ""> = [
+  "Recibido",
+  "En Diagnóstico",
+  "Presupuestado",
+  "Presupuesto Aprobado",
+  "En Espera de Repuestos",
+  "En Reparación",
+  "Reparado",
+  "En Control de Calidad",
+  "Listo para Entrega",
+  "Entregado",
+  "Presupuesto Rechazado",
+  "Sin Reparación",
+  "", // For "All statuses" or placeholder options in UI selects
 ];
 
 export const UNLOCK_PATTERN_OPTIONS: UnlockPatternInfo[] = [

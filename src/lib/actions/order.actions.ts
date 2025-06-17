@@ -1,7 +1,7 @@
 // src/lib/actions/order.actions.ts
 "use server";
 
-import type { Order, User, Comment as OrderCommentType, StoreSettings, Client, WarrantyType } from "@/types";
+import type { Order, User, Comment as OrderCommentType, StoreSettings, Client, WarrantyType, OrderStatus } from "@/types";
 import { OrderSchema } from "@/lib/schemas";
 import type { z } from "zod";
 import { suggestRepairSolutions } from "@/ai/flows/suggest-repair-solutions";
@@ -21,7 +21,7 @@ let mockOrders: Order[] = [
     costSparePart: 15000, costLabor: 5000, costPending: 0,
     classification: "", observations: "Cliente indica que se cayó.",
     customerAccepted: true, customerSignatureName: "Juan Perez",
-    status: "en diagnóstico", previousOrderId: "",
+    status: "En Diagnóstico", previousOrderId: "",
     entryDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
     commentsHistory: [],
     orderCompanyName: "JO-SERVICE Admin Store",
@@ -51,7 +51,7 @@ let mockOrders: Order[] = [
     costSparePart: 0, costLabor: 0, costPending: 8000,
     classification: "rojo", observations: "Revisar pin de carga también.",
     customerAccepted: true, customerSignatureName: "Maria Lopez",
-    status: "esperando pieza", previousOrderId: "ORD001",
+    status: "En Espera de Repuestos", previousOrderId: "ORD001",
     entryDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
     commentsHistory: [{ id: "cmt1", description: "Batería solicitada", timestamp: new Date().toISOString(), userId: "tech123", userName: "Carlos Técnico" }],
     orderCompanyName: "Carlos Tech Shop",
@@ -99,6 +99,7 @@ export async function createOrder(
     previousOrderId: data.previousOrderId || "",
     entryDate: new Date().toISOString(),
     commentsHistory: [],
+    status: data.status || "Recibido", // Ensure status is set, default from schema
     
     orderCompanyName: settingsToSnapshot.companyName,
     orderCompanyLogoUrl: settingsToSnapshot.companyLogoUrl,
@@ -147,7 +148,7 @@ export async function getOrders(filters?: { client?: string, orderNumber?: strin
     if (filters.imei) {
       filteredOrders = filteredOrders.filter(o => o.deviceIMEI.includes(filters.imei!));
     }
-    if (filters.status) {
+    if (filters.status && filters.status !== "") { // Ensure empty string filter means all
       filteredOrders = filteredOrders.filter(o => o.status === filters.status);
     }
   }
@@ -172,7 +173,7 @@ export async function getOrderById(id: string): Promise<Order | null> {
 
 export async function updateOrderStatus(
   orderId: string,
-  status: Order["status"],
+  status: OrderStatus, // Ensure this uses the new OrderStatus type
   userId: string 
 ): Promise<{ success: boolean; message: string; order?: Order }> {
   const orderIndex = mockOrders.findIndex(o => o.id === orderId);
@@ -184,9 +185,9 @@ export async function updateOrderStatus(
   mockOrders[orderIndex].lastUpdatedBy = userId; 
   mockOrders[orderIndex].updatedAt = new Date().toISOString();
 
-  if (status === "listo para retirar" && !mockOrders[orderIndex].readyForPickupDate) {
+  if (status === "Listo para Entrega" && !mockOrders[orderIndex].readyForPickupDate) {
     mockOrders[orderIndex].readyForPickupDate = new Date().toISOString();
-  } else if (status === "entregado" && !mockOrders[orderIndex].deliveryDate) {
+  } else if (status === "Entregado" && !mockOrders[orderIndex].deliveryDate) {
     mockOrders[orderIndex].deliveryDate = new Date().toISOString();
   }
 
@@ -283,9 +284,9 @@ export async function updateOrder(
   mockOrders[orderIndex] = updatedOrderData;
 
   if (validatedFields.data.status) {
-    if (validatedFields.data.status === "listo para retirar" && !mockOrders[orderIndex].readyForPickupDate) {
+    if (validatedFields.data.status === "Listo para Entrega" && !mockOrders[orderIndex].readyForPickupDate) {
       mockOrders[orderIndex].readyForPickupDate = new Date().toISOString();
-    } else if (validatedFields.data.status === "entregado" && !mockOrders[orderIndex].deliveryDate) {
+    } else if (validatedFields.data.status === "Entregado" && !mockOrders[orderIndex].deliveryDate) {
       mockOrders[orderIndex].deliveryDate = new Date().toISOString();
     }
   }
