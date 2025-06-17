@@ -4,10 +4,12 @@ import {
   ORDER_STATUSES,
   USER_ROLES_VALUES,
   CHECKLIST_ITEMS,
-  WARRANTY_TYPE_OPTIONS, // Use this for enum values
-  SALE_CON_HUELLA_OPTIONS
+  WARRANTY_TYPE_OPTIONS, 
+  SALE_CON_HUELLA_OPTIONS,
+  PART_CATEGORIES, // New
+  PART_UNITS // New
 } from './constants';
-import type { UserRole, WarrantyType, OrderStatus, Classification, Checklist } from '@/types';
+import type { UserRole, WarrantyType, OrderStatus, Classification, Checklist, PartCategory, PartUnit } from '@/types'; // New PartCategory, PartUnit
 
 export const LoginSchema = z.object({
   email: z.string().email({ message: "Por favor ingrese un email válido." }),
@@ -72,7 +74,7 @@ export const OrderSchema = z.object({
   equipo_sin_acceso: z.boolean().optional().default(false),
   perdida_informacion: z.boolean().optional().default(false),
   previousOrderId: z.string().optional().or(z.literal('')),
-  promisedDeliveryDate: z.string().nullable().optional(), // Validated with superRefine if not null
+  promisedDeliveryDate: z.string().nullable().optional(), 
   costSparePart: z.preprocess(
     (val) => (val === "" || val === null || val === undefined ? 0 : Number(val)),
     z.number({ invalid_type_error: "Debe ser un número" }).nonnegative("Costo debe ser no negativo.")
@@ -85,9 +87,9 @@ export const OrderSchema = z.object({
     (val) => (val === "" || val === null || val === undefined ? 0 : Number(val)),
     z.number({ invalid_type_error: "Debe ser un número" }).nonnegative("Costo debe ser no negativo.")
   ).default(0),
-  classification: z.enum(validClassificationOptions).nullable().optional(), // Made optional for better form handling
+  classification: z.enum(validClassificationOptions).nullable().optional(), 
   observations: z.string().optional().or(z.literal('')),
-  customerAccepted: z.boolean().optional().default(false),
+  customerAccepted: z.boolean().optional().default(false), 
   customerSignatureName: z.string().optional().or(z.literal('')),
   
   orderSnapshottedUnlockDisclaimer: z.string().optional().or(z.literal('')),
@@ -100,7 +102,7 @@ export const OrderSchema = z.object({
   orderSnapshottedWarrantyVoidConditionsText: z.string().optional().or(z.literal('')),
   orderSnapshottedPrivacyPolicy: z.string().optional().or(z.literal('')),
   orderWarrantyConditions: z.string().optional().or(z.literal('')),
-  pickupConditions: z.string().optional().or(z.literal('')), // Added to schema
+  pickupConditions: z.string().optional().or(z.literal('')), 
   
   dataLossDisclaimerAccepted: z.boolean().optional().default(false), 
   privacyPolicyAccepted: z.boolean().optional().default(false), 
@@ -191,7 +193,6 @@ export const OrderSchema = z.object({
       });
     }
   }
-
 });
 
 export type OrderFormData = z.infer<typeof OrderSchema>;
@@ -246,3 +247,36 @@ export const StoreSettingsSchema = z.object({
 });
 
 export const SettingsSchema = StoreSettingsSchema;
+
+// Inventory Schemas
+const validPartCategories = PART_CATEGORIES.filter(cat => cat !== "") as [PartCategory, ...PartCategory[]];
+const validPartUnits = PART_UNITS as [PartUnit, ...PartUnit[]];
+
+export const PartSchema = z.object({
+  name: z.string().min(1, "Nombre del repuesto es requerido."),
+  sku: z.string().optional().or(z.literal('')),
+  description: z.string().optional().or(z.literal('')),
+  category: z.enum(validPartCategories).optional().or(z.literal("").transform(() => undefined)), // Allow empty string from select to be undefined
+  unit: z.enum(validPartUnits).optional(),
+  costPrice: z.preprocess(
+    (val) => (val === "" || val === null || val === undefined ? 0 : Number(val)),
+    z.number({ invalid_type_error: "Debe ser un número" }).nonnegative("Costo debe ser no negativo.")
+  ).default(0),
+  salePrice: z.preprocess(
+    (val) => (val === "" || val === null || val === undefined ? 0 : Number(val)),
+    z.number({ invalid_type_error: "Debe ser un número" }).nonnegative("Precio debe ser no negativo.")
+  ).default(0),
+  stock: z.preprocess(
+    (val) => (val === "" || val === null || val === undefined ? 0 : Number(val)),
+    z.number({ invalid_type_error: "Debe ser un número" }).int("Stock debe ser un entero.").nonnegative("Stock debe ser no negativo.")
+  ).default(0),
+  minStock: z.preprocess(
+    (val) => (val === "" || val === null || val === undefined ? 0 : Number(val)),
+    z.number({ invalid_type_error: "Debe ser un número" }).int("Stock mínimo debe ser un entero.").nonnegative("Stock debe ser no negativo.").optional()
+  ).default(0),
+  supplierInfo: z.string().optional().or(z.literal('')), // Simple text for now
+  notes: z.string().optional().or(z.literal('')),
+  imageUrl: z.string().url({ message: "URL de imagen inválida." }).optional().or(z.literal('')),
+});
+
+export type PartFormData = z.infer<typeof PartSchema>;

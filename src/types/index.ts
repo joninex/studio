@@ -35,7 +35,7 @@ export interface User {
   uid: string;
   name: string;
   email: string;
-  avatarUrl?: string; // Added avatarUrl
+  avatarUrl?: string; 
   role: UserRole;
   status: UserStatus;
   storeSettings?: StoreSettings;
@@ -147,14 +147,12 @@ export interface Order {
 
   checklist: Checklist;
 
-  // Snapshot of store settings at time of order creation
   orderCompanyName?: string;
   orderCompanyLogoUrl?: string;
   orderCompanyCuit?: string;
   orderCompanyAddress?: string; 
   orderCompanyContactDetails?: string; 
 
-  // Snapshotted specific legal texts
   orderSnapshottedUnlockDisclaimer?: string;
   orderSnapshottedAbandonmentPolicyText?: string;
   orderSnapshottedDataLossPolicyText?: string;
@@ -165,7 +163,7 @@ export interface Order {
   orderSnapshottedWarrantyVoidConditionsText?: string;
   orderSnapshottedPrivacyPolicy?: string;
   orderWarrantyConditions?: string; 
-  pickupConditions?: string; // Added for Order type as it's on StoreSettings and can be snapshotted
+  pickupConditions?: string; 
 
   costSparePart: number;
   costLabor: number;
@@ -182,8 +180,8 @@ export interface Order {
 
   hasWarranty?: boolean; 
   warrantyType?: WarrantyType;
-  warrantyStartDate?: string | null; // Stored as YYYY-MM-DD
-  warrantyEndDate?: string | null;   // Stored as YYYY-MM-DD
+  warrantyStartDate?: string | null; 
+  warrantyEndDate?: string | null;   
   warrantyCoveredItem?: string;
   warrantyNotes?: string;
 }
@@ -194,3 +192,55 @@ export type AISuggestion = {
 };
 
 export interface Configurations extends StoreSettings {}
+
+// Inventory Types
+export type PartCategory = 
+  | "Pantalla" 
+  | "Batería" 
+  | "Placa Madre" 
+  | "Cámara" 
+  | "Pin de Carga" 
+  | "Flex" 
+  | "Carcasa" 
+  | "Botón" 
+  | "Sensor" 
+  | "Altavoz/Auricular" 
+  | "Antena"
+  | "Tornillería"
+  | "Otros Componentes"
+  | "Accesorio"
+  | "Herramienta"
+  | "Insumo Taller";
+
+export type PartUnit = "unidad" | "metro" | "kit" | "juego" | "litro" | "gramo";
+
+export interface Part {
+  id: string;
+  name: string;
+  sku?: string; // Stock Keeping Unit / Código
+  description?: string;
+  category?: PartCategory | ""; // Allow empty string for "no category"
+  unit?: PartUnit;
+  costPrice: number;
+  salePrice: number;
+  stock: number;
+  minStock?: number;
+  supplierInfo?: string; // Simple text for now, later could be Supplier ID
+  notes?: string;
+  imageUrl?: string;
+  createdAt: Timestamp | Date | string;
+  updatedAt: Timestamp | Date | string;
+}
+
+export interface Supplier {
+  id: string;
+  name: string;
+  contactName?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  cuit?: string;
+  notes?: string;
+  createdAt: Timestamp | Date | string;
+  updatedAt: Timestamp | Date | string;
+}

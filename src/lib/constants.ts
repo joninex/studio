@@ -1,5 +1,5 @@
 
-import type { OrderStatus, Classification, Checklist, UserRole, WarrantyType, StoreSettings } from '@/types';
+import type { OrderStatus, Classification, Checklist, UserRole, WarrantyType, StoreSettings, PartCategory, PartUnit } from '@/types';
 
 export const USER_ROLES = {
   ADMIN: 'admin',
@@ -118,10 +118,6 @@ export const DEVICE_CATEGORIES = {
   TABLET: "Tablet",
   NOTEBOOK: "Notebook",
   CONSOLE: "Consola de Videojuegos",
-  // ALLINONE: "All-in-One PC",
-  // DESKTOP: "PC de Escritorio",
-  // SMARTWATCH: "Smartwatch",
-  // OTHER: "Otro",
 } as const;
 
 export type DeviceCategoryKey = keyof typeof DEVICE_CATEGORIES;
@@ -129,7 +125,6 @@ export type DeviceCategoryValue = typeof DEVICE_CATEGORIES[DeviceCategoryKey];
 
 export interface DeviceModelInfo {
   name: string;
-  // commonIssues?: string[]; // Example of future expansion
 }
 
 export interface DeviceBrandInfo {
@@ -220,7 +215,6 @@ export const DEVICE_LIST: DeviceCollection = {
         { name: "OnePlus Nord 3" },
       ],
     },
-    // Add more brands and models as needed
   ],
   TABLET: [
     {
@@ -254,7 +248,6 @@ export const DEVICE_LIST: DeviceCollection = {
         { name: "Tab M10 Plus (Gen 3)" }, { name: "Tab M9" },
       ],
     },
-    // Add more brands and models
   ],
   NOTEBOOK: [
     {
@@ -310,7 +303,6 @@ export const DEVICE_LIST: DeviceCollection = {
         { name: "Predator Helios 18" }, { name: "Predator Triton 16" },
       ],
     },
-    // Add more brands and models
   ],
   CONSOLE: [
     {
@@ -353,8 +345,16 @@ export const DEVICE_LIST: DeviceCollection = {
             { name: "Legion Go"},
         ]
     }
-    // Add more brands and models
   ],
 };
 
-    
+// Inventory Constants
+export const PART_CATEGORIES: Array<PartCategory | ""> = [
+  "Pantalla", "Batería", "Placa Madre", "Cámara", "Pin de Carga", "Flex", 
+  "Carcasa", "Botón", "Sensor", "Altavoz/Auricular", "Antena", "Tornillería",
+  "Otros Componentes", "Accesorio", "Herramienta", "Insumo Taller", ""
+];
+
+export const PART_UNITS: Array<PartUnit> = [
+  "unidad", "metro", "kit", "juego", "litro", "gramo"
+];
