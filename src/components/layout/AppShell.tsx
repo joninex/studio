@@ -42,7 +42,7 @@ import {
   Wrench,
   UserCircle,
   Building, 
-  Contact, // Added Contact icon
+  Contact,
 } from "lucide-react";
 import { useAuth } from "@/providers/AuthProvider";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -138,7 +138,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       return (
         <SidebarMenuItem key={item.href}>
-          <Link href={item.href} passHref legacyBehavior>
+          <Link href={item.href}>
             <SidebarMenuButton 
               asChild={false} // Render as button for proper styling and behavior
               isActive={isLinkActive} // Only direct links are marked active here
