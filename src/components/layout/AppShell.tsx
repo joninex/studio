@@ -4,6 +4,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import Image from "next/image"; // Import next/image
 import {
   Sidebar,
   SidebarProvider,
@@ -37,13 +38,15 @@ import {
   ChevronDown,
   Menu,
   Briefcase,
-  Smartphone,
+  Smartphone, // Keep as fallback
   Wrench,
   UserCircle,
+  Building, // For generic company icon if logo fails
 } from "lucide-react";
 import { useAuth } from "@/providers/AuthProvider";
 import { useIsMobile } from "@/hooks/use-mobile";
-import Image from "next/image";
+import { DEFAULT_STORE_SETTINGS } from "@/lib/constants";
+
 
 interface NavItem {
   href: string;
@@ -65,7 +68,7 @@ const navItems: NavItem[] = [
     ],
   },
   { href: "/users", label: "Usuarios", icon: Users, adminOnly: true },
-  { href: "/settings", label: "Configuración", icon: Settings, adminOnly: false }, // Changed adminOnly to false
+  { href: "/settings", label: "Configuración", icon: Settings, adminOnly: false },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -77,7 +80,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [activeSubMenu, setActiveSubMenu] = useState<string | null>(null);
 
   useEffect(() => {
-    // Determine active parent menu for sub-menu highlighting
     const parentPath = navItems.find(item => item.subItems?.some(sub => pathname.startsWith(sub.href)))?.href;
     if (parentPath) {
       setActiveSubMenu(parentPath);
@@ -125,7 +127,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <Link href={item.href}>
             <SidebarMenuButton isActive={isActive} asChild={!isSubMenu} className={isSubMenu ? 'text-sm' : ''}>
               {!isSubMenu ? (
-                 <div className="flex items-center gap-2 w-full"> {/* Ensure div takes full width for flex to work */}
+                 <div className="flex items-center gap-2 w-full">
                   <Icon />
                   <span>{item.label}</span>
                 </div>
@@ -142,15 +144,37 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     });
   };
 
+  const companyLogoUrl = user?.storeSettings?.companyLogoUrl || DEFAULT_STORE_SETTINGS.companyLogoUrl;
+  const companyName = user?.storeSettings?.companyName || DEFAULT_STORE_SETTINGS.companyName;
 
   return (
     <SidebarProvider defaultOpen={!isMobile} open={isMobile ? undefined : undefined}>
       <Sidebar side="left" variant="sidebar" collapsible={isMobile ? "offcanvas" : "icon"}>
         <SidebarHeader className="border-b border-sidebar-border">
-          <Link href="/dashboard" className="flex items-center gap-2 p-2 hover:no-underline">
-            <Smartphone className="h-8 w-8 text-primary" />
+          <Link href="/dashboard" className="flex items-center gap-2 p-2 hover:no-underline min-h-[56px]">
+            {companyLogoUrl && companyLogoUrl !== DEFAULT_STORE_SETTINGS.companyLogoUrl && !companyLogoUrl.includes("placehold.co") ? ( // Prioritize user's actual logo
+              <Image
+                src={companyLogoUrl}
+                alt={`${companyName || 'Logo'} Logo`}
+                width={32} // Adjust size as needed for sidebar header
+                height={32}
+                className="object-contain h-8 w-8" // Ensure logo fits well
+                data-ai-hint="company logo"
+              />
+            ) : companyLogoUrl && companyLogoUrl.includes("placehold.co") ? ( // Use default placeholder if specifically set
+                 <Image
+                    src={companyLogoUrl}
+                    alt={`${companyName || 'Placeholder Logo'} Logo`}
+                    width={32} 
+                    height={32}
+                    className="object-contain h-8 w-8"
+                    data-ai-hint="company logo placeholder"
+                 />
+            ) : (
+              <Smartphone className="h-8 w-8 text-primary" /> // Fallback icon
+            )}
             <h1 className="font-headline text-xl font-semibold text-sidebar-foreground group-data-[collapsible=icon]:hidden">
-              JO-SERVICE
+              {companyName && companyName !== DEFAULT_STORE_SETTINGS.companyName ? companyName.split(' ')[0] : "JO-SERVICE"} 
             </h1>
           </Link>
         </SidebarHeader>
