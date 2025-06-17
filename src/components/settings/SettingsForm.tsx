@@ -4,8 +4,8 @@
 import { useState, useEffect, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import type { Configurations } from "@/types";
-import { SettingsSchema } from "@/lib/schemas";
+import type { StoreSettings } from "@/types";
+import { StoreSettingsSchema } from "@/lib/schemas";
 import type { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,60 +13,70 @@ import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { LoadingSpinner } from "../shared/LoadingSpinner";
-import { getSettings, updateSettings } from "@/lib/actions/settings.actions";
+import { getStoreSettingsForUser, updateStoreSettingsForUser } from "@/lib/actions/settings.actions";
 import { Separator } from "@/components/ui/separator";
+import { DEFAULT_STORE_SETTINGS } from "@/lib/constants";
 
-export function SettingsForm() {
+
+interface SettingsFormProps {
+    userId: string;
+}
+
+export function SettingsForm({ userId }: SettingsFormProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
 
-  const form = useForm<z.infer<typeof SettingsSchema>>({
-    resolver: zodResolver(SettingsSchema),
+  const form = useForm<z.infer<typeof StoreSettingsSchema>>({
+    resolver: zodResolver(StoreSettingsSchema),
     defaultValues: {
-      companyName: "",
-      companyLogoUrl: "",
-      companyCuit: "",
-      companyAddress: "",
-      companyContactDetails: "",
-      branchInfo: "",
-      warrantyConditions: "",
-      pickupConditions: "",
-      abandonmentPolicyDays30: 30,
-      abandonmentPolicyDays60: 60,
+      ...DEFAULT_STORE_SETTINGS, // Start with defaults
     },
   });
 
   useEffect(() => {
     async function loadSettings() {
+      if (!userId) {
+          setIsLoading(false); // No user, no settings to load
+          return;
+      }
       setIsLoading(true);
       try {
-        const fetchedSettings = await getSettings();
+        const fetchedSettings = await getStoreSettingsForUser(userId);
         form.reset({ 
+          ...DEFAULT_STORE_SETTINGS, // Ensure all fields are present
           ...fetchedSettings,
-          abandonmentPolicyDays30: Number(fetchedSettings.abandonmentPolicyDays30),
-          abandonmentPolicyDays60: Number(fetchedSettings.abandonmentPolicyDays60),
+          abandonmentPolicyDays30: Number(fetchedSettings.abandonmentPolicyDays30 ?? DEFAULT_STORE_SETTINGS.abandonmentPolicyDays30),
+          abandonmentPolicyDays60: Number(fetchedSettings.abandonmentPolicyDays60 ?? DEFAULT_STORE_SETTINGS.abandonmentPolicyDays60),
         });
       } catch (error) {
-        toast({ variant: "destructive", title: "Error", description: "No se pudo cargar la configuración."});
+        toast({ variant: "destructive", title: "Error", description: "No se pudo cargar la configuración de su tienda."});
+        form.reset({...DEFAULT_STORE_SETTINGS}); // Reset to defaults on error
       } finally {
         setIsLoading(false);
       }
     }
     loadSettings();
-  }, [form, toast]);
+  }, [userId, form, toast]);
   
-  const onSubmit = (values: z.infer<typeof SettingsSchema>) => {
+  const onSubmit = (values: z.infer<typeof StoreSettingsSchema>) => {
     startTransition(async () => {
-      const dataToSave = {
+      const dataToSave: StoreSettings = { // Explicitly type to StoreSettings
         ...values,
         abandonmentPolicyDays30: Number(values.abandonmentPolicyDays30),
         abandonmentPolicyDays60: Number(values.abandonmentPolicyDays60),
       };
-      const result = await updateSettings(dataToSave);
+      const result = await updateStoreSettingsForUser(userId, dataToSave);
       if (result.success) {
         toast({ title: "Éxito", description: result.message });
-        if (result.settings) form.reset(result.settings);
+        if (result.settings) {
+            form.reset({
+                ...DEFAULT_STORE_SETTINGS,
+                ...result.settings,
+                abandonmentPolicyDays30: Number(result.settings.abandonmentPolicyDays30),
+                abandonmentPolicyDays60: Number(result.settings.abandonmentPolicyDays60),
+            });
+        }
       } else {
         toast({ variant: "destructive", title: "Error", description: result.message });
       }
@@ -81,9 +91,9 @@ export function SettingsForm() {
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
         <div>
-          <h3 className="text-lg font-medium mb-2">Datos de la Empresa y Sucursal</h3>
+          <h3 className="text-lg font-medium mb-2">Datos de la Tienda y Sucursal</h3>
           <div className="space-y-4">
-            <FormField control={form.control} name="companyName" render={({ field }) => ( <FormItem><FormLabel>Nombre de la Empresa</FormLabel><FormControl><Input placeholder="Nombre de su Taller" {...field} /></FormControl><FormMessage /></FormItem> )} />
+            <FormField control={form.control} name="companyName" render={({ field }) => ( <FormItem><FormLabel>Nombre de la Tienda/Empresa</FormLabel><FormControl><Input placeholder="Nombre de su Taller" {...field} /></FormControl><FormMessage /></FormItem> )} />
             <FormField control={form.control} name="companyLogoUrl" render={({ field }) => ( <FormItem><FormLabel>URL del Logo</FormLabel><FormControl><Input type="url" placeholder="https://ejemplo.com/logo.png" {...field} /></FormControl><FormDescription>Ingrese la URL completa de una imagen para el logo.</FormDescription><FormMessage /></FormItem> )} />
             <FormField control={form.control} name="companyCuit" render={({ field }) => ( <FormItem><FormLabel>CUIT/CUIL (Opcional)</FormLabel><FormControl><Input placeholder="Ej: 20-12345678-9" {...field} /></FormControl><FormMessage /></FormItem> )} />
             <FormField control={form.control} name="companyAddress" render={({ field }) => ( <FormItem><FormLabel>Dirección</FormLabel><FormControl><Textarea rows={2} placeholder="Dirección completa del taller" {...field} /></FormControl><FormMessage /></FormItem> )} />

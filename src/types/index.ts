@@ -1,11 +1,29 @@
 import type { Timestamp } from 'firebase/firestore'; // Using type for Firebase Timestamp
 
+export type UserStatus = 'pending' | 'active' | 'denied';
+
+export interface StoreSettings {
+  id?: string; // e.g., 'user_config_uid'
+  companyName?: string;
+  companyLogoUrl?: string;
+  companyCuit?: string;
+  companyAddress?: string;
+  companyContactDetails?: string;
+  branchInfo?: string;
+  warrantyConditions?: string;
+  pickupConditions?: string;
+  abandonmentPolicyDays30?: number;
+  abandonmentPolicyDays60?: number;
+}
+
 export interface User {
   uid: string;
   name: string;
   email: string;
   role: 'admin' | 'tecnico';
-  createdAt: Timestamp | Date | string; // Allow string for mock, Date for client, Timestamp for Firestore
+  status: UserStatus; // Added for registration approval
+  storeSettings?: StoreSettings; // Added for user-specific settings
+  createdAt: Timestamp | Date | string;
   updatedAt: Timestamp | Date | string;
 }
 
@@ -14,12 +32,12 @@ export interface Checklist {
   screenCrystal: 'si' | 'no';
   frame: 'si' | 'no';
   backCover: 'si' | 'no';
-  camera: 'si' | 'no'; // Assuming this refers to external camera lens condition
+  camera: 'si' | 'no';
   microphone: 'si' | 'no';
   speaker: 'si' | 'no';
   powersOn: 'si' | 'no';
   touchScreen: 'si' | 'no';
-  deviceCamera: 'si' | 'no'; // Renamed from 'Camera' in functionality to avoid conflict
+  deviceCamera: 'si' | 'no';
   fingerprintSensor: 'si' | 'no';
   signal: 'si' | 'no';
   wifi: 'si' | 'no';
@@ -43,7 +61,7 @@ export interface Comment {
 }
 
 export interface Order {
-  id?: string; // Firestore document ID
+  id?: string;
   orderNumber: string;
 
   clientName: string;
@@ -52,7 +70,7 @@ export interface Order {
   clientPhone: string;
   clientEmail: string;
 
-  branchInfo: string;
+  branchInfo: string; // This will default from creating user's settings but can be overridden on the form
 
   deviceBrand: string;
   deviceModel: string;
@@ -62,8 +80,8 @@ export interface Order {
 
   checklist: Checklist;
 
-  damageRisk: string; // Text field
-  specificSectors: string[]; // e.g., ["Pantallas con daño parcial"]
+  damageRisk: string;
+  specificSectors: string[];
 
   costSparePart: number;
   costLabor: number;
@@ -73,10 +91,10 @@ export interface Order {
   observations: string;
 
   customerAccepted: boolean;
-  customerSignatureName: string; // Name of customer who accepted
+  customerSignatureName: string;
 
   status: OrderStatus;
-  previousOrderId?: string; // For linking to a previous order
+  previousOrderId?: string;
 
   entryDate: Timestamp | Date | string;
   readyForPickupDate?: Timestamp | Date | string | null;
@@ -84,23 +102,21 @@ export interface Order {
 
   commentsHistory: Comment[];
 
+  // Store snapshot fields for printing
+  orderCompanyName?: string;
+  orderCompanyLogoUrl?: string;
+  orderCompanyCuit?: string;
+  orderCompanyAddress?: string;
+  orderCompanyContactDetails?: string;
+  orderWarrantyConditions?: string;
+  orderPickupConditions?: string;
+  orderAbandonmentPolicyDays60?: number;
+
+
+  createdByUserId: string; // User ID of the order creator
   lastUpdatedBy: string; // User ID
   updatedAt: Timestamp | Date | string;
-  createdAt?: Timestamp | Date | string; // Firestore typically adds this
-}
-
-export interface Configurations {
-  id?: string; // e.g., 'general_config'
-  companyName?: string;
-  companyLogoUrl?: string;
-  companyCuit?: string;
-  companyAddress?: string;
-  companyContactDetails?: string;
-  branchInfo?: string; // Added for branch/workshop information
-  warrantyConditions: string;
-  pickupConditions: string;
-  abandonmentPolicyDays30: number;
-  abandonmentPolicyDays60: number;
+  createdAt?: Timestamp | Date | string;
 }
 
 // For AI suggestion
@@ -108,3 +124,7 @@ export type AISuggestion = {
   possibleCauses: string;
   suggestedSolutions: string;
 };
+
+// Deprecated, use StoreSettings instead if needed for global fallbacks,
+// but primary settings are now per-user.
+export interface Configurations extends StoreSettings {}

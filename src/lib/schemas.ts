@@ -1,10 +1,21 @@
 import { z } from 'zod';
-import { UNLOCK_PATTERN_OPTIONS, CLASSIFICATION_OPTIONS, ORDER_STATUSES, SPECIFIC_SECTORS_OPTIONS } from './constants';
+import { UNLOCK_PATTERN_OPTIONS, CLASSIFICATION_OPTIONS, ORDER_STATUSES, SPECIFIC_SECTORS_OPTIONS, USER_ROLES_VALUES } from './constants'; // Added USER_ROLES_VALUES
 
 export const LoginSchema = z.object({
   email: z.string().email({ message: "Por favor ingrese un email válido." }),
   password: z.string().min(6, { message: "La contraseña debe tener al menos 6 caracteres." }),
 });
+
+export const RegisterSchema = z.object({
+  name: z.string().min(3, { message: "El nombre debe tener al menos 3 caracteres." }),
+  email: z.string().email({ message: "Por favor ingrese un email válido." }),
+  password: z.string().min(6, { message: "La contraseña debe tener al menos 6 caracteres." }),
+  confirmPassword: z.string().min(6, { message: "La confirmación de contraseña debe tener al menos 6 caracteres." }),
+}).refine(data => data.password === data.confirmPassword, {
+  message: "Las contraseñas no coinciden.",
+  path: ["confirmPassword"], // path of error
+});
+
 
 const checklistShape = z.object({
   carcasaMarks: z.enum(['si', 'no'], { required_error: "Requerido" }),
@@ -75,25 +86,29 @@ export const ResetPasswordSchema = z.object({
 export const UserSchema = z.object({
   name: z.string().min(1, "Nombre es requerido."),
   email: z.string().email("Email inválido."),
-  role: z.enum(['admin', 'tecnico'], { required_error: "Rol es requerido."}),
-  password: z.string().min(6, "Contraseña debe tener al menos 6 caracteres.").optional().or(z.literal('')), // Optional for updates, allow empty string if not changing
+  role: z.enum(USER_ROLES_VALUES, { required_error: "Rol es requerido."}), // Use USER_ROLES_VALUES
+  password: z.string().min(6, "Contraseña debe tener al menos 6 caracteres.").optional().or(z.literal('')),
 });
 
-export const SettingsSchema = z.object({
+// Now for StoreSettings, similar to Configurations
+export const StoreSettingsSchema = z.object({
   companyName: z.string().min(1, "Nombre de la empresa es requerido.").optional().or(z.literal('')),
   companyLogoUrl: z.string().url({ message: "Debe ser una URL válida para el logo." }).optional().or(z.literal('')),
   companyCuit: z.string().optional().or(z.literal('')),
   companyAddress: z.string().optional().or(z.literal('')),
   companyContactDetails: z.string().min(1, "Detalles de contacto de la empresa son requeridos.").optional().or(z.literal('')),
   branchInfo: z.string().min(1, "Información de sucursal/taller es requerida.").optional().or(z.literal('')),
-  warrantyConditions: z.string().min(1, "Condiciones de garantía son requeridas."),
-  pickupConditions: z.string().min(1, "Condiciones de retiro son requeridas."),
+  warrantyConditions: z.string().min(1, "Condiciones de garantía son requeridas.").optional().or(z.literal('')),
+  pickupConditions: z.string().min(1, "Condiciones de retiro son requeridas.").optional().or(z.literal('')),
   abandonmentPolicyDays30: z.preprocess(
-    (val) => (typeof val === 'string' ? parseInt(val, 10) : val),
-    z.number().int().positive("Debe ser un número positivo.")
-  ),
+    (val) => (typeof val === 'string' && val !== "" ? parseInt(val, 10) : (typeof val === 'number' ? val : undefined)),
+    z.number().int().positive("Debe ser un número positivo.").optional()
+  ).default(30),
   abandonmentPolicyDays60: z.preprocess(
-    (val) => (typeof val === 'string' ? parseInt(val, 10) : val),
-    z.number().int().positive("Debe ser un número positivo.")
-  ),
+    (val) => (typeof val === 'string' && val !== "" ? parseInt(val, 10) : (typeof val === 'number' ? val : undefined)),
+    z.number().int().positive("Debe ser un número positivo.").optional()
+  ).default(60),
 });
+
+// For compatibility, if SettingsSchema is still used elsewhere, it can be an alias or extension
+export const SettingsSchema = StoreSettingsSchema;

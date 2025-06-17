@@ -1,24 +1,18 @@
-// src/app/(auth)/login/page.tsx
-import { LoginForm } from "@/components/auth/LoginForm";
+// src/app/(auth)/register/page.tsx
+import { RegisterForm } from "@/components/auth/RegisterForm";
 import Image from "next/image";
-import Link from "next/link"; // Import Link for Register button
-// import { getSettings } from "@/lib/actions/settings.actions"; // Global settings no longer primary
-// import type { Configurations } from "@/types"; // Global settings no longer primary
+import Link from "next/link";
 import { DEFAULT_STORE_SETTINGS } from "@/lib/constants";
 
-
-export default async function LoginPage() {
-  // Login page should use generic/default branding as user isn't known yet
-  // const settings = await getSettings(); // This would be global, not user-specific
+export default function RegisterPage() {
   const companyName = DEFAULT_STORE_SETTINGS.companyName || "JO-SERVICE Tech Manager";
   const logoUrl = DEFAULT_STORE_SETTINGS.companyLogoUrl || "https://placehold.co/150x50.png?text=JO-SERVICE";
-
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
       <div className="w-full max-w-md space-y-8">
         <div className="text-center">
-           <Image 
+          <Image 
             src={logoUrl}
             alt={`${companyName} Logo`}
             width={150} 
@@ -28,18 +22,18 @@ export default async function LoginPage() {
             priority
           />
           <h1 className="font-headline text-3xl font-bold tracking-tight text-primary">
-            {companyName}
+            Registro de Usuario
           </h1>
           <p className="mt-2 text-muted-foreground">
-            Bienvenido. Por favor, inicie sesión.
+            Cree una cuenta para acceder al sistema.
           </p>
         </div>
-        <LoginForm />
-        <div className="text-center mt-4">
+        <RegisterForm />
+         <div className="text-center mt-4">
           <p className="text-sm text-muted-foreground">
-            ¿No tiene una cuenta?{" "}
-            <Link href="/register" className="font-medium text-primary hover:underline">
-              Regístrese aquí
+            ¿Ya tiene una cuenta?{" "}
+            <Link href="/login" className="font-medium text-primary hover:underline">
+              Inicie sesión aquí
             </Link>
           </p>
         </div>

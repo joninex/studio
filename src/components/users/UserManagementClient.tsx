@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, useTransition } from "react";
-import type { User } from "@/types";
+import type { User, UserStatus } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -14,7 +14,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, 
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger 
 } from "@/components/ui/alert-dialog";
-import { PlusCircle, Edit, Trash2, Search, UserPlus } from "lucide-react";
+import { PlusCircle, Edit, Trash2, Search, UserPlus, CheckCircle, XCircle, Clock } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { UserSchema } from "@/lib/schemas";
@@ -23,7 +23,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { LoadingSpinner } from "../shared/LoadingSpinner";
-import { getUsers, createUser, updateUser, deleteUser } from "@/lib/actions/user.actions";
+import { getUsers, createUser, updateUser, deleteUser, updateUserStatus } from "@/lib/actions/user.actions";
 import { Badge } from "@/components/ui/badge";
 
 
@@ -64,13 +64,11 @@ export function UserManagementClient() {
       let result;
       if (editingUser) {
         const updateData: Partial<z.infer<typeof UserSchema>> = {...values};
-        // If password field is empty or just spaces, don't send it for update
         if (!values.password || values.password.trim() === "") {
           delete updateData.password;
         }
         result = await updateUser(editingUser.uid, updateData);
       } else {
-        // Password is required for new users, schema handles this.
         result = await createUser(values);
       }
 
@@ -79,7 +77,7 @@ export function UserManagementClient() {
         setIsFormOpen(false);
         setEditingUser(null);
         form.reset({ name: "", email: "", role: "tecnico", password: "" });
-        await loadUsers(); // Refresh users list
+        await loadUsers();
       } else {
         toast({ variant: "destructive", title: "Error", description: result.message });
       }
@@ -99,12 +97,11 @@ export function UserManagementClient() {
 
   const handleDeleteUser = () => {
     if (!userToDelete) return;
-
     startTransition(async () => {
       const result = await deleteUser(userToDelete.uid);
        if (result.success) {
         toast({ title: "Éxito", description: result.message });
-        await loadUsers(); // Refresh users list
+        await loadUsers();
       } else {
         toast({ variant: "destructive", title: "Error", description: result.message });
       }
@@ -119,6 +116,42 @@ export function UserManagementClient() {
     setIsFormOpen(true);
   };
 
+  const handleApproveUser = (userId: string) => {
+    startTransition(async () => {
+      const result = await updateUserStatus(userId, "active");
+      if (result.success) {
+        toast({ title: "Éxito", description: result.message });
+        await loadUsers();
+      } else {
+        toast({ variant: "destructive", title: "Error", description: result.message });
+      }
+    });
+  };
+
+  const handleDenyUser = (userId: string) => {
+     startTransition(async () => {
+      const result = await updateUserStatus(userId, "denied");
+      if (result.success) {
+        toast({ title: "Éxito", description: result.message });
+        await loadUsers();
+      } else {
+        toast({ variant: "destructive", title: "Error", description: result.message });
+      }
+    });
+  };
+
+  const getStatusBadge = (status: UserStatus) => {
+    switch (status) {
+      case "active":
+        return <Badge variant="default" className="bg-green-500 hover:bg-green-600"><CheckCircle className="mr-1 h-3 w-3"/>Activo</Badge>;
+      case "pending":
+        return <Badge variant="secondary" className="bg-yellow-400 text-yellow-900 hover:bg-yellow-500"><Clock className="mr-1 h-3 w-3"/>Pendiente</Badge>;
+      case "denied":
+        return <Badge variant="destructive"><XCircle className="mr-1 h-3 w-3"/>Denegado</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
+    }
+  };
 
   const filteredUsers = users.filter(user =>
     user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -131,7 +164,7 @@ export function UserManagementClient() {
       <CardHeader className="flex flex-col md:flex-row justify-between items-center gap-4">
         <div>
             <CardTitle>Listado de Usuarios</CardTitle>
-            <CardDescription>Usuarios registrados en el sistema.</CardDescription>
+            <CardDescription>Usuarios registrados y pendientes de aprobación.</CardDescription>
         </div>
         <div className="flex gap-2 w-full md:w-auto">
             <div className="relative flex-grow md:flex-grow-0">
@@ -162,6 +195,7 @@ export function UserManagementClient() {
                 <TableHead>Nombre</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Rol</TableHead>
+                <TableHead>Estado</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
             </TableHeader>
@@ -171,9 +205,20 @@ export function UserManagementClient() {
                   <TableCell className="font-medium">{user.name}</TableCell>
                   <TableCell>{user.email}</TableCell>
                   <TableCell><Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>{user.role}</Badge></TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" onClick={() => handleEditUser(user)}><Edit className="h-4 w-4" /></Button>
-                    <Button variant="ghost" size="icon" onClick={() => confirmDeleteUser(user)} disabled={user.email === 'jesus@mobyland.com.ar'}>
+                  <TableCell>{getStatusBadge(user.status)}</TableCell>
+                  <TableCell className="text-right space-x-1">
+                    {user.status === 'pending' && (
+                      <>
+                        <Button variant="ghost" size="icon" onClick={() => handleApproveUser(user.uid)} title="Aprobar Usuario" className="text-green-600 hover:text-green-700">
+                          <CheckCircle className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleDenyUser(user.uid)} title="Denegar Usuario" className="text-red-600 hover:text-red-700">
+                          <XCircle className="h-4 w-4" />
+                        </Button>
+                      </>
+                    )}
+                    <Button variant="ghost" size="icon" onClick={() => handleEditUser(user)} title="Editar Usuario"><Edit className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="icon" onClick={() => confirmDeleteUser(user)} disabled={user.email === 'jesus@mobyland.com.ar'} title="Eliminar Usuario">
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                   </TableCell>

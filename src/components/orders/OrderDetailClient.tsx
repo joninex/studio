@@ -1,7 +1,7 @@
 // src/components/orders/OrderDetailClient.tsx
 "use client";
 
-import type { Order, User, Comment as OrderComment, OrderStatus, Configurations } from "@/types";
+import type { Order, User, Comment as OrderComment, OrderStatus, StoreSettings } from "@/types";
 import { useState, useTransition, ChangeEvent, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
@@ -16,7 +16,8 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/providers/AuthProvider";
 import { addOrderComment, updateOrderStatus, updateOrderCosts } from "@/lib/actions/order.actions";
-import { getSettings } from "@/lib/actions/settings.actions"; // Import getSettings
+// Removed: import { getSettings } from "@/lib/actions/settings.actions"; 
+// Settings are now snapshotted on the order.
 import { CHECKLIST_ITEMS, ORDER_STATUSES, YES_NO_OPTIONS, SPECIFIC_SECTORS_OPTIONS } from "@/lib/constants";
 import { AlertCircle, Bot, CalendarDays, DollarSign, Edit, FileText, Info, ListChecks, MessageSquare, Printer, User as UserIcon, Wrench, PackageCheck, Smartphone, LinkIcon } from "lucide-react";
 import { Input } from "../ui/input";
@@ -34,8 +35,8 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
   const [order, setOrder] = useState<Order>(initialOrder);
   const [newComment, setNewComment] = useState("");
   const [newStatus, setNewStatus] = useState<OrderStatus>(order.status);
-  const [appSettings, setAppSettings] = useState<Configurations | null>(null);
-  const [isLoadingSettings, setIsLoadingSettings] = useState(true);
+  // const [appSettings, setAppSettings] = useState<StoreSettings | null>(null); // Replaced by order snapshot
+  // const [isLoadingSettings, setIsLoadingSettings] = useState(true); // Replaced by order snapshot
 
 
   const [editableCosts, setEditableCosts] = useState({
@@ -45,21 +46,32 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
   });
   const [isEditingCosts, setIsEditingCosts] = useState(false);
 
-  useEffect(() => {
-    async function fetchSettings() {
-      setIsLoadingSettings(true);
-      try {
-        const settings = await getSettings();
-        setAppSettings(settings);
-      } catch (error) {
-        console.error("Failed to load settings for order detail:", error);
-        toast({ variant: "destructive", title: "Error", description: "No se pudieron cargar las configuraciones de la aplicación." });
-      } finally {
-        setIsLoadingSettings(false);
-      }
-    }
-    fetchSettings();
-  }, [toast]);
+  // useEffect for settings is removed as they are snapshotted on the order.
+  // useEffect(() => {
+  //   async function fetchSettings() {
+  //     setIsLoadingSettings(true);
+  //     try {
+  //       // This would need to fetch settings for order.createdByUserId if we didn't snapshot
+  //       // For now, using snapshotted data
+  //       setAppSettings({
+  //           companyName: order.orderCompanyName,
+  //           companyLogoUrl: order.orderCompanyLogoUrl,
+  //           companyAddress: order.orderCompanyAddress,
+  //           companyCuit: order.orderCompanyCuit,
+  //           companyContactDetails: order.orderCompanyContactDetails,
+  //           warrantyConditions: order.orderWarrantyConditions,
+  //           pickupConditions: order.orderPickupConditions,
+  //           abandonmentPolicyDays60: order.orderAbandonmentPolicyDays60,
+  //       });
+  //     } catch (error) {
+  //       console.error("Failed to process settings for order detail:", error);
+  //       toast({ variant: "destructive", title: "Error", description: "No se pudieron cargar las configuraciones de la tienda para esta orden." });
+  //     } finally {
+  //       setIsLoadingSettings(false);
+  //     }
+  //   }
+  //   fetchSettings();
+  // }, [order, toast]);
 
 
   const handleStatusChange = async () => {
@@ -102,7 +114,7 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
         setOrder(prevOrder => ({
           ...prevOrder,
           commentsHistory: [...prevOrder.commentsHistory, result.comment as OrderComment],
-          updatedAt: new Date().toISOString(), // Reflect update time
+          updatedAt: new Date().toISOString(), 
           lastUpdatedBy: user.name,
         }));
         setNewComment("");
@@ -122,9 +134,11 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
     : null;
 
   let abandonmentWarning = "";
-  if (daysSinceReady !== null && appSettings) {
-    if (daysSinceReady >= appSettings.abandonmentPolicyDays60) abandonmentWarning = `Equipo considerado abandonado (${appSettings.abandonmentPolicyDays60}+ días).`;
-    else if (daysSinceReady >= appSettings.abandonmentPolicyDays30) abandonmentWarning = `Equipo en riesgo de abandono (${appSettings.abandonmentPolicyDays30}+ días).`;
+  if (daysSinceReady !== null && order.orderAbandonmentPolicyDays60) {
+    // Using order-specific abandonment policy days now
+    const abandonmentPolicyDays30 = order.orderAbandonmentPolicyDays60 / 2; // Assuming 30 day warning is half of 60
+    if (daysSinceReady >= order.orderAbandonmentPolicyDays60) abandonmentWarning = `Equipo considerado abandonado (${order.orderAbandonmentPolicyDays60}+ días).`;
+    else if (daysSinceReady >= abandonmentPolicyDays30) abandonmentWarning = `Equipo en riesgo de abandono (${Math.round(abandonmentPolicyDays30)}+ días).`;
   }
 
   const getStatusBadgeVariant = (status: OrderStatus): "default" | "secondary" | "destructive" | "outline" => {
@@ -147,19 +161,19 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
   return (
     <div className="space-y-6">
       <div className="print-only text-center mb-6 hidden print:block">
-        {appSettings?.companyLogoUrl && (
+        {order.orderCompanyLogoUrl && (
           <Image
-            src={appSettings.companyLogoUrl}
-            alt={appSettings.companyName || "Company Logo"}
+            src={order.orderCompanyLogoUrl}
+            alt={order.orderCompanyName || "Company Logo"}
             width={150}
             height={56}
             className="mx-auto mb-4"
             data-ai-hint="company logo"
           />
         )}
-        <h1 className="text-2xl font-bold">{appSettings?.companyName || "Orden de Servicio"} N°: {order.orderNumber}</h1>
-        {appSettings?.companyAddress && <p className="text-sm">{appSettings.companyAddress}</p>}
-        {appSettings?.companyCuit && <p className="text-sm">CUIT: {appSettings.companyCuit}</p>}
+        <h1 className="text-2xl font-bold">{order.orderCompanyName || "Orden de Servicio"} N°: {order.orderNumber}</h1>
+        {order.orderCompanyAddress && <p className="text-sm">{order.orderCompanyAddress}</p>}
+        {order.orderCompanyCuit && <p className="text-sm">CUIT: {order.orderCompanyCuit}</p>}
       </div>
       <Card className="print-container shadow-xl">
         <CardHeader className="flex flex-row justify-between items-start no-print">
@@ -307,13 +321,11 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
           <div className="hidden print:block mt-8 pt-4 border-t">
             <p className="text-sm"><strong>Firma del Cliente Aceptando Condiciones:</strong> _________________________</p>
             <p className="text-sm mt-1"><strong>Aclaración:</strong> {order.customerSignatureName}</p>
-            {isLoadingSettings ? (
-                <p className="text-xs mt-4">Cargando condiciones y contacto...</p>
-            ) : appSettings && (
+            { (
                 <div className="text-xs mt-4 space-y-1">
-                    {appSettings.warrantyConditions && <p><strong>CONDICIONES DE GARANTÍA:</strong> {appSettings.warrantyConditions}</p>}
-                    {appSettings.pickupConditions && <p><strong>CONDICIONES DE RETIRO:</strong> {appSettings.pickupConditions} Equipos no retirados luego de {appSettings.abandonmentPolicyDays60} días podrán ser declarados en abandono.</p>}
-                    {appSettings.companyContactDetails && <p className="whitespace-pre-line mt-2"><strong>CONTACTO:</strong><br/>{appSettings.companyContactDetails}</p>}
+                    {order.orderWarrantyConditions && <p><strong>CONDICIONES DE GARANTÍA:</strong> {order.orderWarrantyConditions}</p>}
+                    {order.orderPickupConditions && <p><strong>CONDICIONES DE RETIRO:</strong> {order.orderPickupConditions} {order.orderAbandonmentPolicyDays60 && `Equipos no retirados luego de ${order.orderAbandonmentPolicyDays60} días podrán ser declarados en abandono.`}</p>}
+                    {order.orderCompanyContactDetails && <p className="whitespace-pre-line mt-2"><strong>CONTACTO:</strong><br/>{order.orderCompanyContactDetails}</p>}
                 </div>
             )}
           </div>

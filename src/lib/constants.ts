@@ -1,9 +1,12 @@
-import type { OrderStatus, UnlockPatternInfo, Classification, Checklist } from '@/types';
+import type { OrderStatus, UnlockPatternInfo, Classification, Checklist, User } from '@/types';
 
 export const USER_ROLES = {
   ADMIN: 'admin',
   TECNICO: 'tecnico',
 } as const;
+
+export const USER_ROLES_VALUES = Object.values(USER_ROLES);
+
 
 export const ORDER_STATUSES: OrderStatus[] = [
   "En diagnóstico",
@@ -51,3 +54,16 @@ export const YES_NO_OPTIONS = [
   { label: "Sí", value: "si" },
   { label: "No", value: "no" },
 ];
+
+export const DEFAULT_STORE_SETTINGS = {
+  companyName: "Mi Taller (Default)",
+  companyLogoUrl: "https://placehold.co/150x50.png?text=Mi+Taller",
+  companyCuit: "",
+  companyAddress: "Mi Dirección 123",
+  companyContactDetails: "Tel: (011) 1234-5678\nEmail: contacto@mitaller.com",
+  branchInfo: "Taller Principal",
+  warrantyConditions: "La garantía cubre la reparación por 90 días. No cubre otros daños.",
+  pickupConditions: "Retirar dentro de los 30 días. Luego se cobra almacenaje.",
+  abandonmentPolicyDays30: 30,
+  abandonmentPolicyDays60: 60,
+};

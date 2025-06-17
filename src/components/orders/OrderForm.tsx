@@ -9,7 +9,7 @@ import type { z } from "zod";
 
 import { OrderSchema, type OrderFormData } from "@/lib/schemas";
 import { createOrder, getRepairSuggestions, updateOrder, getOrderById } from "@/lib/actions/order.actions";
-import { getSettings } from "@/lib/actions/settings.actions";
+import { getStoreSettingsForUser } from "@/lib/actions/settings.actions"; // Updated to user-specific settings
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -18,11 +18,10 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/providers/AuthProvider";
-import { AISuggestion, type Order, type Configurations } from "@/types";
-import { CHECKLIST_ITEMS, CLASSIFICATION_OPTIONS, ORDER_STATUSES, SPECIFIC_SECTORS_OPTIONS, UNLOCK_PATTERN_OPTIONS, YES_NO_OPTIONS } from "@/lib/constants";
+import { AISuggestion, type Order, type StoreSettings } from "@/types"; // Updated Configurations to StoreSettings
+import { CHECKLIST_ITEMS, CLASSIFICATION_OPTIONS, ORDER_STATUSES, SPECIFIC_SECTORS_OPTIONS, UNLOCK_PATTERN_OPTIONS, YES_NO_OPTIONS, DEFAULT_STORE_SETTINGS } from "@/lib/constants";
 import { AlertCircle, Bot, DollarSign, Info, ListChecks, LucideSparkles, User, Wrench, LinkIcon, Building } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
@@ -41,15 +40,14 @@ export function OrderForm({ orderId }: OrderFormProps) {
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [aiSuggestion, setAiSuggestion] = useState<AISuggestion | null>(null);
   const [isLoadingOrder, setIsLoadingOrder] = useState(!!orderId);
-  const [appSettings, setAppSettings] = useState<Configurations | null>(null);
-  const [isLoadingSettings, setIsLoadingSettings] = useState(true);
+  const [isLoadingStoreSettings, setIsLoadingStoreSettings] = useState(!orderId); // Load settings for new orders
 
 
   const form = useForm<OrderFormData>({
     resolver: zodResolver(OrderSchema),
     defaultValues: {
       clientName: "", clientLastName: "", clientDni: "", clientPhone: "", clientEmail: "",
-      branchInfo: "", // Will be populated from settings
+      branchInfo: DEFAULT_STORE_SETTINGS.branchInfo || "Sucursal Principal", // Default before loading user settings
       deviceBrand: "", deviceModel: "", deviceIMEI: "", declaredFault: "",
       unlockPatternInfo: undefined,
       checklist: {
@@ -70,21 +68,18 @@ export function OrderForm({ orderId }: OrderFormProps) {
 
   useEffect(() => {
     async function fetchInitialData() {
-      setIsLoadingSettings(true);
-      try {
-        const settings = await getSettings();
-        setAppSettings(settings);
-        if (!orderId) { // For new orders, set branchInfo from settings
-          form.setValue('branchInfo', settings.branchInfo || "Sucursal Principal"); 
+      if (!orderId && user) { // For new orders, load current user's store settings
+        setIsLoadingStoreSettings(true);
+        try {
+          const userSettings = await getStoreSettingsForUser(user.uid);
+          form.setValue('branchInfo', userSettings.branchInfo || DEFAULT_STORE_SETTINGS.branchInfo || "Sucursal Principal"); 
+        } catch (error) {
+          console.error("Failed to load user store settings for new order form:", error);
+          toast({ variant: "destructive", title: "Error", description: "No se pudo cargar la configuración de su tienda." });
+          form.setValue('branchInfo', DEFAULT_STORE_SETTINGS.branchInfo || "Error carga config");
+        } finally {
+          setIsLoadingStoreSettings(false);
         }
-      } catch (error) {
-        console.error("Failed to load settings for order form:", error);
-        toast({ variant: "destructive", title: "Error", description: "No se pudieron cargar las configuraciones." });
-         if (!orderId) {
-          form.setValue('branchInfo', "Sucursal Principal (Error carga config)");
-        }
-      } finally {
-        setIsLoadingSettings(false);
       }
 
       if (orderId) {
@@ -116,7 +111,7 @@ export function OrderForm({ orderId }: OrderFormProps) {
       }
     }
     fetchInitialData();
-  }, [orderId, form, router, toast]);
+  }, [orderId, user, form, router, toast]);
 
 
   const onSubmit = (values: OrderFormData) => {
@@ -134,21 +129,21 @@ export function OrderForm({ orderId }: OrderFormProps) {
       if (orderId) {
         result = await updateOrder(orderId, submissionValues, user.uid);
       } else {
-        result = await createOrder(submissionValues, user.uid);
+        result = await createOrder(submissionValues, user.uid); // createOrder will now handle snapshotting user settings
       }
 
-      if (result.success) {
+      if (result.success && result.order?.id) {
         toast({ title: "Éxito", description: result.message });
-        if (result.order && result.order.id) {
-            router.push(`/orders/${result.order.id}`);
-        } else if (orderId) { // Fallback for update if order object isn't returned but was successful
-             router.push(`/orders/${orderId}`);
-        } else {
-            toast({ variant: "destructive", title: "Error de Redirección", description: "No se pudo obtener el ID de la orden para redirigir." });
-            router.push("/orders"); 
-        }
-      } else {
-        toast({ variant: "destructive", title: "Error", description: result.message });
+        router.push(`/orders/${result.order.id}`);
+      } else if (result.success && orderId) { // Fallback for update if order object isn't returned but was successful
+          toast({ title: "Éxito", description: result.message });
+          router.push(`/orders/${orderId}`);
+      } else if (result.success) { // Successfully created but no ID somehow (should not happen with snapshot)
+         toast({ title: "Éxito", description: result.message + " No se pudo redirigir." });
+         router.push("/orders");
+      }
+      else {
+        toast({ variant: "destructive", title: "Error", description: result.message || "Ocurrió un error." });
       }
     });
   };
@@ -172,7 +167,7 @@ export function OrderForm({ orderId }: OrderFormProps) {
     setIsAiLoading(false);
   };
 
-  if ((isLoadingOrder && orderId) || (isLoadingSettings && !orderId) ) {
+  if ((isLoadingOrder && orderId) || (isLoadingStoreSettings && !orderId) ) {
     return <div className="flex justify-center items-center h-64"><LoadingSpinner size={48}/> <p className="ml-4">Cargando datos del formulario...</p></div>;
   }
 
@@ -201,8 +196,8 @@ export function OrderForm({ orderId }: OrderFormProps) {
                 <FormField control={form.control} name="branchInfo" render={({ field }) => ( 
                   <FormItem>
                     <FormLabel className="flex items-center gap-1"><Building className="h-4 w-4"/>Sucursal/Taller</FormLabel>
-                    <FormControl><Input placeholder="Nombre de la sucursal" {...field} disabled={isLoadingSettings} /></FormControl>
-                    <FormDescription>Información de la sucursal donde se registra la orden.</FormDescription>
+                    <FormControl><Input placeholder="Nombre de la sucursal" {...field} disabled={isLoadingStoreSettings && !orderId} /></FormControl>
+                    <FormDescription>Información de la sucursal donde se registra la orden. (Configurable en Ajustes)</FormDescription>
                     <FormMessage />
                   </FormItem> 
                 )} />
@@ -393,9 +388,9 @@ export function OrderForm({ orderId }: OrderFormProps) {
           </CardContent>
         </Card>
 
-        <Button type="submit" className="w-full sm:w-auto" disabled={isPending || isAiLoading || isLoadingSettings}>
-          {(isPending || isLoadingSettings) && <LoadingSpinner size={16} className="mr-2"/>}
-          {orderId ? (isPending ? "Actualizando Orden..." : "Actualizar Orden") : (isPending || isLoadingSettings ? "Creando Orden..." : "Crear Orden de Servicio")}
+        <Button type="submit" className="w-full sm:w-auto" disabled={isPending || isAiLoading || isLoadingStoreSettings || isLoadingOrder}>
+          {(isPending || isLoadingStoreSettings || isLoadingOrder) && <LoadingSpinner size={16} className="mr-2"/>}
+          {orderId ? (isPending ? "Actualizando Orden..." : "Actualizar Orden") : (isPending || isLoadingStoreSettings ? "Creando Orden..." : "Crear Orden de Servicio")}
         </Button>
       </form>
     </Form>

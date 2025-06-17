@@ -1,85 +1,65 @@
 // src/lib/actions/order.actions.ts
 "use server";
 
-import type { Order, User, Comment, AISuggestion } from "@/types";
+import type { Order, User, Comment, AISuggestion, StoreSettings } from "@/types";
 import { OrderSchema } from "@/lib/schemas";
 import type { z } from "zod";
 import { suggestRepairSolutions } from "@/ai/flows/suggest-repair-solutions";
+import { getStoreSettingsForUser } from "./settings.actions"; // To get creator's settings
+import { DEFAULT_STORE_SETTINGS } from "@/lib/constants";
+
 
 // Mock database for orders
 let mockOrders: Order[] = [
-  // Sample data
   {
-    id: "ORD001",
-    orderNumber: "ORD001",
-    clientName: "Juan",
-    clientLastName: "Perez",
-    clientDni: "12345678",
-    clientPhone: "1122334455",
-    clientEmail: "juan.perez@example.com",
-    branchInfo: "JO-SERVICE Taller Central (Config)",
-    deviceBrand: "Samsung",
-    deviceModel: "Galaxy S21",
-    deviceIMEI: "123456789012345",
-    declaredFault: "Pantalla rota",
-    unlockPatternInfo: "No tiene",
-    checklist: {
-      carcasaMarks: "si", screenCrystal: "si", frame: "no", backCover: "no", camera: "si",
-      microphone: "si", speaker: "si", powersOn: "si", touchScreen: "no", deviceCamera: "si",
-      fingerprintSensor: "si", signal: "si", wifi: "si",
-    },
-    damageRisk: "Cristal trizado en esquina superior.",
-    specificSectors: ["Pantallas con daño parcial"],
-    costSparePart: 15000,
-    costLabor: 5000,
-    costPending: 0,
-    classification: "",
-    observations: "Cliente indica que se cayó.",
-    customerAccepted: true,
-    customerSignatureName: "Juan Perez",
-    status: "En diagnóstico",
-    previousOrderId: "",
-    entryDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days ago
+    id: "ORD001", orderNumber: "ORD001",
+    clientName: "Juan", clientLastName: "Perez", clientDni: "12345678", clientPhone: "1122334455", clientEmail: "juan.perez@example.com",
+    branchInfo: "Taller Central (Admin)",
+    deviceBrand: "Samsung", deviceModel: "Galaxy S21", deviceIMEI: "123456789012345", declaredFault: "Pantalla rota", unlockPatternInfo: "No tiene",
+    checklist: { carcasaMarks: "si", screenCrystal: "si", frame: "no", backCover: "no", camera: "si", microphone: "si", speaker: "si", powersOn: "si", touchScreen: "no", deviceCamera: "si", fingerprintSensor: "si", signal: "si", wifi: "si" },
+    damageRisk: "Cristal trizado en esquina superior.", specificSectors: ["Pantallas con daño parcial"],
+    costSparePart: 15000, costLabor: 5000, costPending: 0,
+    classification: "", observations: "Cliente indica que se cayó.",
+    customerAccepted: true, customerSignatureName: "Juan Perez",
+    status: "En diagnóstico", previousOrderId: "",
+    entryDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
     commentsHistory: [],
-    lastUpdatedBy: "admin123",
-    updatedAt: new Date().toISOString(),
-    createdAt: new Date().toISOString(),
+    // Snapshot fields
+    orderCompanyName: "JO-SERVICE Admin Store",
+    orderCompanyLogoUrl: "https://placehold.co/150x50.png?text=JO-SERVICE",
+    orderCompanyCuit: "30-12345678-9",
+    orderCompanyAddress: "Admin Main Street 123",
+    orderCompanyContactDetails: "Tel: (011) 1111-1111",
+    orderWarrantyConditions: "Admin warranty",
+    orderPickupConditions: "Admin pickup",
+    orderAbandonmentPolicyDays60: 60,
+    createdByUserId: "admin123", lastUpdatedBy: "admin123",
+    updatedAt: new Date().toISOString(), createdAt: new Date().toISOString(),
   },
   {
-    id: "ORD002",
-    orderNumber: "ORD002",
-    clientName: "Maria",
-    clientLastName: "Lopez",
-    clientDni: "87654321",
-    clientPhone: "5544332211",
-    clientEmail: "maria.lopez@example.com",
-    branchInfo: "JO-SERVICE Taller Norte (Config)",
-    deviceBrand: "Apple",
-    deviceModel: "iPhone 12",
-    deviceIMEI: "543210987654321",
-    declaredFault: "No enciende, batería agotada.",
-    unlockPatternInfo: "No recuerda/sabe",
-    checklist: {
-      carcasaMarks: "no", screenCrystal: "no", frame: "no", backCover: "no", camera: "si",
-      microphone: "si", speaker: "si", powersOn: "no", touchScreen: "si", deviceCamera: "si",
-      fingerprintSensor: "si", signal: "si", wifi: "si",
-    },
-    damageRisk: "",
-    specificSectors: ["Equipos sin clave o que no encienden"],
-    costSparePart: 0,
-    costLabor: 0,
-    costPending: 8000,
-    classification: "Para stock (rojo)",
-    observations: "Revisar pin de carga también.",
-    customerAccepted: true,
-    customerSignatureName: "Maria Lopez",
-    status: "Esperando pieza",
-    previousOrderId: "ORD001", // Example of linked order
-    entryDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), // 5 days ago
+    id: "ORD002", orderNumber: "ORD002",
+    clientName: "Maria", clientLastName: "Lopez", clientDni: "87654321", clientPhone: "5544332211", clientEmail: "maria.lopez@example.com",
+    branchInfo: "Taller Norte (Carlos)",
+    deviceBrand: "Apple", deviceModel: "iPhone 12", deviceIMEI: "543210987654321", declaredFault: "No enciende, batería agotada.", unlockPatternInfo: "No recuerda/sabe",
+    checklist: { carcasaMarks: "no", screenCrystal: "no", frame: "no", backCover: "no", camera: "si", microphone: "si", speaker: "si", powersOn: "no", touchScreen: "si", deviceCamera: "si", fingerprintSensor: "si", signal: "si", wifi: "si" },
+    damageRisk: "", specificSectors: ["Equipos sin clave o que no encienden"],
+    costSparePart: 0, costLabor: 0, costPending: 8000,
+    classification: "Para stock (rojo)", observations: "Revisar pin de carga también.",
+    customerAccepted: true, customerSignatureName: "Maria Lopez",
+    status: "Esperando pieza", previousOrderId: "ORD001",
+    entryDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
     commentsHistory: [{ comment: "Batería solicitada", timestamp: new Date().toISOString(), user: "Carlos Técnico" }],
-    lastUpdatedBy: "tech123",
-    updatedAt: new Date().toISOString(),
-    createdAt: new Date().toISOString(),
+    // Snapshot fields
+    orderCompanyName: "Carlos Tech Shop",
+    orderCompanyLogoUrl: "https://placehold.co/150x50.png?text=Carlos+Shop",
+    orderCompanyCuit: "20-87654321-5",
+    orderCompanyAddress: "Tech Street 456",
+    orderCompanyContactDetails: "Tel: (011) 2222-2222",
+    orderWarrantyConditions: "Carlos warranty",
+    orderPickupConditions: "Carlos pickup",
+    orderAbandonmentPolicyDays60: 60,
+    createdByUserId: "tech123", lastUpdatedBy: "tech123",
+    updatedAt: new Date().toISOString(), createdAt: new Date().toISOString(),
   }
 ];
 let orderCounter = mockOrders.length;
@@ -91,7 +71,7 @@ function generateOrderNumber(): string {
 
 export async function createOrder(
   values: z.infer<typeof OrderSchema>,
-  userId: string // ID of the user creating the order
+  creatingUserId: string
 ): Promise<{ success: boolean; message: string; order?: Order }> {
   const validatedFields = OrderSchema.safeParse(values);
 
@@ -100,17 +80,34 @@ export async function createOrder(
     return { success: false, message: "Campos inválidos. Por favor revise el formulario." };
   }
 
+  // Fetch creating user's store settings to snapshot
+  const userStoreSettings = await getStoreSettingsForUser(creatingUserId);
+  const settingsToSnapshot = { ...DEFAULT_STORE_SETTINGS, ...userStoreSettings };
+
+
   const data = validatedFields.data;
   const newOrderNumber = generateOrderNumber();
 
   const newOrder: Order = {
-    id: newOrderNumber, // Using orderNumber as ID for mock
+    id: newOrderNumber,
     orderNumber: newOrderNumber,
-    ...data, // This includes branchInfo from the form
-    previousOrderId: data.previousOrderId || "", // Ensure it's set
+    ...data, // includes branchInfo from form (which was defaulted from user's settings)
+    previousOrderId: data.previousOrderId || "",
     entryDate: new Date().toISOString(),
     commentsHistory: [],
-    lastUpdatedBy: userId,
+    
+    // Snapshot store details
+    orderCompanyName: settingsToSnapshot.companyName,
+    orderCompanyLogoUrl: settingsToSnapshot.companyLogoUrl,
+    orderCompanyCuit: settingsToSnapshot.companyCuit,
+    orderCompanyAddress: settingsToSnapshot.companyAddress,
+    orderCompanyContactDetails: settingsToSnapshot.companyContactDetails,
+    orderWarrantyConditions: settingsToSnapshot.warrantyConditions,
+    orderPickupConditions: settingsToSnapshot.pickupConditions,
+    orderAbandonmentPolicyDays60: settingsToSnapshot.abandonmentPolicyDays60,
+
+    createdByUserId: creatingUserId,
+    lastUpdatedBy: creatingUserId, // Initially, creator is last updater
     updatedAt: new Date().toISOString(),
     createdAt: new Date().toISOString(),
   };
@@ -120,8 +117,7 @@ export async function createOrder(
 }
 
 export async function getOrders(filters?: { client?: string, orderNumber?: string, imei?: string, status?: string }): Promise<Order[]> {
-  // Simulate fetching orders
-  await new Promise(resolve => setTimeout(resolve, 500)); // Simulate delay
+  await new Promise(resolve => setTimeout(resolve, 500)); 
 
   let filteredOrders = mockOrders;
 
@@ -143,13 +139,10 @@ export async function getOrders(filters?: { client?: string, orderNumber?: strin
       filteredOrders = filteredOrders.filter(o => o.status === filters.status);
     }
   }
-
-  // Sort by entryDate descending
   return [...filteredOrders].sort((a, b) => new Date(b.entryDate).getTime() - new Date(a.entryDate).getTime());
 }
 
 export async function getOrderById(id: string): Promise<Order | null> {
-  // Simulate fetching an order by ID
   await new Promise(resolve => setTimeout(resolve, 300));
   const order = mockOrders.find(o => o.id === id);
   return order || null;
@@ -175,14 +168,13 @@ export async function updateOrderStatus(
     mockOrders[orderIndex].deliveryDate = new Date().toISOString();
   }
 
-
   return { success: true, message: "Estado de la orden actualizado.", order: mockOrders[orderIndex] };
 }
 
 export async function addOrderComment(
   orderId: string,
   commentText: string,
-  user: User // User object or just name/ID
+  user: Pick<User, 'uid' | 'name'> // Expecting a minimal user object
 ): Promise<{ success: boolean; message: string; comment?: Comment }> {
   const orderIndex = mockOrders.findIndex(o => o.id === orderId);
   if (orderIndex === -1) {
@@ -192,11 +184,11 @@ export async function addOrderComment(
   const newComment: Comment = {
     comment: commentText,
     timestamp: new Date().toISOString(),
-    user: user.name, // Using user's name for simplicity
+    user: user.name, 
   };
 
   mockOrders[orderIndex].commentsHistory.push(newComment);
-  mockOrders[orderIndex].lastUpdatedBy = user.uid;
+  mockOrders[orderIndex].lastUpdatedBy = user.uid; // Use UID for lastUpdatedBy
   mockOrders[orderIndex].updatedAt = new Date().toISOString();
 
   return { success: true, message: "Comentario agregado.", comment: newComment };
@@ -236,19 +228,19 @@ export async function getRepairSuggestions(
   }
 }
 
-// Full order update (for editing more fields)
 export async function updateOrder(
   orderId: string,
-  values: Partial<Omit<Order, 'id' | 'orderNumber' | 'entryDate' | 'createdAt'>>,
+  values: Partial<Omit<Order, 'id' | 'orderNumber' | 'entryDate' | 'createdAt' | 'createdByUserId' | 'orderCompanyName' | 'orderCompanyLogoUrl' | 'orderCompanyCuit' | 'orderCompanyAddress' | 'orderCompanyContactDetails' | 'orderWarrantyConditions' | 'orderPickupConditions' | 'orderAbandonmentPolicyDays60'>>,
   userId: string
 ): Promise<{ success: boolean; message: string; order?: Order }> {
+  // Snapshot fields are not updatable via this general update function.
+  // They are set at creation time.
   const validatedFields = OrderSchema.partial().safeParse(values); 
 
   if (!validatedFields.success) {
     console.error("Update Validation Errors:", validatedFields.error.flatten().fieldErrors);
     return { success: false, message: "Datos de actualización inválidos." };
   }
-
 
   const orderIndex = mockOrders.findIndex(o => o.id === orderId);
   if (orderIndex === -1) {
@@ -269,7 +261,6 @@ export async function updateOrder(
       mockOrders[orderIndex].deliveryDate = new Date().toISOString();
     }
   }
-
 
   return { success: true, message: "Orden actualizada exitosamente.", order: mockOrders[orderIndex] };
 }

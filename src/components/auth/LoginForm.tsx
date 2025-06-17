@@ -45,13 +45,10 @@ export function LoginForm() {
     startTransition(async () => {
       const result = await login(values);
       if (result.success && result.user) {
-        // Store user in localStorage (mock session)
         localStorage.setItem('authUser', JSON.stringify(result.user));
-        // Dispatch a custom event to notify AuthProvider about the change
         window.dispatchEvent(new CustomEvent('authChange'));
         toast({ title: "Éxito", description: result.message });
-        router.push("/dashboard"); // Redirect after successful login
-        router.refresh(); // Ensure layout re-renders with new auth state
+        router.push("/dashboard"); 
       } else {
         setError(result.message);
         toast({ variant: "destructive", title: "Error", description: result.message });
@@ -123,10 +120,11 @@ export function LoginForm() {
           </form>
         </Form>
       </CardContent>
-      <CardFooter className="flex-col items-center">
-         <Link href="/reset-password" className="text-sm text-primary hover:underline">
+       <CardFooter className="flex flex-col items-center space-y-2 pt-4">
+          <Link href="/reset-password" className="text-sm text-primary hover:underline">
             ¿Olvidó su contraseña?
           </Link>
+          {/* Link to Register Page will be added in login/page.tsx for better structure */}
       </CardFooter>
     </Card>
   );
