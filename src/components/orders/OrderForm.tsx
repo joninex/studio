@@ -22,7 +22,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/providers/AuthProvider";
 import { AISuggestion, type Order } from "@/types";
 import { CHECKLIST_ITEMS, CLASSIFICATION_OPTIONS, ORDER_STATUSES, SPECIFIC_SECTORS_OPTIONS, UNLOCK_PATTERN_OPTIONS, YES_NO_OPTIONS, DEFAULT_BRANCH_INFO } from "@/lib/constants";
-import { AlertCircle, Bot, DollarSign, Info, ListChecks, LucideSparkles, User, Wrench } from "lucide-react";
+import { AlertCircle, Bot, DollarSign, Info, ListChecks, LucideSparkles, User, Wrench, LinkIcon } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 
@@ -51,7 +51,7 @@ export function OrderForm({ orderId }: OrderFormProps) {
         microphone: "no", speaker: "no", powersOn: "si", touchScreen: "si", deviceCamera: "si",
         fingerprintSensor: "si", signal: "si", wifi: "si",
       },
-      damageRisk: "", specificSectors: [],
+      damageRisk: "", specificSectors: [], previousOrderId: "",
       costSparePart: 0, costLabor: 0, costPending: 0,
       classification: undefined, observations: "",
       customerAccepted: false, customerSignatureName: "",
@@ -68,14 +68,12 @@ export function OrderForm({ orderId }: OrderFormProps) {
       getOrderById(orderId)
         .then(order => {
           if (order) {
-            // Map Order type to OrderFormData type. They are mostly compatible.
-            // Ensure numbers are numbers, not strings, if loaded from a less strict source.
             form.reset({
               ...order,
+              previousOrderId: order.previousOrderId || "",
               costSparePart: Number(order.costSparePart || 0),
               costLabor: Number(order.costLabor || 0),
               costPending: Number(order.costPending || 0),
-              // Ensure optional fields that might be null/undefined are handled
               classification: order.classification || undefined,
               unlockPatternInfo: order.unlockPatternInfo || undefined,
               status: order.status || "En diagnóstico",
@@ -100,14 +98,15 @@ export function OrderForm({ orderId }: OrderFormProps) {
     }
     startTransition(async () => {
       let result;
+      const submissionValues = {
+        ...values,
+        previousOrderId: values.previousOrderId?.trim() === "" ? undefined : values.previousOrderId?.trim()
+      };
+
       if (orderId) {
-        // Filter out fields not directly updatable or that should retain original values if not changed by form
-        // For a full edit, you might pass `values` directly if schema matches Order structure.
-        // Or construct a specific update payload.
-        const updatePayload: Partial<Order> = { ...values };
-        result = await updateOrder(orderId, updatePayload, user.uid);
+        result = await updateOrder(orderId, submissionValues, user.uid);
       } else {
-        result = await createOrder(values, user.uid);
+        result = await createOrder(submissionValues, user.uid);
       }
 
       if (result.success) {
@@ -181,9 +180,17 @@ export function OrderForm({ orderId }: OrderFormProps) {
                     <FormMessage />
                   </FormItem>
                 )} />
+                 <FormField control={form.control} name="previousOrderId" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-1"><LinkIcon className="h-4 w-4"/>ID Orden Anterior (Opcional)</FormLabel>
+                    <FormControl><Input placeholder="Ej: ORD123" {...field} /></FormControl>
+                    <FormDescription>Si esta reparación está relacionada con una orden anterior (garantía, etc.).</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )} />
               </CardContent>
             </Card>
-            
+
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="flex items-center gap-2"><LucideSparkles className="text-primary"/> Asistente IA de Diagnóstico</CardTitle>
@@ -319,7 +326,7 @@ export function OrderForm({ orderId }: OrderFormProps) {
             </Card>
           </div>
         </div>
-        
+
         <Separator />
 
         <Card>

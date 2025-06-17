@@ -10,28 +10,11 @@ import type { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { LoadingSpinner } from "../shared/LoadingSpinner";
-
-// Mock server actions for settings
-async function getSettingsMock(): Promise<Configurations> {
-  await new Promise(resolve => setTimeout(resolve, 500));
-  return {
-    id: "general_config",
-    warrantyConditions: "La garantía cubre la reparación por 90 días. No cubre otros daños.",
-    pickupConditions: "Retirar equipo dentro de los 30 días. Luego se cobra almacenamiento.",
-    contactInfo: "JO-SERVICE, Tel: 123-456789, Email: contacto@joservice.com.ar",
-    abandonmentPolicyDays30: 30,
-    abandonmentPolicyDays60: 60,
-  };
-}
-async function updateSettingsMock(data: z.infer<typeof SettingsSchema>): Promise<{ success: boolean; message: string; settings?: Configurations }> {
-  await new Promise(resolve => setTimeout(resolve, 500));
-  console.log("Updating settings (mock):", data);
-  // In a real app, update the 'general_config' document in Firestore
-  return { success: true, message: "Configuración guardada exitosamente (mock).", settings: { id: "general_config", ...data } };
-}
+import { getSettings, updateSettings } from "@/lib/actions/settings.actions";
+import { Separator } from "@/components/ui/separator";
 
 export function SettingsForm() {
   const [isLoading, setIsLoading] = useState(true);
@@ -41,9 +24,13 @@ export function SettingsForm() {
   const form = useForm<z.infer<typeof SettingsSchema>>({
     resolver: zodResolver(SettingsSchema),
     defaultValues: {
+      companyName: "",
+      companyLogoUrl: "",
+      companyCuit: "",
+      companyAddress: "",
+      companyContactDetails: "",
       warrantyConditions: "",
       pickupConditions: "",
-      contactInfo: "",
       abandonmentPolicyDays30: 30,
       abandonmentPolicyDays60: 60,
     },
@@ -52,26 +39,30 @@ export function SettingsForm() {
   useEffect(() => {
     async function loadSettings() {
       setIsLoading(true);
-      const fetchedSettings = await getSettingsMock();
-      form.reset({ // Ensure numbers are parsed correctly if they come as strings
-        ...fetchedSettings,
-        abandonmentPolicyDays30: Number(fetchedSettings.abandonmentPolicyDays30),
-        abandonmentPolicyDays60: Number(fetchedSettings.abandonmentPolicyDays60),
-      });
-      setIsLoading(false);
+      try {
+        const fetchedSettings = await getSettings();
+        form.reset({ 
+          ...fetchedSettings,
+          abandonmentPolicyDays30: Number(fetchedSettings.abandonmentPolicyDays30),
+          abandonmentPolicyDays60: Number(fetchedSettings.abandonmentPolicyDays60),
+        });
+      } catch (error) {
+        toast({ variant: "destructive", title: "Error", description: "No se pudo cargar la configuración."});
+      } finally {
+        setIsLoading(false);
+      }
     }
     loadSettings();
-  }, [form]);
+  }, [form, toast]);
   
   const onSubmit = (values: z.infer<typeof SettingsSchema>) => {
     startTransition(async () => {
-      // Ensure numeric fields are numbers
       const dataToSave = {
         ...values,
         abandonmentPolicyDays30: Number(values.abandonmentPolicyDays30),
         abandonmentPolicyDays60: Number(values.abandonmentPolicyDays60),
       };
-      const result = await updateSettingsMock(dataToSave);
+      const result = await updateSettings(dataToSave);
       if (result.success) {
         toast({ title: "Éxito", description: result.message });
         if (result.settings) form.reset(result.settings);
@@ -87,16 +78,32 @@ export function SettingsForm() {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <FormField control={form.control} name="warrantyConditions" render={({ field }) => ( <FormItem><FormLabel>Condiciones de Garantía</FormLabel><FormControl><Textarea rows={4} placeholder="Texto de garantía..." {...field} /></FormControl><FormMessage /></FormItem> )} />
-        <FormField control={form.control} name="pickupConditions" render={({ field }) => ( <FormItem><FormLabel>Condiciones de Retiro</FormLabel><FormControl><Textarea rows={4} placeholder="Texto de condiciones de retiro..." {...field} /></FormControl><FormMessage /></FormItem> )} />
-        <FormField control={form.control} name="contactInfo" render={({ field }) => ( <FormItem><FormLabel>Información de Contacto General</FormLabel><FormControl><Textarea rows={3} placeholder="Información de contacto..." {...field} /></FormControl><FormMessage /></FormItem> )} />
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <FormField control={form.control} name="abandonmentPolicyDays30" render={({ field }) => ( <FormItem><FormLabel>Días para abandono (1er aviso)</FormLabel><FormControl><Input type="number" placeholder="30" {...field} onChange={e => field.onChange(parseInt(e.target.value, 10) || 0)} /></FormControl><FormMessage /></FormItem> )} />
-            <FormField control={form.control} name="abandonmentPolicyDays60" render={({ field }) => ( <FormItem><FormLabel>Días para abandono (final)</FormLabel><FormControl><Input type="number" placeholder="60" {...field} onChange={e => field.onChange(parseInt(e.target.value, 10) || 0)} /></FormControl><FormMessage /></FormItem> )} />
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+        <div>
+          <h3 className="text-lg font-medium mb-2">Datos de la Empresa</h3>
+          <div className="space-y-4">
+            <FormField control={form.control} name="companyName" render={({ field }) => ( <FormItem><FormLabel>Nombre de la Empresa</FormLabel><FormControl><Input placeholder="Nombre de su Taller" {...field} /></FormControl><FormMessage /></FormItem> )} />
+            <FormField control={form.control} name="companyLogoUrl" render={({ field }) => ( <FormItem><FormLabel>URL del Logo</FormLabel><FormControl><Input type="url" placeholder="https://ejemplo.com/logo.png" {...field} /></FormControl><FormDescription>Ingrese la URL completa de una imagen para el logo.</FormDescription><FormMessage /></FormItem> )} />
+            <FormField control={form.control} name="companyCuit" render={({ field }) => ( <FormItem><FormLabel>CUIT/CUIL (Opcional)</FormLabel><FormControl><Input placeholder="Ej: 20-12345678-9" {...field} /></FormControl><FormMessage /></FormItem> )} />
+            <FormField control={form.control} name="companyAddress" render={({ field }) => ( <FormItem><FormLabel>Dirección</FormLabel><FormControl><Textarea rows={2} placeholder="Dirección completa del taller" {...field} /></FormControl><FormMessage /></FormItem> )} />
+            <FormField control={form.control} name="companyContactDetails" render={({ field }) => ( <FormItem><FormLabel>Información de Contacto (para impresiones)</FormLabel><FormControl><Textarea rows={3} placeholder="Teléfono, Email, etc." {...field} /></FormControl><FormMessage /></FormItem> )} />
+          </div>
         </div>
 
+        <Separator />
+
+        <div>
+          <h3 className="text-lg font-medium mb-2">Textos Legales y Políticas</h3>
+          <div className="space-y-4">
+            <FormField control={form.control} name="warrantyConditions" render={({ field }) => ( <FormItem><FormLabel>Condiciones de Garantía</FormLabel><FormControl><Textarea rows={4} placeholder="Texto de garantía..." {...field} /></FormControl><FormMessage /></FormItem> )} />
+            <FormField control={form.control} name="pickupConditions" render={({ field }) => ( <FormItem><FormLabel>Condiciones de Retiro</FormLabel><FormControl><Textarea rows={4} placeholder="Texto de condiciones de retiro..." {...field} /></FormControl><FormMessage /></FormItem> )} />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField control={form.control} name="abandonmentPolicyDays30" render={({ field }) => ( <FormItem><FormLabel>Días para abandono (1er aviso)</FormLabel><FormControl><Input type="number" placeholder="30" {...field} onChange={e => field.onChange(parseInt(e.target.value, 10) || 0)} /></FormControl><FormMessage /></FormItem> )} />
+                <FormField control={form.control} name="abandonmentPolicyDays60" render={({ field }) => ( <FormItem><FormLabel>Días para abandono (final)</FormLabel><FormControl><Input type="number" placeholder="60" {...field} onChange={e => field.onChange(parseInt(e.target.value, 10) || 0)} /></FormControl><FormMessage /></FormItem> )} />
+            </div>
+          </div>
+        </div>
+        
         <Button type="submit" className="w-full sm:w-auto" disabled={isPending || isLoading}>
           {isPending && <LoadingSpinner size={16} className="mr-2"/>}
           Guardar Configuración

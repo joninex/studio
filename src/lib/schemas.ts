@@ -40,9 +40,10 @@ export const OrderSchema = z.object({
 
   damageRisk: z.string().optional(),
   specificSectors: z.array(z.string(SPECIFIC_SECTORS_OPTIONS)).optional(),
+  previousOrderId: z.string().optional().or(z.literal('')),
 
   costSparePart: z.preprocess(
-    (val) => (val === "" ? undefined : Number(val)), 
+    (val) => (val === "" ? undefined : Number(val)),
     z.number({ invalid_type_error: "Debe ser un número" }).nonnegative("Costo debe ser no negativo.").optional()
   ).default(0),
   costLabor: z.preprocess(
@@ -53,7 +54,7 @@ export const OrderSchema = z.object({
     (val) => (val === "" ? undefined : Number(val)),
     z.number({ invalid_type_error: "Debe ser un número" }).nonnegative("Costo debe ser no negativo.").optional()
   ).default(0),
-  
+
   classification: z.enum([...CLASSIFICATION_OPTIONS, ""], { required_error: "Clasificación es requerida."}).optional(),
   observations: z.string().optional(),
 
@@ -77,9 +78,19 @@ export const UserSchema = z.object({
 });
 
 export const SettingsSchema = z.object({
+  companyName: z.string().min(1, "Nombre de la empresa es requerido.").optional().or(z.literal('')),
+  companyLogoUrl: z.string().url({ message: "Debe ser una URL válida para el logo." }).optional().or(z.literal('')),
+  companyCuit: z.string().optional().or(z.literal('')),
+  companyAddress: z.string().optional().or(z.literal('')),
+  companyContactDetails: z.string().min(1, "Detalles de contacto de la empresa son requeridos.").optional().or(z.literal('')),
   warrantyConditions: z.string().min(1, "Condiciones de garantía son requeridas."),
   pickupConditions: z.string().min(1, "Condiciones de retiro son requeridas."),
-  contactInfo: z.string().min(1, "Información de contacto es requerida."),
-  abandonmentPolicyDays30: z.number().int().positive("Debe ser un número positivo."),
-  abandonmentPolicyDays60: z.number().int().positive("Debe ser un número positivo."),
+  abandonmentPolicyDays30: z.preprocess(
+    (val) => (typeof val === 'string' ? parseInt(val, 10) : val),
+    z.number().int().positive("Debe ser un número positivo.")
+  ),
+  abandonmentPolicyDays60: z.preprocess(
+    (val) => (typeof val === 'string' ? parseInt(val, 10) : val),
+    z.number().int().positive("Debe ser un número positivo.")
+  ),
 });

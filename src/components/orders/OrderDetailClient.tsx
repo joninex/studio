@@ -1,8 +1,10 @@
 // src/components/orders/OrderDetailClient.tsx
 "use client";
 
-import type { Order, User, Comment as OrderComment, OrderStatus } from "@/types";
-import { useState, useTransition, ChangeEvent } from "react";
+import type { Order, User, Comment as OrderComment, OrderStatus, Configurations } from "@/types";
+import { useState, useTransition, ChangeEvent, useEffect } from "react";
+import Link from "next/link";
+import Image from "next/image";
 import { format, differenceInDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
@@ -14,11 +16,12 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/providers/AuthProvider";
 import { addOrderComment, updateOrderStatus, updateOrderCosts } from "@/lib/actions/order.actions";
+import { getSettings } from "@/lib/actions/settings.actions"; // Import getSettings
 import { CHECKLIST_ITEMS, ORDER_STATUSES, YES_NO_OPTIONS, SPECIFIC_SECTORS_OPTIONS } from "@/lib/constants";
-import { AlertCircle, Bot, CalendarDays, DollarSign, Edit, FileText, Info, ListChecks, MessageSquare, Printer, User as UserIcon, Wrench, PackageCheck, Smartphone } from "lucide-react";
+import { AlertCircle, Bot, CalendarDays, DollarSign, Edit, FileText, Info, ListChecks, MessageSquare, Printer, User as UserIcon, Wrench, PackageCheck, Smartphone, LinkIcon } from "lucide-react";
 import { Input } from "../ui/input";
 import { LoadingSpinner } from "../shared/LoadingSpinner";
-import Image from "next/image"; // Added for logo in print header
+
 
 interface OrderDetailClientProps {
   order: Order;
@@ -31,6 +34,9 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
   const [order, setOrder] = useState<Order>(initialOrder);
   const [newComment, setNewComment] = useState("");
   const [newStatus, setNewStatus] = useState<OrderStatus>(order.status);
+  const [appSettings, setAppSettings] = useState<Configurations | null>(null);
+  const [isLoadingSettings, setIsLoadingSettings] = useState(true);
+
 
   const [editableCosts, setEditableCosts] = useState({
     costSparePart: order.costSparePart,
@@ -38,6 +44,22 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
     costPending: order.costPending,
   });
   const [isEditingCosts, setIsEditingCosts] = useState(false);
+
+  useEffect(() => {
+    async function fetchSettings() {
+      setIsLoadingSettings(true);
+      try {
+        const settings = await getSettings();
+        setAppSettings(settings);
+      } catch (error) {
+        console.error("Failed to load settings for order detail:", error);
+        toast({ variant: "destructive", title: "Error", description: "No se pudieron cargar las configuraciones de la aplicación." });
+      } finally {
+        setIsLoadingSettings(false);
+      }
+    }
+    fetchSettings();
+  }, [toast]);
 
 
   const handleStatusChange = async () => {
@@ -52,7 +74,7 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
       }
     });
   };
-  
+
   const handleCostChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setEditableCosts(prev => ({...prev, [name]: parseFloat(value) || 0}));
@@ -94,27 +116,27 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
   const handlePrint = () => {
     window.print();
   };
-  
+
   const daysSinceReady = order.readyForPickupDate && order.status !== "Entregado" && order.status !== "Abandonado"
     ? differenceInDays(new Date(), new Date(order.readyForPickupDate))
     : null;
-  
+
   let abandonmentWarning = "";
-  if (daysSinceReady !== null) {
-    if (daysSinceReady >= 60) abandonmentWarning = "Equipo considerado abandonado (60+ días).";
-    else if (daysSinceReady >= 30) abandonmentWarning = "Equipo en riesgo de abandono (30+ días).";
+  if (daysSinceReady !== null && appSettings) {
+    if (daysSinceReady >= appSettings.abandonmentPolicyDays60) abandonmentWarning = `Equipo considerado abandonado (${appSettings.abandonmentPolicyDays60}+ días).`;
+    else if (daysSinceReady >= appSettings.abandonmentPolicyDays30) abandonmentWarning = `Equipo en riesgo de abandono (${appSettings.abandonmentPolicyDays30}+ días).`;
   }
 
   const getStatusBadgeVariant = (status: OrderStatus): "default" | "secondary" | "destructive" | "outline" => {
     switch (status) {
       case "Reparado":
       case "Listo para Retirar":
-        return "default"; 
+        return "default";
       case "Entregado":
         return "secondary";
       case "En diagnóstico":
       case "Esperando pieza":
-        return "outline"; 
+        return "outline";
       case "Abandonado":
         return "destructive";
       default:
@@ -125,15 +147,19 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
   return (
     <div className="space-y-6">
       <div className="print-only text-center mb-6 hidden print:block">
-        <Image 
-            src="https://placehold.co/200x75.png?text=JO-SERVICE"
-            alt="JO-SERVICE Logo"
+        {appSettings?.companyLogoUrl && (
+          <Image
+            src={appSettings.companyLogoUrl}
+            alt={appSettings.companyName || "Company Logo"}
             width={150}
             height={56}
             className="mx-auto mb-4"
             data-ai-hint="company logo"
-        />
-        <h1 className="text-2xl font-bold">Orden de Servicio N°: {order.orderNumber}</h1>
+          />
+        )}
+        <h1 className="text-2xl font-bold">{appSettings?.companyName || "Orden de Servicio"} N°: {order.orderNumber}</h1>
+        {appSettings?.companyAddress && <p className="text-sm">{appSettings.companyAddress}</p>}
+        {appSettings?.companyCuit && <p className="text-sm">CUIT: {appSettings.companyCuit}</p>}
       </div>
       <Card className="print-container shadow-xl">
         <CardHeader className="flex flex-row justify-between items-start no-print">
@@ -145,12 +171,17 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
             <CardDescription>
               Fecha de Ingreso: {format(new Date(order.entryDate), "dd MMM yyyy, HH:mm", { locale: es })}
             </CardDescription>
-             <div className="mt-2">
+             <div className="mt-2 flex items-center gap-2">
                 <Badge variant={getStatusBadgeVariant(order.status)} className="text-sm px-3 py-1 badge-print">{order.status}</Badge>
                 {abandonmentWarning && (
                   <Badge variant="destructive" className="ml-2 text-sm px-3 py-1 animate-pulse badge-print">
                     <AlertCircle className="mr-1 h-4 w-4" /> {abandonmentWarning}
                   </Badge>
+                )}
+                {order.previousOrderId && (
+                   <Link href={`/orders/${order.previousOrderId}`} className="text-sm text-primary hover:underline flex items-center gap-1">
+                     <LinkIcon className="h-4 w-4"/> Ver Orden Anterior ({order.previousOrderId})
+                   </Link>
                 )}
               </div>
           </div>
@@ -162,6 +193,9 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
             <p><strong>Estado Actual:</strong> <span className="font-semibold">{order.status}</span></p>
              {abandonmentWarning && (
                 <p className="font-bold text-red-600 mt-1">ALERTA: {abandonmentWarning}</p>
+            )}
+            {order.previousOrderId && (
+                <p><strong>Orden Anterior Vinculada:</strong> {order.previousOrderId}</p>
             )}
         </div>
         <CardContent className="space-y-6">
@@ -204,7 +238,7 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
           </div>
 
           <Separator />
-          
+
           <div className="grid md:grid-cols-2 gap-6 card-print">
             <div className="space-y-2">
                 <h3 className="text-lg font-semibold flex items-center gap-2"><AlertCircle className="h-5 w-5 text-primary"/>Riesgos y Sectores</h3>
@@ -221,7 +255,7 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
           </div>
 
           <Separator />
-          
+
            <div className="card-print">
             <div className="flex justify-between items-center mb-2">
                 <h3 className="text-lg font-semibold flex items-center gap-2"><DollarSign className="h-5 w-5 text-primary"/>Costos</h3>
@@ -273,10 +307,15 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
           <div className="hidden print:block mt-8 pt-4 border-t">
             <p className="text-sm"><strong>Firma del Cliente Aceptando Condiciones:</strong> _________________________</p>
             <p className="text-sm mt-1"><strong>Aclaración:</strong> {order.customerSignatureName}</p>
-             <p className="text-xs mt-4">
-                CONDICIONES: La garantía cubre únicamente la reparación efectuada por un plazo de 90 días y no cubre fallas preexistentes o nuevas fallas no relacionadas con la reparación original. El equipo debe ser retirado dentro de los 30 días posteriores a la notificación de "Listo para Retirar". Pasado dicho plazo, se aplicarán cargos por almacenamiento. Equipos no retirados luego de 60 días podrán ser declarados en abandono.
-                <br/>Contacto: JO-SERVICE, Tel: 123-456789, Email: contacto@joservice.com.ar (Estos datos se deben configurar en la sección Ajustes).
-            </p>
+            {isLoadingSettings ? (
+                <p className="text-xs mt-4">Cargando condiciones y contacto...</p>
+            ) : appSettings && (
+                <div className="text-xs mt-4 space-y-1">
+                    {appSettings.warrantyConditions && <p><strong>CONDICIONES DE GARANTÍA:</strong> {appSettings.warrantyConditions}</p>}
+                    {appSettings.pickupConditions && <p><strong>CONDICIONES DE RETIRO:</strong> {appSettings.pickupConditions} Equipos no retirados luego de {appSettings.abandonmentPolicyDays60} días podrán ser declarados en abandono.</p>}
+                    {appSettings.companyContactDetails && <p className="whitespace-pre-line mt-2"><strong>CONTACTO:</strong><br/>{appSettings.companyContactDetails}</p>}
+                </div>
+            )}
           </div>
 
         </CardContent>
@@ -321,7 +360,7 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
           </div>
         </CardContent>
       </Card>
-      
+
     </div>
   );
 }
