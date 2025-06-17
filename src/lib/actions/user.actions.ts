@@ -13,6 +13,8 @@ import {
   getUserById // Added getUserById
 } from "./auth.actions"; // Import helpers
 
+const SUPER_ADMIN_EMAIL = "jesus@mobyland.com.ar";
+
 export async function getUsers(): Promise<User[]> {
   await new Promise(resolve => setTimeout(resolve, 300)); // Simulate delay
   return await getAllMockUsers();
@@ -40,8 +42,8 @@ export async function createUser(data: z.infer<typeof UserSchema>): Promise<{ su
     uid: `newUser-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`, 
     email,
     name,
-    role,
-    status: "active", // Users created by admin are active by default
+    role: email === SUPER_ADMIN_EMAIL ? 'admin' : role, // Ensure super admin is admin
+    status: email === SUPER_ADMIN_EMAIL ? 'active' : "active", // Super admin and admin-created users are active
     createdAt: new Date().toISOString(), 
     updatedAt: new Date().toISOString() 
     // storeSettings will be default or initialized upon first save by user
@@ -67,31 +69,49 @@ export async function updateUser(uid: string, data: Partial<z.infer<typeof UserS
   
   await new Promise(resolve => setTimeout(resolve, 300));
 
-  const { password, email, ...restData } = validatedFields.data;
+  const { password, email, role, ...restData } = validatedFields.data;
   const existingUser = currentUsers[userIndex];
+
+  // Super admin protection
+  if (existingUser.email === SUPER_ADMIN_EMAIL) {
+    if (email && email !== SUPER_ADMIN_EMAIL) {
+      return { success: false, message: "No se puede cambiar el email del super administrador." };
+    }
+    if (role && role !== 'admin') {
+      return { success: false, message: "No se puede cambiar el rol del super administrador." };
+    }
+  }
 
   if (email && email !== existingUser.email && currentUsers.some(u => u.email === email && u.uid !== uid)) {
     return { success: false, message: "El nuevo email ya está en uso por otro usuario." };
   }
   
-  const updatedUser = { ...existingUser, ...restData, updatedAt: new Date().toISOString() };
+  const updatedUser = { 
+    ...existingUser, 
+    ...restData,
+    role: (existingUser.email === SUPER_ADMIN_EMAIL) ? 'admin' : (role || existingUser.role), // Keep superadmin role, else update
+    email: (existingUser.email === SUPER_ADMIN_EMAIL) ? SUPER_ADMIN_EMAIL : (email || existingUser.email), // Keep superadmin email
+    updatedAt: new Date().toISOString() 
+  };
   
-  if (email && email !== existingUser.email) {
+  // If email is changing for a non-superadmin user
+  if (email && email !== existingUser.email && existingUser.email !== SUPER_ADMIN_EMAIL) {
     const oldEmail = existingUser.email;
     const currentPasswords = await getMockPasswords();
     if (currentPasswords[oldEmail]) {
-        await setMockPassword(email, currentPasswords[oldEmail]); // Use await
-        await deleteMockPassword(oldEmail); // Use await
+        await setMockPassword(email, currentPasswords[oldEmail]); 
+        await deleteMockPassword(oldEmail); 
     }
     updatedUser.email = email;
   }
 
-  if (password && password.trim() !== "") { // Ensure password is not empty if provided
-    await setMockPassword(updatedUser.email, password); // Use await
+
+  if (password && password.trim() !== "") { 
+    await setMockPassword(updatedUser.email, password); 
   }
   
   currentUsers[userIndex] = updatedUser;
-  await updateAllMockUsers(currentUsers); // Use await
+  await updateAllMockUsers(currentUsers); 
   
   return { success: true, message: "Usuario actualizado exitosamente.", user: JSON.parse(JSON.stringify(updatedUser)) };
 }
@@ -106,15 +126,14 @@ export async function deleteUser(uid: string): Promise<{ success: boolean; messa
     return { success: false, message: "Usuario no encontrado." };
   }
 
-  // Prevent deletion of a specific user, e.g., the main admin
-  if (currentUsers[userIndex].email === "jesus@mobyland.com.ar") {
-    return { success: false, message: "No se puede eliminar al administrador principal." };
+  if (currentUsers[userIndex].email === SUPER_ADMIN_EMAIL) {
+    return { success: false, message: "No se puede eliminar al super administrador." };
   }
 
   const deletedUserEmail = currentUsers[userIndex].email;
   currentUsers.splice(userIndex, 1);
-  await updateAllMockUsers(currentUsers); // Use await
-  await deleteMockPassword(deletedUserEmail); // Use await
+  await updateAllMockUsers(currentUsers); 
+  await deleteMockPassword(deletedUserEmail); 
 
   return { success: true, message: "Usuario eliminado exitosamente." };
 }
@@ -128,9 +147,13 @@ export async function updateUserStatus(uid: string, status: UserStatus): Promise
     return { success: false, message: "Usuario no encontrado." };
   }
 
+  if (currentUsers[userIndex].email === SUPER_ADMIN_EMAIL && status !== 'active') {
+    return { success: false, message: "No se puede cambiar el estado del super administrador." };
+  }
+
   currentUsers[userIndex].status = status;
   currentUsers[userIndex].updatedAt = new Date().toISOString();
-  await updateAllMockUsers(currentUsers); // Use await
+  await updateAllMockUsers(currentUsers); 
 
   const message = status === 'active' ? 'Usuario aprobado exitosamente.' :
                   status === 'denied' ? 'Usuario denegado exitosamente.' :

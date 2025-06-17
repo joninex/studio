@@ -65,7 +65,7 @@ const navItems: NavItem[] = [
     ],
   },
   { href: "/users", label: "Usuarios", icon: Users, adminOnly: true },
-  { href: "/settings", label: "Configuración", icon: Settings, adminOnly: true },
+  { href: "/settings", label: "Configuración", icon: Settings, adminOnly: false }, // Changed adminOnly to false
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -125,7 +125,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <Link href={item.href}>
             <SidebarMenuButton isActive={isActive} asChild={!isSubMenu} className={isSubMenu ? 'text-sm' : ''}>
               {!isSubMenu ? (
-                <div className="flex items-center gap-2"> 
+                 <div className="flex items-center gap-2 w-full"> {/* Ensure div takes full width for flex to work */}
                   <Icon />
                   <span>{item.label}</span>
                 </div>
