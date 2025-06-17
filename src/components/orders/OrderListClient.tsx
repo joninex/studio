@@ -24,6 +24,8 @@ interface OrderListClientProps {
   initialFilters: { client?: string, orderNumber?: string, imei?: string, status?: string };
 }
 
+const ALL_STATUSES_VALUE = "__ALL__"; // Special value for "All Statuses" option
+
 export function OrderListClient({ initialOrders, initialFilters }: OrderListClientProps) {
   const [orders, setOrders] = useState<Order[]>(initialOrders);
   const [isLoading, setIsLoading] = useState(false);
@@ -53,7 +55,6 @@ export function OrderListClient({ initialOrders, initialFilters }: OrderListClie
   }, []);
   
   useEffect(() => {
-    // Sync URL search params to component state on initial load or if URL changes externally
     const params = new URLSearchParams(searchParams.toString());
     setFilters({
       client: params.get('client') || '',
@@ -61,13 +62,15 @@ export function OrderListClient({ initialOrders, initialFilters }: OrderListClie
       imei: params.get('imei') || '',
       status: params.get('status') || '',
     });
-    // Removed direct fetchOrders call here to avoid double fetching on mount.
-    // Initial data is passed via props. Subsequent fetches are driven by filter changes.
   }, [searchParams]);
 
 
   const handleFilterChange = (filterName: keyof typeof filters, value: string) => {
-    setFilters(prev => ({ ...prev, [filterName]: value }));
+    if (filterName === 'status' && value === ALL_STATUSES_VALUE) {
+      setFilters(prev => ({ ...prev, status: "" }));
+    } else {
+      setFilters(prev => ({ ...prev, [filterName]: value }));
+    }
   };
 
   const applyFilters = () => {
@@ -78,7 +81,7 @@ export function OrderListClient({ initialOrders, initialFilters }: OrderListClie
       if (filters.imei) params.set('imei', filters.imei);
       if (filters.status) params.set('status', filters.status);
       router.push(`${pathname}?${params.toString()}`);
-      fetchOrders(filters); // Fetch orders when filters are applied
+      fetchOrders(filters); 
     });
   };
 
@@ -86,7 +89,7 @@ export function OrderListClient({ initialOrders, initialFilters }: OrderListClie
     startTransition(() => {
       setFilters({ client: "", orderNumber: "", imei: "", status: "" });
       router.push(pathname);
-      fetchOrders({ client: "", orderNumber: "", imei: "", status: "" }); // Fetch with cleared filters
+      fetchOrders({ client: "", orderNumber: "", imei: "", status: "" }); 
     });
   };
 
@@ -94,12 +97,12 @@ export function OrderListClient({ initialOrders, initialFilters }: OrderListClie
     switch (status) {
       case "Reparado":
       case "Listo para Retirar":
-        return "default"; // Primary color (e.g. green if themed)
+        return "default"; 
       case "Entregado":
         return "secondary";
       case "En diagnóstico":
       case "Esperando pieza":
-        return "outline"; // Accent color (e.g. orange)
+        return "outline"; 
       case "Abandonado":
         return "destructive";
       default:
@@ -128,12 +131,12 @@ export function OrderListClient({ initialOrders, initialFilters }: OrderListClie
             value={filters.imei}
             onChange={(e) => handleFilterChange("imei", e.target.value)}
           />
-          <Select value={filters.status} onValueChange={(value) => handleFilterChange("status", value)}>
+          <Select value={filters.status === "" ? ALL_STATUSES_VALUE : filters.status} onValueChange={(value) => handleFilterChange("status", value)}>
             <SelectTrigger>
               <SelectValue placeholder="Estado" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Todos los Estados</SelectItem>
+              <SelectItem value={ALL_STATUSES_VALUE}>Todos los Estados</SelectItem>
               {ORDER_STATUSES.map(status => (
                 <SelectItem key={status} value={status}>{status}</SelectItem>
               ))}
