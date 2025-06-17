@@ -3,6 +3,7 @@
 
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button"; // Added import
 import { useAuth } from "@/providers/AuthProvider";
 import { BarChart, FileText, Users, Wrench } from "lucide-react";
 import Link from "next/link";
@@ -65,7 +66,7 @@ export default function DashboardPage() {
           <CardContent>
             {/* Placeholder for activity feed or chart */}
             <div className="flex flex-col items-center justify-center h-48 border-2 border-dashed rounded-md">
-                <Image src="https://placehold.co/300x150.png?text=Gráfico+de+Actividad" alt="Gráfico de Actividad" width={300} height={150} data-ai-hint="activity chart" className="opacity-50"/>
+                <Image src="https://placehold.co/300x150.png" alt="Gráfico de Actividad" width={300} height={150} data-ai-hint="activity chart" className="opacity-50"/>
                 <p className="text-muted-foreground mt-2">Próximamente: Gráficos de actividad.</p>
             </div>
           </CardContent>
