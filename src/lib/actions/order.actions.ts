@@ -40,6 +40,7 @@ let mockOrders: Order[] = [
     privacyPolicyAccepted: true,    
     status: "En Diagnóstico", previousOrderId: "",
     entryDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+    promisedDeliveryDate: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString(), // Promised tomorrow
     commentsHistory: [
       { id: 'cmt-1', userId: 'tech123', userName: 'Carlos Técnico', description: 'Se confirma pantalla rota, posible daño en flex de display.', timestamp: new Date(Date.now() - 1.5 * 24 * 60 * 60 * 1000).toISOString()}
     ],
@@ -87,6 +88,7 @@ let mockOrders: Order[] = [
     dataLossDisclaimerAccepted: true, privacyPolicyAccepted: true,    
     status: "En Reparación", previousOrderId: "",
     entryDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+    promisedDeliveryDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), // Promised yesterday (already late)
     commentsHistory: [
       { id: 'cmt-2a', userId: 'tech123', userName: 'Carlos Técnico', description: 'Diagnóstico: pin de carga defectuoso. Cliente aprueba presupuesto.', timestamp: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString()},
       { id: 'cmt-2b', userId: 'tech123', userName: 'Carlos Técnico', description: 'Repuesto solicitado. En espera.', timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()},
@@ -109,6 +111,46 @@ let mockOrders: Order[] = [
     orderSnapshottedPrivacyPolicy: DEFAULT_STORE_SETTINGS.privacyPolicyText,
     createdByUserId: "recepcionista123", lastUpdatedBy: "tech123",
     updatedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+    hasWarranty: false,
+  },
+  {
+    id: "ORD003", orderNumber: "ORD003",
+    clientId: "CLI003", 
+    branchInfo: "Taller Principal (Admin)",
+    deviceBrand: "Xiaomi", deviceModel: "Redmi Note 10", deviceIMEI: "543210987654321", declaredFault: "No enciende", 
+    unlockPatternInfo: "Sin patrón", 
+    checklist: CHECKLIST_ITEMS.reduce((acc, item) => { 
+        (acc as any)[item.id] = (item.type === 'boolean' && item.id !== 'enciende') ? 'no' : ((item.type === 'enum_saleConHuella') ? 'no_tiene' : '');
+        if(item.id === 'enciende') (acc as any)[item.id] = 'no';
+        return acc;
+    }, {} as Checklist),
+    damageRisk: "Equipo sin signos de daño externo.", pantalla_parcial: false, equipo_sin_acceso: true, perdida_informacion: true,
+    costSparePart: 0, costLabor: 0, costPending: 0,
+    classification: null, observations: "Cliente no recuerda qué pasó, simplemente se apagó.",
+    customerAccepted: true, customerSignatureName: "Carlos Gomez",
+    dataLossDisclaimerAccepted: true, 
+    privacyPolicyAccepted: true,    
+    status: "Recibido", previousOrderId: "",
+    entryDate: new Date(Date.now() - 10 * 60 * 1000).toISOString(), // Entered 10 minutes ago
+    promisedDeliveryDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(), // Promised in 3 days
+    commentsHistory: [],
+    orderCompanyName: DEFAULT_STORE_SETTINGS.companyName,
+    orderCompanyLogoUrl: DEFAULT_STORE_SETTINGS.companyLogoUrl,
+    orderCompanyCuit: DEFAULT_STORE_SETTINGS.companyCuit,
+    orderCompanyAddress: DEFAULT_STORE_SETTINGS.companyAddress,
+    orderCompanyContactDetails: DEFAULT_STORE_SETTINGS.companyContactDetails,
+    orderWarrantyConditions: DEFAULT_STORE_SETTINGS.warrantyConditions,
+    orderSnapshottedUnlockDisclaimer: DEFAULT_STORE_SETTINGS.unlockDisclaimerText,
+    orderSnapshottedAbandonmentPolicyText: DEFAULT_STORE_SETTINGS.abandonmentPolicyText,
+    orderSnapshottedDataLossPolicyText: DEFAULT_STORE_SETTINGS.dataLossPolicyText,
+    orderSnapshottedUntestedDevicePolicyText: DEFAULT_STORE_SETTINGS.untestedDevicePolicyText,
+    orderSnapshottedBudgetVariationText: DEFAULT_STORE_SETTINGS.budgetVariationText,
+    orderSnapshottedHighRiskDeviceText: DEFAULT_STORE_SETTINGS.highRiskDeviceText,
+    orderSnapshottedPartialDamageDisplayText: DEFAULT_STORE_SETTINGS.partialDamageDisplayText,
+    orderSnapshottedWarrantyVoidConditionsText: DEFAULT_STORE_SETTINGS.warrantyVoidConditionsText,
+    orderSnapshottedPrivacyPolicy: DEFAULT_STORE_SETTINGS.privacyPolicyText,
+    createdByUserId: "admin123", lastUpdatedBy: "admin123",
+    updatedAt: new Date(Date.now() - 10 * 60 * 1000).toISOString(), createdAt: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
     hasWarranty: false,
   },
 ];
@@ -144,6 +186,7 @@ export async function createOrder(
     unlockPatternInfo: data.unlockPatternInfo, 
     previousOrderId: data.previousOrderId || "",
     entryDate: new Date().toISOString(),
+    promisedDeliveryDate: data.promisedDeliveryDate ? new Date(data.promisedDeliveryDate).toISOString() : null,
     commentsHistory: [],
     status: data.status || "Recibido", 
     
@@ -339,7 +382,8 @@ export async function updateOrder(
     ...currentOrder,
     ...validatedFields.data, 
     // Ensure unlockPatternInfo is always a string, falling back to current if not provided in validatedFields.data
-    unlockPatternInfo: validatedFields.data.unlockPatternInfo ?? currentOrder.unlockPatternInfo, 
+    unlockPatternInfo: validatedFields.data.unlockPatternInfo ?? currentOrder.unlockPatternInfo,
+    promisedDeliveryDate: validatedFields.data.promisedDeliveryDate ? new Date(validatedFields.data.promisedDeliveryDate).toISOString() : currentOrder.promisedDeliveryDate,
     lastUpdatedBy: userId, 
     updatedAt: new Date().toISOString(),
   };

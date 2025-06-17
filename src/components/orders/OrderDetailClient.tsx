@@ -5,7 +5,7 @@ import type { Order, User, Comment as OrderComment, OrderStatus, StoreSettings, 
 import { useState, useTransition, ChangeEvent, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { format, differenceInDays } from "date-fns";
+import { format, differenceInDays, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -18,7 +18,7 @@ import { useAuth } from "@/providers/AuthProvider";
 import { addOrderComment, updateOrderStatus, updateOrderCosts } from "@/lib/actions/order.actions";
 import { getClientById } from "@/lib/actions/client.actions"; 
 import { CHECKLIST_ITEMS, ORDER_STATUSES, SALE_CON_HUELLA_OPTIONS } from "@/lib/constants";
-import { AlertCircle, Bot, CalendarDays, DollarSign, Edit, FileText, Info, ListChecks, MessageSquare, Printer, User as UserIcon, Wrench, PackageCheck, Smartphone, LinkIcon, QrCode, GripVertical, FileLock2, LockKeyhole } from "lucide-react";
+import { AlertCircle, Bot, CalendarDays, DollarSign, Edit, FileText, Info, ListChecks, MessageSquare, Printer, User as UserIcon, Wrench, PackageCheck, Smartphone, LinkIcon, QrCode, GripVertical, FileLock2, LockKeyhole, ClockIcon } from "lucide-react";
 import { Input } from "../ui/input";
 import { LoadingSpinner } from "../shared/LoadingSpinner";
 
@@ -138,7 +138,7 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
   };
 
   const daysSinceReady = order.readyForPickupDate && order.status !== "Entregado" && order.status !== "Sin Reparación" && order.status !== "Presupuesto Rechazado"
-    ? differenceInDays(new Date(), new Date(order.readyForPickupDate))
+    ? differenceInDays(new Date(), parseISO(order.readyForPickupDate as string))
     : null;
   
   let abandonmentWarning = "";
@@ -236,7 +236,8 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
                 </div>
                 <div className="text-right">
                     <h1 className="text-xl font-bold print-title mb-1">{getPrintTitle()}</h1>
-                    <p className="print-company-info text-xs">Fecha Ingreso: {format(new Date(order.entryDate), "dd/MM/yyyy HH:mm", { locale: es })}</p>
+                    <p className="print-company-info text-xs">Fecha Ingreso: {format(parseISO(order.entryDate as string), "dd/MM/yyyy HH:mm", { locale: es })}</p>
+                    {order.promisedDeliveryDate && <p className="print-company-info text-xs">Entrega Estimada: {format(parseISO(order.promisedDeliveryDate as string), "dd/MM/yyyy HH:mm", { locale: es })}</p>}
                     <p className="print-company-info text-xs">Estado Actual: {order.status}</p>
                      <Image 
                         src="https://placehold.co/80x80.png?text=QR" 
@@ -278,7 +279,7 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
                     <div className="print-pattern-grid ml-2">
                         {Array(9).fill(0).map((_, i) => <div key={i}></div>)}
                     </div>
-                    {order.unlockPatternInfo && <span className="text-xs italic ml-1">(Información sensible)</span>}
+                    {order.unlockPatternInfo && <span className="text-xs italic ml-1">(Información sensible para uso interno)</span>}
                 </div>
                 <p className="col-span-2"><strong>Falla Declarada:</strong> {order.declaredFault}</p>
                 <p className="col-span-2"><strong>Daños Preexistentes/Observaciones de Ingreso (Riesgo de Rotura):</strong> {order.damageRisk || "Sin observaciones específicas de daños."}</p>
@@ -310,7 +311,7 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
                  <div className="space-y-1.5 text-sm">
                     {order.commentsHistory.map((comment, index) => (
                     <div key={comment.id || index} className="print-comment-item p-1.5 border-b border-gray-200">
-                        <p className="font-semibold">{comment.userName || `Técnico ID: ${comment.userId}`} <span className="text-xs text-muted-foreground">- {format(new Date(comment.timestamp), "dd/MM/yy HH:mm", { locale: es })}</span></p>
+                        <p className="font-semibold">{comment.userName || `Técnico ID: ${comment.userId}`} <span className="text-xs text-muted-foreground">- {format(parseISO(comment.timestamp as string), "dd/MM/yy HH:mm", { locale: es })}</span></p>
                         <p className="whitespace-pre-line text-xs">{comment.description}</p>
                     </div>
                     ))}
@@ -334,12 +335,12 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
         )}
         
         {/* Extended Warranty Details */}
-        {showWarrantyDetailsForPrint && (
+        {showWarrantyDetailsForPrint && order.warrantyStartDate && order.warrantyEndDate && (
             <div className="print-section card-print">
                 <h3 className="print-section-title"><PackageCheck className="inline-block mr-2 h-4 w-4"/>Detalles de Garantía Extendida</h3>
                 <div className="text-sm space-y-0.5">
                     <p><strong>Tipo:</strong> {order.warrantyType === '30d' ? '30 Días' : order.warrantyType === '60d' ? '60 Días' : order.warrantyType === '90d' ? '90 Días' : order.warrantyType === 'custom' ? `Personalizada` : 'N/A'}</p>
-                    {order.warrantyStartDate && <p><strong>Periodo:</strong> {format(new Date(order.warrantyStartDate), "dd/MM/yyyy", { locale: es })} - {order.warrantyEndDate ? format(new Date(order.warrantyEndDate), "dd/MM/yyyy", { locale: es }) : 'N/A'}</p>}
+                    {order.warrantyStartDate && <p><strong>Periodo:</strong> {format(parseISO(order.warrantyStartDate as string), "dd/MM/yyyy", { locale: es })} - {order.warrantyEndDate ? format(parseISO(order.warrantyEndDate as string), "dd/MM/yyyy", { locale: es }) : 'N/A'}</p>}
                     {order.warrantyCoveredItem && <p><strong>Pieza/Procedimiento Cubierto:</strong> {order.warrantyCoveredItem}</p>}
                     {order.warrantyNotes && <p><strong>Notas de Garantía Extendida:</strong> {order.warrantyNotes}</p>}
                     {order.orderWarrantyConditions && <p className="text-xs mt-1"><strong>Condiciones Generales de Garantía del Taller:</strong> {order.orderWarrantyConditions}</p>}
@@ -425,7 +426,7 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
               Orden de Servicio: {order.orderNumber}
             </CardTitle>
             <CardDescription>
-              Fecha de Ingreso: {format(new Date(order.entryDate), "dd MMM yyyy, HH:mm", { locale: es })}
+              Fecha de Ingreso: {format(parseISO(order.entryDate as string), "dd MMM yyyy, HH:mm", { locale: es })}
             </CardDescription>
              <div className="mt-2 flex items-center gap-2">
                 <Badge variant={getStatusBadgeVariant(order.status)} className="text-sm px-3 py-1">{order.status}</Badge>
@@ -528,7 +529,7 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
                  <div className="space-y-4 max-h-60 overflow-y-auto pr-2 no-print-scroll">
                     {order.commentsHistory.map((comment, index) => (
                     <div key={comment.id || index} className="text-sm p-3 bg-muted/30 rounded-md border">
-                        <p className="font-semibold">{comment.userName || `Usuario ID: ${comment.userId}`} <span className="text-xs text-muted-foreground">- {format(new Date(comment.timestamp), "dd MMM yyyy, HH:mm", { locale: es })}</span></p>
+                        <p className="font-semibold">{comment.userName || `Usuario ID: ${comment.userId}`} <span className="text-xs text-muted-foreground">- {format(parseISO(comment.timestamp as string), "dd MMM yyyy, HH:mm", { locale: es })}</span></p>
                         <p className="whitespace-pre-line">{comment.description}</p>
                     </div>
                     ))}
@@ -587,8 +588,8 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
                     <h3 className="text-lg font-semibold mb-2 flex items-center gap-2"><PackageCheck className="h-5 w-5 text-primary"/>Detalles de Garantía Extendida</h3>
                     <div className="text-sm space-y-1">
                         <p><strong>Tipo:</strong> {order.warrantyType === '30d' ? '30 Días' : order.warrantyType === '60d' ? '60 Días' : order.warrantyType === '90d' ? '90 Días' : order.warrantyType === 'custom' ? 'Personalizada' : 'N/A'}</p>
-                        {order.warrantyStartDate && <p><strong>Inicio:</strong> {format(new Date(order.warrantyStartDate), "dd MMM yyyy", { locale: es })}</p>}
-                        {order.warrantyEndDate && <p><strong>Fin:</strong> {format(new Date(order.warrantyEndDate), "dd MMM yyyy", { locale: es })}</p>}
+                        {order.warrantyStartDate && <p><strong>Inicio:</strong> {format(parseISO(order.warrantyStartDate as string), "dd MMM yyyy", { locale: es })}</p>}
+                        {order.warrantyEndDate && <p><strong>Fin:</strong> {format(parseISO(order.warrantyEndDate as string), "dd MMM yyyy", { locale: es })}</p>}
                         {order.warrantyCoveredItem && <p><strong>Pieza/Procedimiento Cubierto:</strong> {order.warrantyCoveredItem}</p>}
                         {order.warrantyNotes && <p><strong>Notas de Garantía Extendida:</strong> {order.warrantyNotes}</p>}
                         {order.orderWarrantyConditions && <p className="text-xs mt-1"><strong>Condiciones Generales de Garantía (Taller):</strong> {order.orderWarrantyConditions}</p>}
@@ -603,9 +604,10 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
           <div>
             <h3 className="text-lg font-semibold mb-2 flex items-center gap-2"><CalendarDays className="h-5 w-5 text-primary"/>Seguimiento y Fechas</h3>
             <div className="text-sm space-y-1">
-                <p><strong>Última Actualización:</strong> {format(new Date(order.updatedAt), "dd MMM yyyy, HH:mm", { locale: es })} {user?.uid === order.lastUpdatedBy ? `por ${user.name}` : ``}</p>
-                {order.readyForPickupDate && <p><strong>Listo para Retirar:</strong> {format(new Date(order.readyForPickupDate), "dd MMM yyyy, HH:mm", { locale: es })}</p>}
-                {order.deliveryDate && <p><strong>Entregado:</strong> {format(new Date(order.deliveryDate), "dd MMM yyyy, HH:mm", { locale: es })}</p>}
+                <p><strong>Última Actualización:</strong> {format(parseISO(order.updatedAt as string), "dd MMM yyyy, HH:mm", { locale: es })} {user?.uid === order.lastUpdatedBy ? `por ${user.name}` : ``}</p>
+                {order.promisedDeliveryDate && <p><strong>Fecha Prometida:</strong> {format(parseISO(order.promisedDeliveryDate as string), "dd MMM yyyy, HH:mm", { locale: es })}</p>}
+                {order.readyForPickupDate && <p><strong>Listo para Retirar:</strong> {format(parseISO(order.readyForPickupDate as string), "dd MMM yyyy, HH:mm", { locale: es })}</p>}
+                {order.deliveryDate && <p><strong>Entregado:</strong> {format(parseISO(order.deliveryDate as string), "dd MMM yyyy, HH:mm", { locale: es })}</p>}
             </div>
           </div>
         </CardContent>
@@ -636,7 +638,7 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
           <div className="space-y-4 mb-4 max-h-60 overflow-y-auto pr-2 no-print-scroll">
             {order.commentsHistory.length > 0 ? order.commentsHistory.map((comment, index) => (
               <div key={comment.id || index} className="text-sm p-3 bg-muted/30 rounded-md border">
-                <p className="font-semibold">{comment.userName || `Usuario ID: ${comment.userId}`} <span className="text-xs text-muted-foreground">- {format(new Date(comment.timestamp), "dd MMM yyyy, HH:mm", { locale: es })}</span></p>
+                <p className="font-semibold">{comment.userName || `Usuario ID: ${comment.userId}`} <span className="text-xs text-muted-foreground">- {format(parseISO(comment.timestamp as string), "dd MMM yyyy, HH:mm", { locale: es })}</span></p>
                 <p className="whitespace-pre-line">{comment.description}</p>
               </div>
             )) : <p className="text-sm text-muted-foreground">Sin comentarios técnicos.</p>}

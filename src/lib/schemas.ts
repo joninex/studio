@@ -67,7 +67,7 @@ export const ChecklistSchema = z.object(checklistShapeObject);
 
 const validOrderStatuses = ORDER_STATUSES.filter(status => status !== "") as [OrderStatus, ...OrderStatus[]];
 const validClassificationOptions = CLASSIFICATION_OPTIONS.filter(opt => opt !== null) as [Classification, ...Classification[]];
-const validWarrantyTypes = WARRANTY_TYPES.filter(type => type !== null) as [WarrantyType, ...WarrantyType[]];
+const validWarrantyTypes = WARRANTY_TYPES.filter(type => type !== null && type !== "") as [WarrantyType, ...WarrantyType[]];
 
 
 export const OrderSchema = z.object({
@@ -84,6 +84,7 @@ export const OrderSchema = z.object({
   equipo_sin_acceso: z.boolean().optional().default(false),
   perdida_informacion: z.boolean().optional().default(false),
   previousOrderId: z.string().optional().or(z.literal('')),
+  promisedDeliveryDate: z.string().datetime({ message: "Formato de fecha y hora inválido." }).nullable().optional(),
   costSparePart: z.preprocess(
     (val) => (val === "" || val === null || val === undefined ? 0 : Number(val)),
     z.number({ invalid_type_error: "Debe ser un número" }).nonnegative("Costo debe ser no negativo.")

@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useState, useTransition, useEffect } from "react";
 import type { z } from "zod";
-import { format, addDays } from "date-fns";
+import { format, addDays, parseISO } from "date-fns";
 
 import { OrderSchema, type OrderFormData } from "@/lib/schemas";
 import { createOrder, getRepairSuggestions, updateOrder, getOrderById } from "@/lib/actions/order.actions";
@@ -29,7 +29,7 @@ import {
   CHECKLIST_ITEMS, CLASSIFICATION_OPTIONS, ORDER_STATUSES, 
   YES_NO_OPTIONS, DEFAULT_STORE_SETTINGS, WARRANTY_TYPE_OPTIONS, SALE_CON_HUELLA_OPTIONS
 } from "@/lib/constants";
-import { AlertCircle, Bot, CalendarIcon, DollarSign, Info, ListChecks, LucideSparkles, User, Wrench, LinkIcon, Building, UserSquare, ShieldCheck, FileLock2, FileTextIcon, LockKeyhole, ClipboardSignature } from "lucide-react";
+import { AlertCircle, Bot, CalendarIcon, DollarSign, Info, ListChecks, LucideSparkles, User, Wrench, LinkIcon, Building, UserSquare, ShieldCheck, FileLock2, FileTextIcon, LockKeyhole, ClipboardSignature, ClockIcon } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import { cn } from "@/lib/utils";
@@ -39,10 +39,29 @@ interface OrderFormProps {
 }
 
 const NONE_CLASSIFICATION_VALUE = "__NONE_CLASSIFICATION_VALUE__";
-const NONE_WARRANTY_TYPE_VALUE = ""; // This is fine for Select value, but not SelectItem
+const NONE_WARRANTY_TYPE_VALUE = "__NONE_WARRANTY_VALUE__"; // Changed to be non-empty string
 
 const validOrderStatusOptions = ORDER_STATUSES.filter(status => status !== "") as OrderStatus[];
-const validClassificationOptions = CLASSIFICATION_OPTIONS.filter(opt => opt !== "") as Classification[];
+const validClassificationOptions = CLASSIFICATION_OPTIONS.filter(opt => opt !== null) as Classification[];
+
+
+// Helper to format date-time string for datetime-local input
+const formatDateTimeForInput = (isoDateString: string | null | undefined): string => {
+  if (!isoDateString) return "";
+  try {
+    const date = new Date(isoDateString);
+    if (isNaN(date.getTime())) return "";
+    // Format: YYYY-MM-DDTHH:mm
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  } catch (e) {
+    return "";
+  }
+};
 
 
 export function OrderForm({ orderId }: OrderFormProps) {
@@ -77,18 +96,18 @@ export function OrderForm({ orderId }: OrderFormProps) {
       clientId: "",
       branchInfo: DEFAULT_STORE_SETTINGS.branchInfo || "Sucursal Principal",
       deviceBrand: "", deviceModel: "", deviceIMEI: "", declaredFault: "",
-      unlockPatternInfo: "", // Now a free text field
+      unlockPatternInfo: "", 
       checklist: defaultChecklistValues,
       damageRisk: "",
       pantalla_parcial: false,
       equipo_sin_acceso: false,
       perdida_informacion: false,
       previousOrderId: "",
+      promisedDeliveryDate: null,
       costSparePart: 0, costLabor: 0, costPending: 0,
       classification: undefined, observations: "",
       customerAccepted: false, 
       customerSignatureName: "",
-      // Snapshotted texts will be filled from store settings on load or from existing order
       orderSnapshottedUnlockDisclaimer: "",
       orderSnapshottedAbandonmentPolicyText: "",
       orderSnapshottedDataLossPolicyText: "",
@@ -99,12 +118,11 @@ export function OrderForm({ orderId }: OrderFormProps) {
       orderSnapshottedWarrantyVoidConditionsText: "",
       orderSnapshottedPrivacyPolicy: "",
       orderWarrantyConditions: "",
-      // Acceptance flags
       dataLossDisclaimerAccepted: false,
       privacyPolicyAccepted: false,
       status: "Recibido",
       hasWarranty: false,
-      warrantyType: null, // Use null for no selection initially
+      warrantyType: null, 
       warrantyStartDate: null,
       warrantyEndDate: null,
       warrantyCoveredItem: "",
@@ -146,6 +164,7 @@ export function OrderForm({ orderId }: OrderFormProps) {
                 ...defaultChecklistValues, 
                 ...(order.checklist || {}), 
               },
+              promisedDeliveryDate: order.promisedDeliveryDate ? formatDateTimeForInput(order.promisedDeliveryDate as string) : null,
               clientId: order.clientId,
               unlockPatternInfo: order.unlockPatternInfo || "",
               previousOrderId: order.previousOrderId || "",
@@ -157,7 +176,6 @@ export function OrderForm({ orderId }: OrderFormProps) {
               branchInfo: order.branchInfo,
               customerAccepted: order.customerAccepted || false,
               customerSignatureName: order.customerSignatureName || "",
-              // Reset snapshotted texts from the loaded order
               orderSnapshottedUnlockDisclaimer: order.orderSnapshottedUnlockDisclaimer || fetchedStoreSettings.unlockDisclaimerText || "",
               orderSnapshottedAbandonmentPolicyText: order.orderSnapshottedAbandonmentPolicyText || fetchedStoreSettings.abandonmentPolicyText || "",
               orderSnapshottedDataLossPolicyText: order.orderSnapshottedDataLossPolicyText || fetchedStoreSettings.dataLossPolicyText || "",
@@ -168,13 +186,12 @@ export function OrderForm({ orderId }: OrderFormProps) {
               orderSnapshottedWarrantyVoidConditionsText: order.orderSnapshottedWarrantyVoidConditionsText || fetchedStoreSettings.warrantyVoidConditionsText || "",
               orderSnapshottedPrivacyPolicy: order.orderSnapshottedPrivacyPolicy || fetchedStoreSettings.privacyPolicyText || "",
               orderWarrantyConditions: order.orderWarrantyConditions || fetchedStoreSettings.warrantyConditions || "",
-              // Acceptance flags
               dataLossDisclaimerAccepted: order.dataLossDisclaimerAccepted || false,
               privacyPolicyAccepted: order.privacyPolicyAccepted || false,
               hasWarranty: order.hasWarranty || false,
               warrantyType: order.warrantyType || null,
-              warrantyStartDate: order.warrantyStartDate ? format(new Date(order.warrantyStartDate), "yyyy-MM-dd") : null,
-              warrantyEndDate: order.warrantyEndDate ? format(new Date(order.warrantyEndDate), "yyyy-MM-dd") : null,
+              warrantyStartDate: order.warrantyStartDate ? format(parseISO(order.warrantyStartDate as string), "yyyy-MM-dd") : null,
+              warrantyEndDate: order.warrantyEndDate ? format(parseISO(order.warrantyEndDate as string), "yyyy-MM-dd") : null,
               warrantyCoveredItem: order.warrantyCoveredItem || "",
               warrantyNotes: order.warrantyNotes || "",
             });
@@ -183,11 +200,12 @@ export function OrderForm({ orderId }: OrderFormProps) {
             router.push("/orders");
           }
         } catch (error) {
+          console.error("Error loading order:", error);
           toast({ variant: "destructive", title: "Error", description: "No se pudo cargar la orden." });
         } finally {
           setIsLoadingOrder(false);
         }
-      } else { // New order
+      } else { 
           form.setValue('branchInfo', fetchedStoreSettings.branchInfo || DEFAULT_STORE_SETTINGS.branchInfo || "Sucursal Principal");
           form.setValue('orderSnapshottedUnlockDisclaimer', fetchedStoreSettings.unlockDisclaimerText || "");
           form.setValue('orderSnapshottedAbandonmentPolicyText', fetchedStoreSettings.abandonmentPolicyText || "");
@@ -207,7 +225,7 @@ export function OrderForm({ orderId }: OrderFormProps) {
   useEffect(() => {
     if (hasWarrantyWatch && warrantyStartDateWatch && warrantyTypeWatch && warrantyTypeWatch !== 'custom' && warrantyTypeWatch !== NONE_WARRANTY_TYPE_VALUE) {
       try {
-        const startDate = new Date(warrantyStartDateWatch);
+        const startDate = parseISO(warrantyStartDateWatch);
         if (isNaN(startDate.getTime())) return; 
 
         let daysToAdd = 0;
@@ -246,11 +264,12 @@ export function OrderForm({ orderId }: OrderFormProps) {
 
       const submissionValues: OrderFormData = {
         ...values,
-        unlockPatternInfo: values.unlockPatternInfo, // TODO: Consider encryption before sending to server
+        promisedDeliveryDate: values.promisedDeliveryDate ? new Date(values.promisedDeliveryDate).toISOString() : null,
+        unlockPatternInfo: values.unlockPatternInfo,
         previousOrderId: values.previousOrderId?.trim() === "" ? undefined : values.previousOrderId?.trim(),
         warrantyType: values.hasWarranty ? values.warrantyType : null,
-        warrantyStartDate: values.hasWarranty && values.warrantyStartDate ? values.warrantyStartDate : null,
-        warrantyEndDate: values.hasWarranty && values.warrantyEndDate ? values.warrantyEndDate : null,
+        warrantyStartDate: values.hasWarranty && values.warrantyStartDate ? new Date(values.warrantyStartDate).toISOString() : null,
+        warrantyEndDate: values.hasWarranty && values.warrantyEndDate ? new Date(values.warrantyEndDate).toISOString() : null,
         warrantyCoveredItem: values.hasWarranty ? values.warrantyCoveredItem : "",
         warrantyNotes: values.hasWarranty ? values.warrantyNotes : "",
         status: values.status || "Recibido", 
@@ -259,7 +278,6 @@ export function OrderForm({ orderId }: OrderFormProps) {
           acc[item.id] = values.checklist[item.id] || (item.type === 'boolean' ? 'no' : (item.type === 'enum_saleConHuella' ? 'no_tiene' : ''));
           return acc;
         }, {} as Checklist),
-        // Ensure all snapshotted texts are from settings if creating, or existing if editing
         orderSnapshottedUnlockDisclaimer: orderId ? values.orderSnapshottedUnlockDisclaimer : settingsSource.unlockDisclaimerText,
         orderSnapshottedAbandonmentPolicyText: orderId ? values.orderSnapshottedAbandonmentPolicyText : settingsSource.abandonmentPolicyText,
         orderSnapshottedDataLossPolicyText: orderId ? values.orderSnapshottedDataLossPolicyText : settingsSource.dataLossPolicyText,
@@ -362,6 +380,21 @@ export function OrderForm({ orderId }: OrderFormProps) {
                     <FormLabel className="flex items-center gap-1"><LinkIcon className="h-4 w-4"/>ID Orden Anterior (Opcional)</FormLabel>
                     <FormControl><Input placeholder="Ej: ORD123" {...field} /></FormControl>
                     <FormDescription>Si esta reparación está relacionada con una orden anterior (garantía, etc.).</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="promisedDeliveryDate" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-1"><ClockIcon className="h-4 w-4"/>Fecha/Hora Prometida de Entrega (Opcional)</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="datetime-local" 
+                        {...field} 
+                        value={field.value || ""}
+                        onChange={(e) => field.onChange(e.target.value || null)}
+                      />
+                    </FormControl>
+                    <FormDescription>Establezca una fecha y hora estimada para la finalización del servicio.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )} />
@@ -545,9 +578,13 @@ export function OrderForm({ orderId }: OrderFormProps) {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Tipo de Garantía</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value || NONE_WARRANTY_TYPE_VALUE}>
+                       <Select 
+                        onValueChange={(value) => field.onChange(value === NONE_WARRANTY_TYPE_VALUE ? null : value as WarrantyType)} 
+                        value={field.value || NONE_WARRANTY_TYPE_VALUE}
+                      >
                         <FormControl><SelectTrigger><SelectValue placeholder="Seleccione tipo..." /></SelectTrigger></FormControl>
                         <SelectContent>
+                          <SelectItem value={NONE_WARRANTY_TYPE_VALUE}>Ninguna</SelectItem>
                           {WARRANTY_TYPE_OPTIONS.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
                         </SelectContent>
                       </Select>
@@ -572,7 +609,7 @@ export function OrderForm({ orderId }: OrderFormProps) {
                               )}
                             >
                               {field.value ? (
-                                format(new Date(field.value  + 'T00:00:00'), "PPP", { weekStartsOn: 1 }) 
+                                format(parseISO(field.value), "PPP", { weekStartsOn: 1 }) 
                               ) : (
                                 <span>Seleccione fecha</span>
                               )}
@@ -583,7 +620,7 @@ export function OrderForm({ orderId }: OrderFormProps) {
                         <PopoverContent className="w-auto p-0" align="start">
                           <Calendar
                             mode="single"
-                            selected={field.value ? new Date(field.value + 'T00:00:00') : undefined}
+                            selected={field.value ? parseISO(field.value) : undefined}
                             onSelect={(date) => field.onChange(date ? format(date, "yyyy-MM-dd") : null)}
                             initialFocus
                           />
@@ -611,7 +648,7 @@ export function OrderForm({ orderId }: OrderFormProps) {
                               disabled={warrantyTypeWatch !== 'custom' && warrantyTypeWatch !== null && warrantyTypeWatch !== NONE_WARRANTY_TYPE_VALUE}
                             >
                               {field.value ? (
-                                format(new Date(field.value + 'T00:00:00'), "PPP", { weekStartsOn: 1 })
+                                format(parseISO(field.value), "PPP", { weekStartsOn: 1 })
                               ) : (
                                 <span>Seleccione fecha</span>
                               )}
@@ -622,10 +659,10 @@ export function OrderForm({ orderId }: OrderFormProps) {
                         <PopoverContent className="w-auto p-0" align="start">
                           <Calendar
                             mode="single"
-                            selected={field.value ? new Date(field.value + 'T00:00:00') : undefined}
+                            selected={field.value ? parseISO(field.value) : undefined}
                             onSelect={(date) => field.onChange(date ? format(date, "yyyy-MM-dd") : null)}
                             disabled={(date) =>
-                              warrantyStartDateWatch ? date < new Date(warrantyStartDateWatch + 'T00:00:00') : false
+                              warrantyStartDateWatch ? date < parseISO(warrantyStartDateWatch) : false
                             }
                             initialFocus
                           />

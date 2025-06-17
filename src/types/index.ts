@@ -138,6 +138,7 @@ export interface Order {
   previousOrderId?: string;
 
   entryDate: Timestamp | Date | string;
+  promisedDeliveryDate?: Timestamp | Date | string | null;
   deliveryDate?: Timestamp | Date | string | null;
   readyForPickupDate?: Timestamp | Date | string | null;
 
