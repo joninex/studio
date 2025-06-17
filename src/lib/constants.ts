@@ -86,11 +86,11 @@ export const WARRANTY_TYPE_OPTIONS: Array<{ value: Exclude<WarrantyType, null | 
 
 
 export const DEFAULT_STORE_SETTINGS: StoreSettings = {
-  companyName: "JO-SERVICE (Ejemplo)",
-  companyLogoUrl: "https://placehold.co/150x70.png?text=TU+LOGO",
+  companyName: "JO-SERVICE",
+  companyLogoUrl: "https://placehold.co/150x50.png?text=Logo",
   companyCuit: "XX-XXXXXXXX-X",
-  companyAddress: "La Rioja 1799-1699, N3301 Posadas, Misiones (Ejemplo)",
-  companyContactDetails: "Tel/WhatsApp: 11 3016-5093 (Ejemplo)\nEmail: contacto@joservice.com",
+  companyAddress: "Dirección Ejemplo 123, Ciudad",
+  companyContactDetails: "Tel: (123) 456-7890\nEmail: contacto@joservice.com",
   branchInfo: "Taller Principal",
 
   warrantyConditions: "CONDICIONES GENERALES DE GARANTÍA: JO-SERVICE garantiza la reparación por noventa (90) días calendario (o el período especificado) a partir de la fecha de entrega, únicamente sobre la/s falla/s especificada/s en la presente orden y sobre el/los repuesto/s utilizado/s si los hubiere. La garantía podrá ser anulada si se detecta dolo o fraude por parte del cliente o terceros.",

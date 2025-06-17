@@ -2,16 +2,12 @@
 import { LoginForm } from "@/components/auth/LoginForm";
 import Image from "next/image";
 import Link from "next/link"; // Import Link for Register button
-// import { getSettings } from "@/lib/actions/settings.actions"; // Global settings no longer primary
-// import type { Configurations } from "@/types"; // Global settings no longer primary
 import { DEFAULT_STORE_SETTINGS } from "@/lib/constants";
 
 
 export default async function LoginPage() {
-  // Login page should use generic/default branding as user isn't known yet
-  // const settings = await getSettings(); // This would be global, not user-specific
   const companyName = DEFAULT_STORE_SETTINGS.companyName || "JO-SERVICE Tech Manager";
-  const logoUrl = DEFAULT_STORE_SETTINGS.companyLogoUrl || "https://placehold.co/150x50.png?text=JO-SERVICE";
+  const logoUrl = DEFAULT_STORE_SETTINGS.companyLogoUrl || "https://placehold.co/150x50.png?text=Logo";
 
 
   return (
@@ -23,7 +19,7 @@ export default async function LoginPage() {
             alt={`${companyName} Logo`}
             width={150} 
             height={50}
-            className="mx-auto mb-6"
+            className="mx-auto mb-6 object-contain"
             data-ai-hint="company logo"
             priority
           />

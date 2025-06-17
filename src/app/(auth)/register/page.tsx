@@ -6,7 +6,7 @@ import { DEFAULT_STORE_SETTINGS } from "@/lib/constants";
 
 export default function RegisterPage() {
   const companyName = DEFAULT_STORE_SETTINGS.companyName || "JO-SERVICE Tech Manager";
-  const logoUrl = DEFAULT_STORE_SETTINGS.companyLogoUrl || "https://placehold.co/150x50.png?text=JO-SERVICE";
+  const logoUrl = DEFAULT_STORE_SETTINGS.companyLogoUrl || "https://placehold.co/150x50.png?text=Logo";
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
@@ -17,7 +17,7 @@ export default function RegisterPage() {
             alt={`${companyName} Logo`}
             width={150} 
             height={50}
-            className="mx-auto mb-6"
+            className="mx-auto mb-6 object-contain"
             data-ai-hint="company logo"
             priority
           />

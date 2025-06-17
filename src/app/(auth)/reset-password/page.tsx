@@ -8,11 +8,11 @@ export default function ResetPasswordPage() {
       <div className="w-full max-w-md space-y-8">
         <div className="text-center">
           <Image 
-            src="https://placehold.co/150x50.png?text=JO-SERVICE" // Placeholder for logo
-            alt="JO-SERVICE Logo" 
+            src="https://placehold.co/150x50.png?text=Logo" 
+            alt="Company Logo" 
             width={150} 
             height={50}
-            className="mx-auto mb-6"
+            className="mx-auto mb-6 object-contain"
             data-ai-hint="company logo"
           />
           <h1 className="font-headline text-3xl font-bold tracking-tight text-primary">
