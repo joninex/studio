@@ -4,7 +4,7 @@ import { OrderDetailClient } from "@/components/orders/OrderDetailClient";
 import { getOrderById } from "@/lib/actions/order.actions";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { ArrowLeft, Edit, Printer } from "lucide-react";
+import { ArrowLeft, Edit, Printer, Eye } from "lucide-react";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
@@ -72,7 +72,3 @@ export default async function OrderDetailPage({
     </div>
   );
 }
-
-// Add Eye icon to imports in OrderDetailClient if needed, or lucide-react generally
-// For PageHeader actions above
-import { Eye } from "lucide-react";
