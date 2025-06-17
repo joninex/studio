@@ -1,7 +1,7 @@
 // src/components/orders/OrderDetailClient.tsx
 "use client";
 
-import type { Order, User, Comment as OrderComment, OrderStatus, StoreSettings } from "@/types";
+import type { Order, User, Comment as OrderComment, OrderStatus, StoreSettings, Client } from "@/types";
 import { useState, useTransition, ChangeEvent, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
@@ -16,9 +16,8 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/providers/AuthProvider";
 import { addOrderComment, updateOrderStatus, updateOrderCosts } from "@/lib/actions/order.actions";
-// Removed: import { getSettings } from "@/lib/actions/settings.actions"; 
-// Settings are now snapshotted on the order.
-import { CHECKLIST_ITEMS, ORDER_STATUSES, YES_NO_OPTIONS, SPECIFIC_SECTORS_OPTIONS } from "@/lib/constants";
+import { getClientById } from "@/lib/actions/client.actions"; // Import new action
+import { CHECKLIST_ITEMS, ORDER_STATUSES } from "@/lib/constants";
 import { AlertCircle, Bot, CalendarDays, DollarSign, Edit, FileText, Info, ListChecks, MessageSquare, Printer, User as UserIcon, Wrench, PackageCheck, Smartphone, LinkIcon } from "lucide-react";
 import { Input } from "../ui/input";
 import { LoadingSpinner } from "../shared/LoadingSpinner";
@@ -33,10 +32,10 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
   const [order, setOrder] = useState<Order>(initialOrder);
+  const [clientData, setClientData] = useState<Client | null>(null);
+  const [isLoadingClient, setIsLoadingClient] = useState(true);
   const [newComment, setNewComment] = useState("");
   const [newStatus, setNewStatus] = useState<OrderStatus>(order.status);
-  // const [appSettings, setAppSettings] = useState<StoreSettings | null>(null); // Replaced by order snapshot
-  // const [isLoadingSettings, setIsLoadingSettings] = useState(true); // Replaced by order snapshot
 
 
   const [editableCosts, setEditableCosts] = useState({
@@ -46,32 +45,27 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
   });
   const [isEditingCosts, setIsEditingCosts] = useState(false);
 
-  // useEffect for settings is removed as they are snapshotted on the order.
-  // useEffect(() => {
-  //   async function fetchSettings() {
-  //     setIsLoadingSettings(true);
-  //     try {
-  //       // This would need to fetch settings for order.createdByUserId if we didn't snapshot
-  //       // For now, using snapshotted data
-  //       setAppSettings({
-  //           companyName: order.orderCompanyName,
-  //           companyLogoUrl: order.orderCompanyLogoUrl,
-  //           companyAddress: order.orderCompanyAddress,
-  //           companyCuit: order.orderCompanyCuit,
-  //           companyContactDetails: order.orderCompanyContactDetails,
-  //           warrantyConditions: order.orderWarrantyConditions,
-  //           pickupConditions: order.orderPickupConditions,
-  //           abandonmentPolicyDays60: order.orderAbandonmentPolicyDays60,
-  //       });
-  //     } catch (error) {
-  //       console.error("Failed to process settings for order detail:", error);
-  //       toast({ variant: "destructive", title: "Error", description: "No se pudieron cargar las configuraciones de la tienda para esta orden." });
-  //     } finally {
-  //       setIsLoadingSettings(false);
-  //     }
-  //   }
-  //   fetchSettings();
-  // }, [order, toast]);
+  useEffect(() => {
+    async function fetchClientDetails() {
+      if (order.clientId) {
+        setIsLoadingClient(true);
+        try {
+          const client = await getClientById(order.clientId);
+          setClientData(client);
+        } catch (error) {
+          console.error("Failed to fetch client details:", error);
+          toast({ variant: "destructive", title: "Error", description: "No se pudieron cargar los datos del cliente." });
+          setClientData(null);
+        } finally {
+          setIsLoadingClient(false);
+        }
+      } else {
+        setIsLoadingClient(false);
+        setClientData(null);
+      }
+    }
+    fetchClientDetails();
+  }, [order.clientId, toast]);
 
 
   const handleStatusChange = async () => {
@@ -109,13 +103,13 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
   const handleAddComment = async () => {
     if (!user || !newComment.trim()) return;
     startTransition(async () => {
-      const result = await addOrderComment(order.id!, newComment.trim(), user);
+      const result = await addOrderComment(order.id!, newComment.trim(), {uid: user.uid, name: user.name});
       if (result.success && result.comment) {
         setOrder(prevOrder => ({
           ...prevOrder,
           commentsHistory: [...prevOrder.commentsHistory, result.comment as OrderComment],
           updatedAt: new Date().toISOString(), 
-          lastUpdatedBy: user.name,
+          lastUpdatedBy: user.uid, // Should be user.name or a way to get it
         }));
         setNewComment("");
         toast({ title: "Éxito", description: "Comentario agregado." });
@@ -129,29 +123,29 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
     window.print();
   };
 
-  const daysSinceReady = order.readyForPickupDate && order.status !== "Entregado" && order.status !== "Abandonado"
+  const daysSinceReady = order.readyForPickupDate && order.status !== "entregado" && order.status !== "abandonado"
     ? differenceInDays(new Date(), new Date(order.readyForPickupDate))
     : null;
 
   let abandonmentWarning = "";
   if (daysSinceReady !== null && order.orderAbandonmentPolicyDays60) {
-    // Using order-specific abandonment policy days now
-    const abandonmentPolicyDays30 = order.orderAbandonmentPolicyDays60 / 2; // Assuming 30 day warning is half of 60
-    if (daysSinceReady >= order.orderAbandonmentPolicyDays60) abandonmentWarning = `Equipo considerado abandonado (${order.orderAbandonmentPolicyDays60}+ días).`;
+    const abandonmentPolicyDays30 = (order.orderAbandonmentPolicyDays60 || 60) / 2; 
+    if (daysSinceReady >= (order.orderAbandonmentPolicyDays60 || 60)) abandonmentWarning = `Equipo considerado abandonado (${order.orderAbandonmentPolicyDays60 || 60}+ días).`;
     else if (daysSinceReady >= abandonmentPolicyDays30) abandonmentWarning = `Equipo en riesgo de abandono (${Math.round(abandonmentPolicyDays30)}+ días).`;
   }
 
   const getStatusBadgeVariant = (status: OrderStatus): "default" | "secondary" | "destructive" | "outline" => {
     switch (status) {
-      case "Reparado":
-      case "Listo para Retirar":
+      case "en reparación":
+      case "listo para retirar":
         return "default";
-      case "Entregado":
+      case "entregado":
         return "secondary";
-      case "En diagnóstico":
-      case "Esperando pieza":
+      case "en diagnóstico":
+      case "esperando pieza":
+      case "ingreso":
         return "outline";
-      case "Abandonado":
+      case "abandonado":
         return "destructive";
       default:
         return "outline";
@@ -201,7 +195,6 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
           </div>
           <Button onClick={handlePrint} variant="outline" className="no-print"><Printer className="mr-2 h-4 w-4" /> Imprimir</Button>
         </CardHeader>
-        {/* Visible only on print - simplified header */}
         <div className="hidden print:block mb-4 p-6 border-b">
             <p><strong>Fecha de Ingreso:</strong> {format(new Date(order.entryDate), "dd MMMM yyyy, HH:mm", { locale: es })}</p>
             <p><strong>Estado Actual:</strong> <span className="font-semibold">{order.status}</span></p>
@@ -217,10 +210,20 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
             <Card className="bg-muted/30 card-print">
               <CardHeader><CardTitle className="text-lg flex items-center gap-2"><UserIcon className="h-5 w-5 text-primary"/>Datos del Cliente</CardTitle></CardHeader>
               <CardContent className="text-sm space-y-1">
-                <p><strong>Nombre:</strong> {order.clientName} {order.clientLastName}</p>
-                <p><strong>DNI:</strong> {order.clientDni}</p>
-                <p><strong>Teléfono:</strong> {order.clientPhone}</p>
-                <p><strong>Email:</strong> {order.clientEmail || "No provisto"}</p>
+                {isLoadingClient ? (
+                    <div className="flex items-center gap-2"><LoadingSpinner size={16}/> Cargando cliente...</div>
+                ) : clientData ? (
+                  <>
+                    <p><strong>Nombre:</strong> {clientData.name} {clientData.lastName}</p>
+                    <p><strong>DNI:</strong> {clientData.dni}</p>
+                    <p><strong>Teléfono:</strong> {clientData.phone}</p>
+                    <p><strong>Email:</strong> {clientData.email || "No provisto"}</p>
+                    {clientData.address && <p><strong>Dirección:</strong> {clientData.address}</p>}
+                    {clientData.notes && <p><strong>Notas Cliente:</strong> {clientData.notes}</p>}
+                  </>
+                ) : (
+                  <p className="text-destructive">Cliente no encontrado (ID: {order.clientId}).</p>
+                )}
               </CardContent>
             </Card>
             <Card className="bg-muted/30 card-print">
@@ -255,14 +258,19 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
 
           <div className="grid md:grid-cols-2 gap-6 card-print">
             <div className="space-y-2">
-                <h3 className="text-lg font-semibold flex items-center gap-2"><AlertCircle className="h-5 w-5 text-primary"/>Riesgos y Sectores</h3>
+                <h3 className="text-lg font-semibold flex items-center gap-2"><AlertCircle className="h-5 w-5 text-primary"/>Riesgos y Condiciones</h3>
                 <p className="text-sm"><strong>Riesgo de Rotura:</strong> {order.damageRisk || "Ninguno especificado"}</p>
-                <p className="text-sm"><strong>Sectores Específicos:</strong> {order.specificSectors.length > 0 ? order.specificSectors.join(", ") : "Ninguno"}</p>
+                <ul className="text-sm list-disc list-inside pl-1">
+                    {order.pantalla_parcial && <li>Pantalla con daño parcial</li>}
+                    {order.equipo_sin_acceso && <li>Equipo sin clave o que no enciende</li>}
+                    {order.perdida_informacion && <li>Riesgo de pérdida de información</li>}
+                    {!(order.pantalla_parcial || order.equipo_sin_acceso || order.perdida_informacion) && <li>Ninguna condición específica marcada.</li>}
+                </ul>
             </div>
              <div className="space-y-2">
                 <h3 className="text-lg font-semibold flex items-center gap-2"><Info className="h-5 w-5 text-primary"/>Otros Detalles</h3>
-                <p className="text-sm"><strong>Clasificación:</strong> {order.classification || "No clasificado"}</p>
-                <p className="text-sm"><strong>Observaciones:</strong> {order.observations || "Sin observaciones"}</p>
+                <p className="text-sm"><strong>Clasificación (Para Stock):</strong> {order.classification || "No clasificado"}</p>
+                <p className="text-sm"><strong>Observaciones Generales:</strong> {order.observations || "Sin observaciones"}</p>
                 <p className="text-sm"><strong>Aceptado por:</strong> {order.customerSignatureName} (Aceptado: {order.customerAccepted ? "Sí" : "No"})</p>
                 <p className="text-sm"><strong>Sucursal:</strong> {order.branchInfo}</p>
              </div>
@@ -313,14 +321,14 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
           <div className="card-print">
             <h3 className="text-lg font-semibold mb-2 flex items-center gap-2"><PackageCheck className="h-5 w-5 text-primary"/>Seguimiento y Fechas</h3>
             <div className="text-sm space-y-1">
-                <p><strong>Última Actualización:</strong> {format(new Date(order.updatedAt), "dd MMM yyyy, HH:mm", { locale: es })} por {order.lastUpdatedBy}</p>
+                <p><strong>Última Actualización:</strong> {format(new Date(order.updatedAt), "dd MMM yyyy, HH:mm", { locale: es })} {user?.uid === order.lastUpdatedBy ? `por ${user.name}` : `por Usuario ID: ${order.lastUpdatedBy}`}</p>
                 {order.readyForPickupDate && <p><strong>Listo para Retirar:</strong> {format(new Date(order.readyForPickupDate), "dd MMM yyyy, HH:mm", { locale: es })}</p>}
                 {order.deliveryDate && <p><strong>Entregado:</strong> {format(new Date(order.deliveryDate), "dd MMM yyyy, HH:mm", { locale: es })}</p>}
             </div>
           </div>
           <div className="hidden print:block mt-8 pt-4 border-t">
             <p className="text-sm"><strong>Firma del Cliente Aceptando Condiciones:</strong> _________________________</p>
-            <p className="text-sm mt-1"><strong>Aclaración:</strong> {order.customerSignatureName}</p>
+            <p className="text-sm mt-1"><strong>Aclaración:</strong> {order.customerSignatureName || clientData?.name + ' ' + clientData?.lastName}</p>
             { (
                 <div className="text-xs mt-4 space-y-1">
                     {order.orderWarrantyConditions && <p><strong>CONDICIONES DE GARANTÍA:</strong> {order.orderWarrantyConditions}</p>}
@@ -338,14 +346,15 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
         <CardContent className="flex flex-col sm:flex-row gap-4 items-end">
           <div className="flex-grow">
             <label htmlFor="statusSelect" className="text-sm font-medium">Nuevo Estado</label>
-            <Select value={newStatus} onValueChange={(value: OrderStatus) => setNewStatus(value)}>
+            <Select value={newStatus || ""} onValueChange={(value: OrderStatus) => setNewStatus(value)}>
               <SelectTrigger id="statusSelect"><SelectValue placeholder="Seleccionar estado" /></SelectTrigger>
               <SelectContent>
-                {ORDER_STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                <SelectItem value="" disabled>Seleccione un estado</SelectItem>
+                {ORDER_STATUSES.filter(opt => opt !== "").map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
-          <Button onClick={handleStatusChange} disabled={isPending || newStatus === order.status} className="w-full sm:w-auto">
+          <Button onClick={handleStatusChange} disabled={isPending || newStatus === order.status || !newStatus} className="w-full sm:w-auto">
             {isPending && <LoadingSpinner size={16} className="mr-2"/>}
             Actualizar Estado
           </Button>
@@ -357,9 +366,9 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
         <CardContent>
           <div className="space-y-4 mb-4 max-h-60 overflow-y-auto pr-2">
             {order.commentsHistory.length > 0 ? order.commentsHistory.map((comment, index) => (
-              <div key={index} className="text-sm p-3 bg-muted/30 rounded-md border">
-                <p className="font-semibold">{comment.user} <span className="text-xs text-muted-foreground">- {format(new Date(comment.timestamp), "dd MMM yyyy, HH:mm", { locale: es })}</span></p>
-                <p>{comment.comment}</p>
+              <div key={comment.id || index} className="text-sm p-3 bg-muted/30 rounded-md border">
+                <p className="font-semibold">{comment.userName || `Usuario ID: ${comment.userId}`} <span className="text-xs text-muted-foreground">- {format(new Date(comment.timestamp), "dd MMM yyyy, HH:mm", { locale: es })}</span></p>
+                <p>{comment.description}</p>
               </div>
             )) : <p className="text-sm text-muted-foreground">Sin comentarios técnicos.</p>}
           </div>

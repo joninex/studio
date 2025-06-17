@@ -9,7 +9,7 @@ import type { z } from "zod";
 
 import { OrderSchema, type OrderFormData } from "@/lib/schemas";
 import { createOrder, getRepairSuggestions, updateOrder, getOrderById } from "@/lib/actions/order.actions";
-import { getStoreSettingsForUser } from "@/lib/actions/settings.actions"; // Updated to user-specific settings
+import { getStoreSettingsForUser } from "@/lib/actions/settings.actions"; 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -20,14 +20,14 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/providers/AuthProvider";
-import { AISuggestion, type Order, type StoreSettings } from "@/types"; // Updated Configurations to StoreSettings
+import { AISuggestion, type Order, type StoreSettings } from "@/types"; 
 import { CHECKLIST_ITEMS, CLASSIFICATION_OPTIONS, ORDER_STATUSES, SPECIFIC_SECTORS_OPTIONS, UNLOCK_PATTERN_OPTIONS, YES_NO_OPTIONS, DEFAULT_STORE_SETTINGS } from "@/lib/constants";
-import { AlertCircle, Bot, DollarSign, Info, ListChecks, LucideSparkles, User, Wrench, LinkIcon, Building } from "lucide-react";
+import { AlertCircle, Bot, DollarSign, Info, ListChecks, LucideSparkles, User, Wrench, LinkIcon, Building, UserSquare } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 
 interface OrderFormProps {
-  orderId?: string; // For editing existing order
+  orderId?: string; 
 }
 
 const NONE_CLASSIFICATION_VALUE = "__NONE_CLASSIFICATION_VALUE__";
@@ -40,26 +40,30 @@ export function OrderForm({ orderId }: OrderFormProps) {
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [aiSuggestion, setAiSuggestion] = useState<AISuggestion | null>(null);
   const [isLoadingOrder, setIsLoadingOrder] = useState(!!orderId);
-  const [isLoadingStoreSettings, setIsLoadingStoreSettings] = useState(!orderId); // Load settings for new orders
+  const [isLoadingStoreSettings, setIsLoadingStoreSettings] = useState(!orderId); 
 
 
   const form = useForm<OrderFormData>({
     resolver: zodResolver(OrderSchema),
     defaultValues: {
-      clientName: "", clientLastName: "", clientDni: "", clientPhone: "", clientEmail: "",
-      branchInfo: DEFAULT_STORE_SETTINGS.branchInfo || "Sucursal Principal", // Default before loading user settings
+      clientId: "", // New field for client ID
+      branchInfo: DEFAULT_STORE_SETTINGS.branchInfo || "Sucursal Principal", 
       deviceBrand: "", deviceModel: "", deviceIMEI: "", declaredFault: "",
       unlockPatternInfo: undefined,
-      checklist: {
-        carcasaMarks: "no", screenCrystal: "no", frame: "no", backCover: "no", camera: "no",
-        microphone: "no", speaker: "no", powersOn: "si", touchScreen: "si", deviceCamera: "si",
-        fingerprintSensor: "si", signal: "si", wifi: "si",
-      },
-      damageRisk: "", specificSectors: [], previousOrderId: "",
+      checklist: CHECKLIST_ITEMS.reduce((acc, item) => {
+        // @ts-ignore
+        acc[item.id] = item.id === 'enciende' || item.id === 'tactil_funciona' || item.id === 'imagen_pantalla' || item.id === 'botones_funcionales' || item.id === 'camara_trasera' || item.id === 'camara_delantera' || item.id === 'vibrador' || item.id === 'microfono' || item.id === 'auricular' || item.id === 'parlante' || item.id === 'sensor_huella' || item.id === 'senal' || item.id === 'wifi_bluetooth' || item.id === 'pin_carga' ? 'si' : 'no';
+        return acc;
+      }, {} as OrderFormData['checklist']),
+      damageRisk: "", 
+      pantalla_parcial: false,
+      equipo_sin_acceso: false,
+      perdida_informacion: false,
+      previousOrderId: "",
       costSparePart: 0, costLabor: 0, costPending: 0,
       classification: undefined, observations: "",
       customerAccepted: false, customerSignatureName: "",
-      status: "En diagnóstico",
+      status: "ingreso",
     },
   });
 
@@ -68,7 +72,7 @@ export function OrderForm({ orderId }: OrderFormProps) {
 
   useEffect(() => {
     async function fetchInitialData() {
-      if (!orderId && user) { // For new orders, load current user's store settings
+      if (!orderId && user) { 
         setIsLoadingStoreSettings(true);
         try {
           const userSettings = await getStoreSettingsForUser(user.uid);
@@ -89,15 +93,16 @@ export function OrderForm({ orderId }: OrderFormProps) {
           if (order) {
             form.reset({
               ...order,
+              clientId: order.clientId, // Set clientId
               previousOrderId: order.previousOrderId || "",
               costSparePart: Number(order.costSparePart || 0),
               costLabor: Number(order.costLabor || 0),
               costPending: Number(order.costPending || 0),
               classification: order.classification || undefined,
               unlockPatternInfo: order.unlockPatternInfo || undefined,
-              status: order.status || "En diagnóstico",
-              specificSectors: order.specificSectors || [],
-              branchInfo: order.branchInfo, // Use existing branchInfo for edits
+              status: order.status || "ingreso",
+              branchInfo: order.branchInfo, 
+              // Removed direct client fields from reset
             });
           } else {
             toast({ variant: "destructive", title: "Error", description: "Orden no encontrada." });
@@ -110,7 +115,9 @@ export function OrderForm({ orderId }: OrderFormProps) {
         }
       }
     }
-    fetchInitialData();
+    if (user || orderId) { // Ensure user is available for new orders or orderId for edits
+        fetchInitialData();
+    }
   }, [orderId, user, form, router, toast]);
 
 
@@ -129,20 +136,13 @@ export function OrderForm({ orderId }: OrderFormProps) {
       if (orderId) {
         result = await updateOrder(orderId, submissionValues, user.uid);
       } else {
-        result = await createOrder(submissionValues, user.uid); // createOrder will now handle snapshotting user settings
+        result = await createOrder(submissionValues, user.uid); 
       }
 
       if (result.success && result.order?.id) {
         toast({ title: "Éxito", description: result.message });
         router.push(`/orders/${result.order.id}`);
-      } else if (result.success && orderId) { // Fallback for update if order object isn't returned but was successful
-          toast({ title: "Éxito", description: result.message });
-          router.push(`/orders/${orderId}`);
-      } else if (result.success) { // Successfully created but no ID somehow (should not happen with snapshot)
-         toast({ title: "Éxito", description: result.message + " No se pudo redirigir." });
-         router.push("/orders");
-      }
-      else {
+      } else {
         toast({ variant: "destructive", title: "Error", description: result.message || "Ocurrió un error." });
       }
     });
@@ -167,7 +167,7 @@ export function OrderForm({ orderId }: OrderFormProps) {
     setIsAiLoading(false);
   };
 
-  if ((isLoadingOrder && orderId) || (isLoadingStoreSettings && !orderId) ) {
+  if ((isLoadingOrder && orderId) || (isLoadingStoreSettings && !orderId && user) ) {
     return <div className="flex justify-center items-center h-64"><LoadingSpinner size={48}/> <p className="ml-4">Cargando datos del formulario...</p></div>;
   }
 
@@ -178,15 +178,16 @@ export function OrderForm({ orderId }: OrderFormProps) {
           {/* Left Column */}
           <div className="space-y-6">
             <Card>
-              <CardHeader><CardTitle className="flex items-center gap-2"><User className="text-primary"/> Datos del Cliente</CardTitle></CardHeader>
+              <CardHeader><CardTitle className="flex items-center gap-2"><UserSquare className="text-primary"/> Datos del Cliente</CardTitle></CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <FormField control={form.control} name="clientName" render={({ field }) => ( <FormItem><FormLabel>Nombre</FormLabel><FormControl><Input placeholder="Nombre" {...field} /></FormControl><FormMessage /></FormItem> )} />
-                  <FormField control={form.control} name="clientLastName" render={({ field }) => ( <FormItem><FormLabel>Apellido</FormLabel><FormControl><Input placeholder="Apellido" {...field} /></FormControl><FormMessage /></FormItem> )} />
-                </div>
-                <FormField control={form.control} name="clientDni" render={({ field }) => ( <FormItem><FormLabel>DNI</FormLabel><FormControl><Input placeholder="DNI" {...field} /></FormControl><FormMessage /></FormItem> )} />
-                <FormField control={form.control} name="clientPhone" render={({ field }) => ( <FormItem><FormLabel>Teléfono</FormLabel><FormControl><Input placeholder="Teléfono" {...field} /></FormControl><FormMessage /></FormItem> )} />
-                <FormField control={form.control} name="clientEmail" render={({ field }) => ( <FormItem><FormLabel>Email (Opcional)</FormLabel><FormControl><Input type="email" placeholder="Email" {...field} /></FormControl><FormMessage /></FormItem> )} />
+                 <FormField control={form.control} name="clientId" render={({ field }) => ( 
+                    <FormItem>
+                        <FormLabel>ID del Cliente</FormLabel>
+                        <FormControl><Input placeholder="Ej: CLI001" {...field} /></FormControl>
+                        <FormDescription>Ingrese el ID de un cliente existente. Próximamente: búsqueda y creación de clientes.</FormDescription>
+                        <FormMessage />
+                    </FormItem> 
+                  )} />
               </CardContent>
             </Card>
 
@@ -208,10 +209,11 @@ export function OrderForm({ orderId }: OrderFormProps) {
                 <FormField control={form.control} name="unlockPatternInfo" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Patrón o Clave de Desbloqueo</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value || ""} defaultValue="">
                       <FormControl><SelectTrigger><SelectValue placeholder="Seleccione una opción" /></SelectTrigger></FormControl>
                       <SelectContent>
-                        {UNLOCK_PATTERN_OPTIONS.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+                        <SelectItem value="" disabled>Seleccione una opción</SelectItem>
+                        {UNLOCK_PATTERN_OPTIONS.filter(opt => opt !== "").map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -289,34 +291,27 @@ export function OrderForm({ orderId }: OrderFormProps) {
               <CardHeader><CardTitle className="flex items-center gap-2"><AlertCircle className="text-primary"/> Riesgos y Sectores Específicos</CardTitle></CardHeader>
               <CardContent className="space-y-4">
                 <FormField control={form.control} name="damageRisk" render={({ field }) => ( <FormItem><FormLabel>Riesgo de Rotura (Daños preexistentes)</FormLabel><FormControl><Textarea placeholder="Describa daños específicos..." {...field} /></FormControl><FormMessage /></FormItem> )} />
-                <FormField control={form.control} name="specificSectors" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Sectores Específicos (Marcar si aplica)</FormLabel>
-                    {SPECIFIC_SECTORS_OPTIONS.map(sector => (
-                      <FormField
-                        key={sector}
-                        control={form.control}
-                        name="specificSectors"
-                        render={({ field: subField }) => (
-                          <FormItem className="flex flex-row items-start space-x-3 space-y-0 mt-2">
-                            <FormControl>
-                              <Checkbox
-                                checked={subField.value?.includes(sector)}
-                                onCheckedChange={(checked) => {
-                                  return checked
-                                    ? subField.onChange([...(subField.value || []), sector])
-                                    : subField.onChange(subField.value?.filter(value => value !== sector));
-                                }}
-                              />
-                            </FormControl>
-                            <FormLabel className="text-sm font-normal">{sector}</FormLabel>
-                          </FormItem>
-                        )}
-                      />
-                    ))}
-                    <FormMessage />
-                  </FormItem>
-                )} />
+                 <div className="space-y-2">
+                    <FormLabel>Condiciones Específicas (Marcar si aplica)</FormLabel>
+                    <FormField control={form.control} name="pantalla_parcial" render={({ field }) => (
+                        <FormItem className="flex flex-row items-start space-x-3 space-y-0 mt-2">
+                            <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                            <FormLabel className="text-sm font-normal">Pantalla con daño parcial</FormLabel>
+                        </FormItem>
+                    )} />
+                    <FormField control={form.control} name="equipo_sin_acceso" render={({ field }) => (
+                        <FormItem className="flex flex-row items-start space-x-3 space-y-0 mt-2">
+                            <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                            <FormLabel className="text-sm font-normal">Equipo sin clave o que no enciende (sin acceso completo)</FormLabel>
+                        </FormItem>
+                    )} />
+                    <FormField control={form.control} name="perdida_informacion" render={({ field }) => (
+                        <FormItem className="flex flex-row items-start space-x-3 space-y-0 mt-2">
+                            <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                            <FormLabel className="text-sm font-normal">Riesgo de pérdida de información</FormLabel>
+                        </FormItem>
+                    )} />
+                 </div>
               </CardContent>
             </Card>
 
@@ -330,15 +325,16 @@ export function OrderForm({ orderId }: OrderFormProps) {
                 </div>
                 <FormField control={form.control} name="classification" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Clasificación</FormLabel>
+                    <FormLabel>Clasificación (Para Stock)</FormLabel>
                     <Select
                       onValueChange={(selectedValue) => field.onChange(selectedValue === NONE_CLASSIFICATION_VALUE ? "" : selectedValue)}
                       value={field.value === "" || field.value === undefined ? NONE_CLASSIFICATION_VALUE : field.value}
+                      defaultValue={NONE_CLASSIFICATION_VALUE}
                     >
                       <FormControl><SelectTrigger><SelectValue placeholder="Seleccione clasificación" /></SelectTrigger></FormControl>
                       <SelectContent>
                         <SelectItem value={NONE_CLASSIFICATION_VALUE}>Ninguna</SelectItem>
-                        {CLASSIFICATION_OPTIONS.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+                        {CLASSIFICATION_OPTIONS.filter(opt => opt !== "").map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -351,10 +347,11 @@ export function OrderForm({ orderId }: OrderFormProps) {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Estado de la Orden</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value || ""} defaultValue="">
                           <FormControl><SelectTrigger><SelectValue placeholder="Seleccione estado" /></SelectTrigger></FormControl>
                           <SelectContent>
-                            {ORDER_STATUSES.map(status => <SelectItem key={status} value={status}>{status}</SelectItem>)}
+                             <SelectItem value="" disabled>Seleccione un estado</SelectItem>
+                            {ORDER_STATUSES.filter(opt => opt !== "").map(status => <SelectItem key={status} value={status}>{status}</SelectItem>)}
                           </SelectContent>
                         </Select>
                         <FormMessage />

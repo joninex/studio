@@ -3,9 +3,8 @@ import {
   UNLOCK_PATTERN_OPTIONS, 
   CLASSIFICATION_OPTIONS, 
   ORDER_STATUSES, 
-  SPECIFIC_SECTORS_OPTIONS, // This might need review if it's still used directly or becomes part of Order booleans
   USER_ROLES_VALUES,
-  CHECKLIST_ITEMS // Import the updated checklist items for keys
+  CHECKLIST_ITEMS 
 } from './constants';
 
 export const LoginSchema = z.object({
@@ -25,6 +24,7 @@ export const RegisterSchema = z.object({
 
 export const ClientSchema = z.object({
   name: z.string().min(1, "Nombre del cliente es requerido."),
+  lastName: z.string().min(1, "Apellido del cliente es requerido."),
   dni: z.string().min(7, "DNI debe tener al menos 7 caracteres.").max(10, "DNI no puede exceder 10 caracteres."),
   phone: z.string().min(7, "Teléfono debe tener al menos 7 caracteres."),
   email: z.string().email("Email inválido.").optional().or(z.literal('')),
@@ -42,13 +42,12 @@ export const ChecklistSchema = z.object(checklistShapeObject);
 
 
 export const OrderSchema = z.object({
-  // Client fields will be handled by selecting/creating a Client, then linking clientId
-  clientId: z.string().min(1, "Cliente es requerido."), 
+  clientId: z.string().min(1, "ID de Cliente es requerido."), 
   
   branchInfo: z.string().min(1, "Información de sucursal es requerida."),
 
   deviceBrand: z.string().min(1, "Marca del equipo es requerida."),
-  deviceModel: z.string().min(1, "Modelo del equipo es requerido."),
+  deviceModel: z.string().min(1, "Modelo del equipo es requerida."),
   deviceIMEI: z.string().min(14, "IMEI debe tener al menos 14 caracteres.").max(16, "IMEI no puede exceder 16 caracteres."),
   declaredFault: z.string().min(1, "Falla declarada es requerida."),
   unlockPatternInfo: z.enum(UNLOCK_PATTERN_OPTIONS, { required_error: "Información de desbloqueo es requerida."}),
@@ -56,7 +55,6 @@ export const OrderSchema = z.object({
   checklist: ChecklistSchema,
 
   damageRisk: z.string().optional().or(z.literal('')),
-  // specificSectors is replaced by individual boolean fields for simplicity in the form
   pantalla_parcial: z.boolean().optional().default(false),
   equipo_sin_acceso: z.boolean().optional().default(false),
   perdida_informacion: z.boolean().optional().default(false),
@@ -64,26 +62,33 @@ export const OrderSchema = z.object({
   previousOrderId: z.string().optional().or(z.literal('')),
 
   costSparePart: z.preprocess(
-    (val) => (val === "" ? undefined : Number(val)),
-    z.number({ invalid_type_error: "Debe ser un número" }).nonnegative("Costo debe ser no negativo.").optional()
+    (val) => (val === "" || val === null || val === undefined ? 0 : Number(val)),
+    z.number({ invalid_type_error: "Debe ser un número" }).nonnegative("Costo debe ser no negativo.")
   ).default(0),
   costLabor: z.preprocess(
-    (val) => (val === "" ? undefined : Number(val)),
-    z.number({ invalid_type_error: "Debe ser un número" }).nonnegative("Costo debe ser no negativo.").optional()
+    (val) => (val === "" || val === null || val === undefined ? 0 : Number(val)),
+    z.number({ invalid_type_error: "Debe ser un número" }).nonnegative("Costo debe ser no negativo.")
   ).default(0),
   costPending: z.preprocess(
-    (val) => (val === "" ? undefined : Number(val)),
-    z.number({ invalid_type_error: "Debe ser un número" }).nonnegative("Costo debe ser no negativo.").optional()
+    (val) => (val === "" || val === null || val === undefined ? 0 : Number(val)),
+    z.number({ invalid_type_error: "Debe ser un número" }).nonnegative("Costo debe ser no negativo.")
   ).default(0),
 
-  classification: z.enum(CLASSIFICATION_OPTIONS, { required_error: "Clasificación es requerida."}).optional(),
+  classification: z.enum(CLASSIFICATION_OPTIONS, { errorMap: () => ({ message: "Clasificación es requerida."}) }).optional().or(z.literal("")),
   observations: z.string().optional().or(z.literal('')),
 
   customerAccepted: z.boolean().optional().refine(val => val === true, { message: "El cliente debe aceptar los términos." }),
-  customerSignatureName: z.string().optional().or(z.literal('')),
-  // If customerAccepted is true, customerSignatureName should be required. This can be a .superRefine() if needed.
-
+  customerSignatureName: z.string().min(1, "El nombre para la firma es requerido si se aceptan los términos.").optional().or(z.literal('')),
+  
   status: z.enum(ORDER_STATUSES, { required_error: "Estado es requerido."}).default("ingreso"),
+}).superRefine((data, ctx) => {
+  if (data.customerAccepted && !data.customerSignatureName) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "El nombre para la firma es requerido si el cliente acepta los términos.",
+      path: ["customerSignatureName"],
+    });
+  }
 });
 
 export type OrderFormData = z.infer<typeof OrderSchema>;

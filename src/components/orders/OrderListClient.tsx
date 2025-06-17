@@ -20,11 +20,11 @@ import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import { Badge } from "@/components/ui/badge";
 
 interface OrderListClientProps {
-  initialOrders: Order[];
+  initialOrders: Order[]; // These orders will now have clientName and clientLastName populated
   initialFilters: { client?: string, orderNumber?: string, imei?: string, status?: string };
 }
 
-const ALL_STATUSES_VALUE = "__ALL__"; // Special value for "All Statuses" option
+const ALL_STATUSES_VALUE = "__ALL__"; 
 
 export function OrderListClient({ initialOrders, initialFilters }: OrderListClientProps) {
   const [orders, setOrders] = useState<Order[]>(initialOrders);
@@ -35,7 +35,7 @@ export function OrderListClient({ initialOrders, initialFilters }: OrderListClie
   const searchParams = useSearchParams();
 
   const [filters, setFilters] = useState({
-    client: initialFilters.client || "",
+    client: initialFilters.client || "", // This filter text will search against the populated clientName/lastName
     orderNumber: initialFilters.orderNumber || "",
     imei: initialFilters.imei || "",
     status: initialFilters.status || "",
@@ -48,7 +48,6 @@ export function OrderListClient({ initialOrders, initialFilters }: OrderListClie
       setOrders(fetchedOrders);
     } catch (error) {
       console.error("Error fetching orders:", error);
-      // Handle error (e.g., show toast)
     } finally {
       setIsLoading(false);
     }
@@ -95,15 +94,16 @@ export function OrderListClient({ initialOrders, initialFilters }: OrderListClie
 
   const getStatusBadgeVariant = (status: OrderStatus): "default" | "secondary" | "destructive" | "outline" => {
     switch (status) {
-      case "Reparado":
-      case "Listo para Retirar":
+      case "en reparación":
+      case "listo para retirar":
         return "default"; 
-      case "Entregado":
+      case "entregado":
         return "secondary";
-      case "En diagnóstico":
-      case "Esperando pieza":
+      case "en diagnóstico":
+      case "esperando pieza":
+      case "ingreso":
         return "outline"; 
-      case "Abandonado":
+      case "abandonado":
         return "destructive";
       default:
         return "outline";
@@ -137,7 +137,7 @@ export function OrderListClient({ initialOrders, initialFilters }: OrderListClie
             </SelectTrigger>
             <SelectContent>
               <SelectItem value={ALL_STATUSES_VALUE}>Todos los Estados</SelectItem>
-              {ORDER_STATUSES.map(status => (
+              {ORDER_STATUSES.filter(opt => opt !== "").map(status => (
                 <SelectItem key={status} value={status}>{status}</SelectItem>
               ))}
             </SelectContent>
