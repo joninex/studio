@@ -30,14 +30,14 @@ export const UNLOCK_PATTERN_OPTIONS: UnlockPatternInfo[] = [
   "no tiene",
   "no recuerda",
   "no proporciona",
-  "", 
+  "",
 ];
 
 export const CLASSIFICATION_OPTIONS: Classification[] = [
   "rojo",
   "verde",
   "sin stock",
-  "", 
+  "",
 ];
 
 export const SPECIFIC_SECTORS_OPTIONS: string[] = [
@@ -81,7 +81,7 @@ export const WARRANTY_TYPE_OPTIONS: Array<{ value: WarrantyType; label: string }
   { value: "60d", label: "60 Días" },
   { value: "90d", label: "90 Días" },
   { value: "custom", label: "Personalizado" },
-  { value: "", label: "Ninguna" },
+  // { value: "", label: "Ninguna" }, // Removed this line
 ];
 
 
