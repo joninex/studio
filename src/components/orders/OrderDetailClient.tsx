@@ -143,7 +143,6 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
   
   let abandonmentWarning = "";
   if (daysSinceReady !== null && order.orderSnapshottedAbandonmentPolicyText) { 
-    // Attempt to parse days from the policy text or use default. More robust would be to store days in order snapshot.
     const abandonmentPolicyDays = order.orderCompanyContactDetails?.includes("60") ? 60 : (order.orderCompanyContactDetails?.includes("30") ? 30 : (DEFAULT_STORE_SETTINGS.abandonmentPolicyDays60 || 60)) ; 
     const firstWarningDays = abandonmentPolicyDays / 2;
     if (daysSinceReady >= abandonmentPolicyDays) abandonmentWarning = `Equipo considerado abandonado (${abandonmentPolicyDays}+ días).`;
@@ -220,7 +219,7 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
         <div className="print-header-container mb-4">
             <div className="flex justify-between items-start">
                 <div className="text-left">
-                    {order.orderCompanyLogoUrl && (
+                    {order.orderCompanyLogoUrl && !order.orderCompanyLogoUrl.includes('placehold.co') ? (
                       <Image
                         src={order.orderCompanyLogoUrl}
                         alt={order.orderCompanyName || "Company Logo"}
@@ -229,7 +228,16 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
                         className="print-logo mb-2 object-contain"
                         data-ai-hint="company logo"
                       />
-                    )}
+                    ) : order.orderCompanyLogoUrl && order.orderCompanyLogoUrl.includes('placehold.co') ? (
+                         <Image
+                            src={order.orderCompanyLogoUrl}
+                            alt="Placeholder Logo"
+                            width={140}
+                            height={60}
+                            className="print-logo mb-2 object-contain"
+                            data-ai-hint="company logo placeholder"
+                         />
+                    ) : null}
                     <p className="print-company-info text-xs font-semibold">{order.orderCompanyName}</p>
                     {order.orderCompanyAddress && <p className="print-company-info text-xs whitespace-pre-line">{order.orderCompanyAddress}</p>}
                     {order.orderCompanyCuit && <p className="print-company-info text-xs">CUIT: {order.orderCompanyCuit}</p>}
@@ -276,10 +284,12 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
                 <p><strong>IMEI/Serial:</strong> {order.deviceIMEI}</p>
                 <div className="col-span-2 flex items-center">
                     <LockKeyhole className="inline-block mr-1 h-3 w-3 text-muted-foreground"/><strong>Patrón/Clave:</strong>
-                    <span className="ml-2 mr-1">{order.unlockPatternInfo ? "Registrado en sistema" : "No provisto / No aplica"}</span>
-                    <div className="print-pattern-grid ml-2">
-                        {Array(9).fill(0).map((_, i) => <div key={i}></div>)}
-                    </div>
+                    <span className="ml-2 mr-1">{order.unlockPatternInfo && order.unlockPatternInfo !== "No tiene" && order.unlockPatternInfo !== "No recuerda" ? "Registrado en sistema" : (order.unlockPatternInfo || "No provisto")}</span>
+                    {order.unlockPatternInfo && order.unlockPatternInfo !== "No tiene" && order.unlockPatternInfo !== "No recuerda" && (
+                         <div className="print-pattern-grid ml-2">
+                            {Array(9).fill(0).map((_, i) => <div key={i}></div>)}
+                         </div>
+                    )}
                 </div>
                 <p className="col-span-2"><strong>Falla Declarada:</strong> {order.declaredFault}</p>
                 <p className="col-span-2"><strong>Daños Preexistentes/Observaciones de Ingreso (Riesgo de Rotura):</strong> {order.damageRisk || "Sin observaciones específicas de daños."}</p>
@@ -335,7 +345,7 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
         )}
         
         {/* Extended Warranty Details */}
-        {showWarrantyDetailsForPrint && order.warrantyStartDate && order.warrantyEndDate && (
+        {showWarrantyDetailsForPrint && order.warrantyStartDate && (
             <div className="print-section card-print">
                 <h3 className="print-section-title"><PackageCheck className="inline-block mr-2 h-4 w-4"/>Detalles de Garantía Extendida</h3>
                 <div className="text-sm space-y-0.5">
@@ -657,3 +667,5 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
     </div>
   );
 }
+
+    
