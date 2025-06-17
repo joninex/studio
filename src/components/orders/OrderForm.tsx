@@ -222,7 +222,7 @@ export function OrderForm({ orderId }: OrderFormProps) {
                     <Select onValueChange={field.onChange} value={field.value || ""} defaultValue="">
                       <FormControl><SelectTrigger><SelectValue placeholder="Seleccione una opción" /></SelectTrigger></FormControl>
                       <SelectContent>
-                        <SelectItem value="" disabled>Seleccione una opción</SelectItem>
+                        {/* Removed problematic SelectItem with value="" */}
                         {UNLOCK_PATTERN_OPTIONS.filter(opt => opt !== "").map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
                       </SelectContent>
                     </Select>
@@ -360,7 +360,7 @@ export function OrderForm({ orderId }: OrderFormProps) {
                         <Select onValueChange={field.onChange} value={field.value || ""} defaultValue="">
                           <FormControl><SelectTrigger><SelectValue placeholder="Seleccione estado" /></SelectTrigger></FormControl>
                           <SelectContent>
-                             <SelectItem value="" disabled>Seleccione un estado</SelectItem>
+                            {/* Removed problematic SelectItem with value="" */}
                             {ORDER_STATUSES.filter(opt => opt !== "").map(status => <SelectItem key={status} value={status}>{status}</SelectItem>)}
                           </SelectContent>
                         </Select>
