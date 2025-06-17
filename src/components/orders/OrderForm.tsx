@@ -78,8 +78,8 @@ export function OrderForm({ orderId }: OrderFormProps) {
   const defaultChecklistValues = CHECKLIST_ITEMS.reduce((acc, item) => {
     if (item.type === 'boolean') {
       // @ts-ignore
-      acc[item.id] = ['enciende', 'tactil', 'imagen', 'botones', 'cam_trasera', 'cam_delantera', 'vibrador', 'microfono', 'auricular', 'parlante', 'sensor_huella', 'senal', 'wifi_bluetooth', 'pin_carga', 'lente_camara'].includes(item.id) ? 'si' : 'no';
-      if (item.id === 'equipo_doblado') (acc as any)[item.id] = 'no'; // Default to 'no' for new items
+      acc[item.id] = ['enciende', 'tactil', 'imagen', 'botones', 'cam_trasera', 'cam_delantera', 'vibrador', 'microfono', 'auricular', 'parlante', 'sensor_huella', 'senal', 'wifi_bluetooth', 'pin_carga', 'lente_camara', 'equipo_doblado'].includes(item.id) ? 'si' : 'no';
+       if (item.id === 'humedad' || item.id === 'golpe' || item.id === 'cristal' || item.id === 'marco' || item.id === 'tapa' ) (acc as any)[item.id] = 'no'; // Default specific items to 'no'
     } else if (item.type === 'text') {
       // @ts-ignore
       acc[item.id] = "";
@@ -109,7 +109,6 @@ export function OrderForm({ orderId }: OrderFormProps) {
       classification: undefined, observations: "",
       customerAccepted: false, 
       customerSignatureName: "",
-      // Initialize all snapshotted legal text fields from default or fetched settings
       orderSnapshottedUnlockDisclaimer: DEFAULT_STORE_SETTINGS.unlockDisclaimerText || "",
       orderSnapshottedAbandonmentPolicyText: DEFAULT_STORE_SETTINGS.abandonmentPolicyText || "",
       orderSnapshottedDataLossPolicyText: DEFAULT_STORE_SETTINGS.dataLossPolicyText || "",
@@ -120,6 +119,7 @@ export function OrderForm({ orderId }: OrderFormProps) {
       orderSnapshottedWarrantyVoidConditionsText: DEFAULT_STORE_SETTINGS.warrantyVoidConditionsText || "",
       orderSnapshottedPrivacyPolicy: DEFAULT_STORE_SETTINGS.privacyPolicyText || "",
       orderWarrantyConditions: DEFAULT_STORE_SETTINGS.warrantyConditions || "",
+      pickupConditions: DEFAULT_STORE_SETTINGS.pickupConditions || "",
 
       dataLossDisclaimerAccepted: false,
       privacyPolicyAccepted: false,
@@ -179,7 +179,6 @@ export function OrderForm({ orderId }: OrderFormProps) {
               branchInfo: order.branchInfo,
               customerAccepted: order.customerAccepted || false,
               customerSignatureName: order.customerSignatureName || "",
-              // Use snapshotted texts from the order if they exist, otherwise from fetched settings (which should be the same as creation)
               orderSnapshottedUnlockDisclaimer: order.orderSnapshottedUnlockDisclaimer || fetchedStoreSettings.unlockDisclaimerText || "",
               orderSnapshottedAbandonmentPolicyText: order.orderSnapshottedAbandonmentPolicyText || fetchedStoreSettings.abandonmentPolicyText || "",
               orderSnapshottedDataLossPolicyText: order.orderSnapshottedDataLossPolicyText || fetchedStoreSettings.dataLossPolicyText || "",
@@ -190,6 +189,7 @@ export function OrderForm({ orderId }: OrderFormProps) {
               orderSnapshottedWarrantyVoidConditionsText: order.orderSnapshottedWarrantyVoidConditionsText || fetchedStoreSettings.warrantyVoidConditionsText || "",
               orderSnapshottedPrivacyPolicy: order.orderSnapshottedPrivacyPolicy || fetchedStoreSettings.privacyPolicyText || "",
               orderWarrantyConditions: order.orderWarrantyConditions || fetchedStoreSettings.warrantyConditions || "",
+              pickupConditions: order.pickupConditions || fetchedStoreSettings.pickupConditions || "",
               
               dataLossDisclaimerAccepted: order.dataLossDisclaimerAccepted || false,
               privacyPolicyAccepted: order.privacyPolicyAccepted || false,
@@ -211,7 +211,6 @@ export function OrderForm({ orderId }: OrderFormProps) {
           setIsLoadingOrder(false);
         }
       } else { 
-          // For new orders, set all snapshottable texts from current store settings
           form.setValue('branchInfo', fetchedStoreSettings.branchInfo || DEFAULT_STORE_SETTINGS.branchInfo || "Sucursal Principal");
           form.setValue('orderSnapshottedUnlockDisclaimer', fetchedStoreSettings.unlockDisclaimerText || "");
           form.setValue('orderSnapshottedAbandonmentPolicyText', fetchedStoreSettings.abandonmentPolicyText || "");
@@ -223,6 +222,7 @@ export function OrderForm({ orderId }: OrderFormProps) {
           form.setValue('orderSnapshottedWarrantyVoidConditionsText', fetchedStoreSettings.warrantyVoidConditionsText || "");
           form.setValue('orderSnapshottedPrivacyPolicy', fetchedStoreSettings.privacyPolicyText || "");
           form.setValue('orderWarrantyConditions', fetchedStoreSettings.warrantyConditions || "");
+          form.setValue('pickupConditions', fetchedStoreSettings.pickupConditions || "");
       }
     }
     fetchInitialData();
@@ -233,7 +233,7 @@ export function OrderForm({ orderId }: OrderFormProps) {
       try {
         const startDate = parseISO(warrantyStartDateWatch);
         if (isNaN(startDate.getTime())) {
-          form.setValue('warrantyEndDate', null); // Clear if start date is invalid
+          form.setValue('warrantyEndDate', null); 
           return;
         }
 
@@ -246,19 +246,16 @@ export function OrderForm({ orderId }: OrderFormProps) {
           const endDate = addDays(startDate, daysToAdd);
           form.setValue('warrantyEndDate', format(endDate, "yyyy-MM-dd"));
         } else {
-          form.setValue('warrantyEndDate', null); // If type is somehow invalid
+          form.setValue('warrantyEndDate', null); 
         }
       } catch (error) {
         console.error("Error calculating warranty end date:", error);
         form.setValue('warrantyEndDate', null); 
       }
     } else if (hasWarrantyWatch && warrantyTypeWatch === 'custom') {
-      // Allow manual input for 'custom', so don't clear or auto-set endDate here unless startDate changes.
-      // If startDateWatch changes and type is custom, user needs to re-verify/set endDate.
+      // User manually inputs end date
     } else if (!hasWarrantyWatch) {
         form.setValue('warrantyEndDate', null);
-        // Do not clear startDate or type if hasWarranty is toggled off, user might toggle it back on.
-        // Schema validation will handle requirements if it's toggled back on.
     }
   }, [hasWarrantyWatch, warrantyTypeWatch, warrantyStartDateWatch, form]);
 
@@ -270,10 +267,8 @@ export function OrderForm({ orderId }: OrderFormProps) {
     }
     startTransition(async () => {
       let result;
-      // Use currentStoreSettings if available (for new orders), otherwise default (should not happen if loading is handled)
       const settingsSource = currentStoreSettings || DEFAULT_STORE_SETTINGS;
 
-      // Ensure all snapshotted fields are explicitly set, especially for new orders.
       const submissionValues: OrderFormData = {
         ...values,
         promisedDeliveryDate: values.promisedDeliveryDate ? new Date(values.promisedDeliveryDate).toISOString() : null,
@@ -282,8 +277,8 @@ export function OrderForm({ orderId }: OrderFormProps) {
         
         hasWarranty: values.hasWarranty,
         warrantyType: values.hasWarranty ? values.warrantyType : null,
-        warrantyStartDate: values.hasWarranty && values.warrantyStartDate ? values.warrantyStartDate : null, // Already YYYY-MM-DD
-        warrantyEndDate: values.hasWarranty && values.warrantyEndDate ? values.warrantyEndDate : null, // Already YYYY-MM-DD
+        warrantyStartDate: values.hasWarranty && values.warrantyStartDate ? values.warrantyStartDate : null,
+        warrantyEndDate: values.hasWarranty && values.warrantyEndDate ? values.warrantyEndDate : null,
         warrantyCoveredItem: values.hasWarranty ? (values.warrantyCoveredItem || "") : "",
         warrantyNotes: values.hasWarranty ? (values.warrantyNotes || "") : "",
         
@@ -294,7 +289,6 @@ export function OrderForm({ orderId }: OrderFormProps) {
           return acc;
         }, {} as Checklist),
 
-        // For new orders, these come from settingsSource. For updates, they come from `values` (which were loaded from the order).
         orderSnapshottedUnlockDisclaimer: orderId ? values.orderSnapshottedUnlockDisclaimer : settingsSource.unlockDisclaimerText,
         orderSnapshottedAbandonmentPolicyText: orderId ? values.orderSnapshottedAbandonmentPolicyText : settingsSource.abandonmentPolicyText,
         orderSnapshottedDataLossPolicyText: orderId ? values.orderSnapshottedDataLossPolicyText : settingsSource.dataLossPolicyText,
@@ -305,6 +299,7 @@ export function OrderForm({ orderId }: OrderFormProps) {
         orderSnapshottedWarrantyVoidConditionsText: orderId ? values.orderSnapshottedWarrantyVoidConditionsText : settingsSource.warrantyVoidConditionsText,
         orderSnapshottedPrivacyPolicy: orderId ? values.orderSnapshottedPrivacyPolicy : settingsSource.privacyPolicyText,
         orderWarrantyConditions: orderId ? values.orderWarrantyConditions : settingsSource.warrantyConditions,
+        pickupConditions: orderId ? values.pickupConditions : settingsSource.pickupConditions,
       };
 
       if (orderId) {

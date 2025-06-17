@@ -52,6 +52,7 @@ let mockOrders: Order[] = [
     orderCompanyAddress: DEFAULT_STORE_SETTINGS.companyAddress,
     orderCompanyContactDetails: DEFAULT_STORE_SETTINGS.companyContactDetails,
     orderWarrantyConditions: DEFAULT_STORE_SETTINGS.warrantyConditions,
+    pickupConditions: DEFAULT_STORE_SETTINGS.pickupConditions,
     
     orderSnapshottedUnlockDisclaimer: DEFAULT_STORE_SETTINGS.unlockDisclaimerText,
     orderSnapshottedAbandonmentPolicyText: DEFAULT_STORE_SETTINGS.abandonmentPolicyText,
@@ -103,6 +104,7 @@ let mockOrders: Order[] = [
     orderCompanyAddress: "Av. Corrientes 123, CABA",
     orderCompanyContactDetails: DEFAULT_STORE_SETTINGS.companyContactDetails,
     orderWarrantyConditions: DEFAULT_STORE_SETTINGS.warrantyConditions,
+    pickupConditions: DEFAULT_STORE_SETTINGS.pickupConditions,
     orderSnapshottedUnlockDisclaimer: DEFAULT_STORE_SETTINGS.unlockDisclaimerText,
     orderSnapshottedAbandonmentPolicyText: DEFAULT_STORE_SETTINGS.abandonmentPolicyText,
     orderSnapshottedDataLossPolicyText: DEFAULT_STORE_SETTINGS.dataLossPolicyText,
@@ -144,6 +146,7 @@ let mockOrders: Order[] = [
     orderCompanyAddress: DEFAULT_STORE_SETTINGS.companyAddress,
     orderCompanyContactDetails: DEFAULT_STORE_SETTINGS.companyContactDetails,
     orderWarrantyConditions: DEFAULT_STORE_SETTINGS.warrantyConditions,
+    pickupConditions: DEFAULT_STORE_SETTINGS.pickupConditions,
     orderSnapshottedUnlockDisclaimer: DEFAULT_STORE_SETTINGS.unlockDisclaimerText,
     orderSnapshottedAbandonmentPolicyText: DEFAULT_STORE_SETTINGS.abandonmentPolicyText,
     orderSnapshottedDataLossPolicyText: DEFAULT_STORE_SETTINGS.dataLossPolicyText,
@@ -202,6 +205,7 @@ export async function createOrder(
     
     // Snapshot all legal texts
     orderWarrantyConditions: settingsToSnapshot.warrantyConditions,
+    pickupConditions: settingsToSnapshot.pickupConditions, // Snapshot pickupConditions
     orderSnapshottedUnlockDisclaimer: settingsToSnapshot.unlockDisclaimerText,
     orderSnapshottedAbandonmentPolicyText: settingsToSnapshot.abandonmentPolicyText,
     orderSnapshottedDataLossPolicyText: settingsToSnapshot.dataLossPolicyText,
@@ -393,7 +397,7 @@ export async function getRepairSuggestions(
 
 export async function updateOrder(
   orderId: string,
-  values: Partial<Omit<Order, 'id' | 'orderNumber' | 'entryDate' | 'createdAt' | 'createdByUserId' | 'orderCompanyName' | 'orderCompanyLogoUrl' | 'orderCompanyCuit' | 'orderCompanyAddress' | 'orderCompanyContactDetails' | 'orderWarrantyConditions' | 'clientName' | 'clientLastName' >>,
+  values: Partial<Omit<Order, 'id' | 'orderNumber' | 'entryDate' | 'createdAt' | 'createdByUserId' | 'orderCompanyName' | 'orderCompanyLogoUrl' | 'orderCompanyCuit' | 'orderCompanyAddress' | 'orderCompanyContactDetails' | 'orderWarrantyConditions' | 'pickupConditions' | 'clientName' | 'clientLastName' >>,
   userId: string 
 ): Promise<{ success: boolean; message: string; order?: Order }> {
   
@@ -411,44 +415,43 @@ export async function updateOrder(
   
   const currentOrder = mockOrders[orderIndex];
   
+  // Prepare the data for update, ensuring that any undefined fields in validatedFields.data
+  // do not overwrite existing values in currentOrder unless explicitly set to null or a new value.
+  const dataToUpdate = { ...validatedFields.data };
+  
+  // Explicitly handle promisedDeliveryDate conversion
+  if (dataToUpdate.promisedDeliveryDate !== undefined) {
+    dataToUpdate.promisedDeliveryDate = dataToUpdate.promisedDeliveryDate ? new Date(dataToUpdate.promisedDeliveryDate).toISOString() : null;
+  }
+
   const updatedOrderData: Order = {
     ...currentOrder,
-    ...validatedFields.data, 
-    unlockPatternInfo: validatedFields.data.unlockPatternInfo ?? currentOrder.unlockPatternInfo,
-    promisedDeliveryDate: validatedFields.data.promisedDeliveryDate ? new Date(validatedFields.data.promisedDeliveryDate).toISOString() : currentOrder.promisedDeliveryDate,
+    ...dataToUpdate, 
+    // Ensure specific fields that might be handled differently are explicitly set
+    unlockPatternInfo: dataToUpdate.unlockPatternInfo ?? currentOrder.unlockPatternInfo,
     lastUpdatedBy: userId, 
     updatedAt: new Date().toISOString(),
-    // Ensure warranty fields are updated correctly
-    hasWarranty: validatedFields.data.hasWarranty ?? currentOrder.hasWarranty,
-    warrantyType: (validatedFields.data.hasWarranty ?? currentOrder.hasWarranty) ? (validatedFields.data.warrantyType ?? currentOrder.warrantyType) : null,
-    warrantyStartDate: (validatedFields.data.hasWarranty ?? currentOrder.hasWarranty) && validatedFields.data.warrantyStartDate ? validatedFields.data.warrantyStartDate : null,
-    warrantyEndDate: (validatedFields.data.hasWarranty ?? currentOrder.hasWarranty) && validatedFields.data.warrantyEndDate ? validatedFields.data.warrantyEndDate : null,
-    warrantyCoveredItem: (validatedFields.data.hasWarranty ?? currentOrder.hasWarranty) ? (validatedFields.data.warrantyCoveredItem ?? currentOrder.warrantyCoveredItem) : "",
-    warrantyNotes: (validatedFields.data.hasWarranty ?? currentOrder.hasWarranty) ? (validatedFields.data.warrantyNotes ?? currentOrder.warrantyNotes) : "",
+    hasWarranty: dataToUpdate.hasWarranty ?? currentOrder.hasWarranty,
+    warrantyType: (dataToUpdate.hasWarranty ?? currentOrder.hasWarranty) ? (dataToUpdate.warrantyType ?? currentOrder.warrantyType) : null,
+    warrantyStartDate: (dataToUpdate.hasWarranty ?? currentOrder.hasWarranty) && dataToUpdate.warrantyStartDate ? dataToUpdate.warrantyStartDate : null,
+    warrantyEndDate: (dataToUpdate.hasWarranty ?? currentOrder.hasWarranty) && dataToUpdate.warrantyEndDate ? dataToUpdate.warrantyEndDate : null,
+    warrantyCoveredItem: (dataToUpdate.hasWarranty ?? currentOrder.hasWarranty) ? (dataToUpdate.warrantyCoveredItem ?? currentOrder.warrantyCoveredItem) : "",
+    warrantyNotes: (dataToUpdate.hasWarranty ?? currentOrder.hasWarranty) ? (dataToUpdate.warrantyNotes ?? currentOrder.warrantyNotes) : "",
   };
 
-  // If hasWarranty is being set to true and snapshotted legal texts are missing, snapshot them (idempotent if already set)
-  if (updatedOrderData.hasWarranty && !currentOrder.hasWarranty) { // Check if warranty was just enabled
-    const userStoreSettings = await getStoreSettingsForUser(userId); // Or use createdByUserId if preferred for original terms
-    const settingsToSnapshot: StoreSettings = { ...DEFAULT_STORE_SETTINGS, ...userStoreSettings };
-    updatedOrderData.orderWarrantyConditions = currentOrder.orderWarrantyConditions || settingsToSnapshot.warrantyConditions;
-    updatedOrderData.orderSnapshottedWarrantyVoidConditionsText = currentOrder.orderSnapshottedWarrantyVoidConditionsText || settingsToSnapshot.warrantyVoidConditionsText;
-    // Add other legal texts if they should be snapshotted at this point,
-    // though typically they are snapshotted at order creation.
-    // For this update, we only focus on warranty-specific texts if hasWarranty changes.
-  }
 
+  // Legal texts are snapshotted at creation and should not change on update.
+  // They are already part of currentOrder and will be preserved by the spread operator.
+  // However, if for some reason they need to be updated (e.g. a system-wide policy change affecting old orders - unlikely),
+  // that would be a separate, specific action.
 
-  if (validatedFields.data.clientId) {
-    updatedOrderData.clientId = validatedFields.data.clientId;
-  }
-  
   mockOrders[orderIndex] = updatedOrderData;
 
-  if (validatedFields.data.status) {
-    if (validatedFields.data.status === "Listo para Entrega" && !mockOrders[orderIndex].readyForPickupDate) {
+  // Update related dates if status changes
+  if (dataToUpdate.status) {
+    if (dataToUpdate.status === "Listo para Entrega" && !mockOrders[orderIndex].readyForPickupDate) {
       mockOrders[orderIndex].readyForPickupDate = new Date().toISOString();
-    } else if (validatedFields.data.status === "Entregado" && !mockOrders[orderIndex].deliveryDate) {
+    } else if (dataToUpdate.status === "Entregado" && !mockOrders[orderIndex].deliveryDate) {
       mockOrders[orderIndex].deliveryDate = new Date().toISOString();
     }
   }

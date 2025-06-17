@@ -165,6 +165,7 @@ export interface Order {
   orderSnapshottedWarrantyVoidConditionsText?: string;
   orderSnapshottedPrivacyPolicy?: string;
   orderWarrantyConditions?: string; 
+  pickupConditions?: string; // Added for Order type as it's on StoreSettings and can be snapshotted
 
   costSparePart: number;
   costLabor: number;

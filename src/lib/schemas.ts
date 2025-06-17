@@ -4,8 +4,7 @@ import {
   ORDER_STATUSES,
   USER_ROLES_VALUES,
   CHECKLIST_ITEMS,
-  WARRANTY_TYPES,
-  WARRANTY_TYPE_OPTIONS,
+  WARRANTY_TYPE_OPTIONS, // Use this for enum values
   SALE_CON_HUELLA_OPTIONS
 } from './constants';
 import type { UserRole, WarrantyType, OrderStatus, Classification, Checklist } from '@/types';
@@ -37,38 +36,25 @@ export const ClientSchema = z.object({
 export type ClientFormData = z.infer<typeof ClientSchema>;
 
 
-const checklistShapeObject: Record<keyof Checklist, z.ZodTypeAny> = {
-  golpe: z.enum(['si', 'no']),
-  cristal: z.enum(['si', 'no']),
-  marco: z.enum(['si', 'no']),
-  tapa: z.enum(['si', 'no']),
-  lente_camara: z.enum(['si', 'no']),
-  enciende: z.enum(['si', 'no']),
-  tactil: z.enum(['si', 'no']),
-  imagen: z.enum(['si', 'no']),
-  botones: z.enum(['si', 'no']),
-  cam_trasera: z.enum(['si', 'no']),
-  cam_delantera: z.enum(['si', 'no']),
-  vibrador: z.enum(['si', 'no']),
-  microfono: z.enum(['si', 'no']),
-  auricular: z.enum(['si', 'no']),
-  parlante: z.enum(['si', 'no']),
-  sensor_huella: z.enum(['si', 'no']),
-  senal: z.enum(['si', 'no']),
-  wifi_bluetooth: z.enum(['si', 'no']),
-  pin_carga: z.enum(['si', 'no']),
-  humedad: z.enum(['si', 'no']),
-  equipo_doblado: z.enum(['si', 'no']),
-  consumoV: z.string().optional().or(z.literal('')),
-  mah: z.string().optional().or(z.literal('')),
-  saleConHuella: z.enum(['si', 'no', 'no_tiene']).optional(),
-};
+const checklistShapeObject: Record<keyof Checklist, z.ZodTypeAny> = CHECKLIST_ITEMS.reduce((acc, item) => {
+  if (item.type === 'boolean') {
+    // @ts-ignore
+    acc[item.id] = z.enum(['si', 'no']);
+  } else if (item.type === 'text') {
+    // @ts-ignore
+    acc[item.id] = z.string().optional().or(z.literal(''));
+  } else if (item.type === 'enum_saleConHuella') {
+    // @ts-ignore
+    acc[item.id] = z.enum(SALE_CON_HUELLA_OPTIONS.map(o => o.value) as [string, ...string[]]).optional();
+  }
+  return acc;
+}, {} as Record<keyof Checklist, z.ZodTypeAny>);
+
 
 export const ChecklistSchema = z.object(checklistShapeObject);
 
 const validOrderStatuses = ORDER_STATUSES.filter(status => status !== "") as [OrderStatus, ...OrderStatus[]];
 const validClassificationOptions = CLASSIFICATION_OPTIONS.filter(opt => opt !== null) as [Classification, ...Classification[]];
-// For warrantyType schema, include null explicitly as it's a valid type for the DB/state.
 const validWarrantyTypeEnumValues = WARRANTY_TYPE_OPTIONS.map(opt => opt.value) as [Exclude<WarrantyType, null | ''>, ...Exclude<WarrantyType, null | ''>[]];
 
 
@@ -86,7 +72,7 @@ export const OrderSchema = z.object({
   equipo_sin_acceso: z.boolean().optional().default(false),
   perdida_informacion: z.boolean().optional().default(false),
   previousOrderId: z.string().optional().or(z.literal('')),
-  promisedDeliveryDate: z.string().datetime({ message: "Formato de fecha y hora inválido." }).nullable().optional(),
+  promisedDeliveryDate: z.string().nullable().optional(), // Validated with superRefine if not null
   costSparePart: z.preprocess(
     (val) => (val === "" || val === null || val === undefined ? 0 : Number(val)),
     z.number({ invalid_type_error: "Debe ser un número" }).nonnegative("Costo debe ser no negativo.")
@@ -99,10 +85,10 @@ export const OrderSchema = z.object({
     (val) => (val === "" || val === null || val === undefined ? 0 : Number(val)),
     z.number({ invalid_type_error: "Debe ser un número" }).nonnegative("Costo debe ser no negativo.")
   ).default(0),
-  classification: z.enum(validClassificationOptions).nullable(),
+  classification: z.enum(validClassificationOptions).nullable().optional(), // Made optional for better form handling
   observations: z.string().optional().or(z.literal('')),
-  customerAccepted: z.boolean().optional().default(false).refine(val => val === true, { message: "El cliente debe aceptar los términos generales." }),
-  customerSignatureName: z.string().min(1, "El nombre para la firma es requerido si se aceptan los términos.").optional().or(z.literal('')),
+  customerAccepted: z.boolean().optional().default(false),
+  customerSignatureName: z.string().optional().or(z.literal('')),
   
   orderSnapshottedUnlockDisclaimer: z.string().optional().or(z.literal('')),
   orderSnapshottedAbandonmentPolicyText: z.string().optional().or(z.literal('')),
@@ -114,6 +100,7 @@ export const OrderSchema = z.object({
   orderSnapshottedWarrantyVoidConditionsText: z.string().optional().or(z.literal('')),
   orderSnapshottedPrivacyPolicy: z.string().optional().or(z.literal('')),
   orderWarrantyConditions: z.string().optional().or(z.literal('')),
+  pickupConditions: z.string().optional().or(z.literal('')), // Added to schema
   
   dataLossDisclaimerAccepted: z.boolean().optional().default(false), 
   privacyPolicyAccepted: z.boolean().optional().default(false), 
@@ -121,8 +108,8 @@ export const OrderSchema = z.object({
   status: z.enum(validOrderStatuses).default("Recibido"),
   hasWarranty: z.boolean().optional().default(false),
   warrantyType: z.enum(validWarrantyTypeEnumValues).nullable().optional(),
-  warrantyStartDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Formato de fecha de inicio inválido (YYYY-MM-DD).").nullable().optional(), 
-  warrantyEndDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Formato de fecha de fin inválido (YYYY-MM-DD).").nullable().optional(),   
+  warrantyStartDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Formato de fecha inválido (YYYY-MM-DD).").nullable().optional(), 
+  warrantyEndDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Formato de fecha inválido (YYYY-MM-DD).").nullable().optional(),   
   warrantyCoveredItem: z.string().optional().nullable(),
   warrantyNotes: z.string().optional().nullable(),
 
@@ -135,7 +122,6 @@ export const OrderSchema = z.object({
     });
   }
   
-  // Refined logic: only require acceptance if the text is non-empty
   if (data.orderSnapshottedDataLossPolicyText && data.orderSnapshottedDataLossPolicyText.trim() !== "" && !data.dataLossDisclaimerAccepted) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
@@ -165,17 +151,12 @@ export const OrderSchema = z.object({
     
     if (data.warrantyType === 'custom' && !data.warrantyEndDate) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, message: "La fecha de fin de garantía es requerida para tipo personalizado.", path: ["warrantyEndDate"] });
-    } else if (data.warrantyType && data.warrantyType !== 'custom' && !data.warrantyEndDate) {
-      // For auto-calculated types, endDate might not be set by user but should exist after calculation
-      // This server-side validation might be less critical if form handles auto-calc, but good for direct API calls
     }
 
     if (data.warrantyStartDate && data.warrantyEndDate) {
       try {
         const startDate = new Date(data.warrantyStartDate);
         const endDate = new Date(data.warrantyEndDate);
-        // Add time to startDate and endDate to compare dates correctly
-        // by setting them to the start of the day.
         startDate.setHours(0,0,0,0);
         endDate.setHours(0,0,0,0);
 
@@ -188,11 +169,29 @@ export const OrderSchema = z.object({
         if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime()) && endDate < startDate) {
           ctx.addIssue({ code: z.ZodIssueCode.custom, message: "La fecha de fin debe ser posterior o igual a la fecha de inicio.", path: ["warrantyEndDate"] });
         }
-      } catch (e) {
-        // Errors during date parsing will be caught by individual field regex or type checks
-      }
+      } catch (e) { /* Handled by regex */ }
     }
   }
+
+  if (data.promisedDeliveryDate) {
+    try {
+      const date = new Date(data.promisedDeliveryDate);
+      if (isNaN(date.getTime())) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Fecha y hora prometida de entrega inválida.",
+          path: ["promisedDeliveryDate"],
+        });
+      }
+    } catch (e) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Formato de Fecha y hora prometida de entrega inválido.",
+        path: ["promisedDeliveryDate"],
+      });
+    }
+  }
+
 });
 
 export type OrderFormData = z.infer<typeof OrderSchema>;
