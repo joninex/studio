@@ -18,7 +18,7 @@ import { useAuth } from "@/providers/AuthProvider";
 import { addOrderComment, updateOrderStatus, updateOrderCosts } from "@/lib/actions/order.actions";
 import { getClientById } from "@/lib/actions/client.actions"; 
 import { CHECKLIST_ITEMS, ORDER_STATUSES } from "@/lib/constants";
-import { AlertCircle, Bot, CalendarDays, DollarSign, Edit, FileText, Info, ListChecks, MessageSquare, Printer, User as UserIcon, Wrench, PackageCheck, Smartphone, LinkIcon } from "lucide-react";
+import { AlertCircle, Bot, CalendarDays, DollarSign, Edit, FileText, Info, ListChecks, MessageSquare, Printer, User as UserIcon, Wrench, PackageCheck, Smartphone, LinkIcon, QrCode } from "lucide-react";
 import { Input } from "../ui/input";
 import { LoadingSpinner } from "../shared/LoadingSpinner";
 
@@ -176,38 +176,208 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
       case "En Reparación":
          return `Orden de Servicio N°: ${order.orderNumber}`;
       default:
-        return `Orden de Servicio N°: ${order.orderNumber}`;
+        return `Documento Orden N°: ${order.orderNumber}`;
     }
   };
 
-  const showChecklistForPrint = ["Recibido", "En Diagnóstico"].includes(order.status);
-  const showBudgetForPrint = ["Presupuestado", "Presupuesto Aprobado", "En Espera de Repuestos", "En Reparación", "Reparado", "En Control de Calidad", "Listo para Entrega", "Entregado"].includes(order.status) && (order.costSparePart > 0 || order.costLabor > 0);
-  const showWarrantyForPrint = order.hasWarranty;
-  const showApprovalSignatureSpace = order.status === "Presupuestado";
-  const showDeliverySignatureSpace = ["Listo para Entrega", "Entregado"].includes(order.status);
-  const showTechnicalCommentsForPrint = order.commentsHistory && order.commentsHistory.length > 0 && 
-                                      ["Presupuestado", "Presupuesto Aprobado", "En Espera de Repuestos", "En Reparación", "Reparado", "En Control de Calidad", "Listo para Entrega", "Entregado", "Presupuesto Rechazado", "Sin Reparación"].includes(order.status);
+  const isIngresoContext = ["Recibido", "En Diagnóstico"].includes(order.status);
+  const isPresupuestoContext = ["Presupuestado", "Presupuesto Rechazado", "Presupuesto Aprobado"].includes(order.status);
+  const isEntregaContext = ["Listo para Entrega", "Entregado"].includes(order.status);
+  const isReparacionContext = ["En Reparación", "Reparado", "En Control de Calidad"].includes(order.status);
+
+  const showChecklistForPrint = isIngresoContext || order.status === "Presupuestado";
+  const showBudgetForPrint = (order.costSparePart > 0 || order.costLabor > 0) && (isPresupuestoContext || isReparacionContext || isEntregaContext);
+  const showTechnicalCommentsForPrint = order.commentsHistory && order.commentsHistory.length > 0 && (isPresupuestoContext || isReparacionContext || isEntregaContext);
+  const showWarrantyDetailsForPrint = order.hasWarranty;
+  
+  const showClientReceptionSignature = isIngresoContext && order.customerAccepted;
+  const showTechnicianReceptionSignature = isIngresoContext;
+  const showClientBudgetSignature = isPresupuestoContext && order.status === "Presupuestado";
+  const showClientDeliverySignature = isEntregaContext;
 
 
   return (
     <div className="space-y-6">
-      <div className="print-header-container print-only text-center mb-6 hidden print:block">
-        {order.orderCompanyLogoUrl && (
-          <Image
-            src={order.orderCompanyLogoUrl}
-            alt={order.orderCompanyName || "Company Logo"}
-            width={150}
-            height={56}
-            className="mx-auto mb-4 print-logo"
-            data-ai-hint="company logo"
-          />
+      {/* ----- PRINT ONLY VIEW ----- */}
+      <div className="print-only hidden print:block print-container-full-page">
+        <div className="print-header-container mb-6 text-center">
+            <div className="flex justify-between items-start">
+                <div className="text-left">
+                    {order.orderCompanyLogoUrl && (
+                      <Image
+                        src={order.orderCompanyLogoUrl}
+                        alt={order.orderCompanyName || "Company Logo"}
+                        width={120} // Adjusted size
+                        height={45}  // Adjusted size
+                        className="print-logo mb-2"
+                        data-ai-hint="company logo"
+                      />
+                    )}
+                    <p className="print-company-info text-xs font-semibold">{order.orderCompanyName}</p>
+                    {order.orderCompanyAddress && <p className="print-company-info text-xs">{order.orderCompanyAddress}</p>}
+                    {order.orderCompanyCuit && <p className="print-company-info text-xs">CUIT: {order.orderCompanyCuit}</p>}
+                </div>
+                <div className="text-right">
+                    <h1 className="text-xl font-bold print-title mb-1">{getPrintTitle()}</h1>
+                    <p className="print-company-info text-xs">Fecha Ingreso: {format(new Date(order.entryDate), "dd/MM/yyyy HH:mm", { locale: es })}</p>
+                    <p className="print-company-info text-xs">Estado Actual: {order.status}</p>
+                     <Image 
+                        src="https://placehold.co/80x80.png?text=QR" 
+                        alt="QR Code" 
+                        width={80} 
+                        height={80} 
+                        className="mt-2 ml-auto print-qr-code"
+                        data-ai-hint="order QR code"
+                     />
+                </div>
+            </div>
+        </div>
+
+        <div className="print-section card-print">
+            <h3 className="print-section-title"><UserIcon className="inline-block mr-2 h-4 w-4"/>Datos del Cliente</h3>
+            {isLoadingClient ? (
+                <p className="text-sm">Cargando cliente...</p>
+            ) : clientData ? (
+              <div className="grid grid-cols-2 gap-x-4 text-sm">
+                <p><strong>Nombre:</strong> {clientData.name} {clientData.lastName}</p>
+                <p><strong>DNI:</strong> {clientData.dni}</p>
+                <p><strong>Teléfono:</strong> {clientData.phone}</p>
+                <p><strong>Email:</strong> {clientData.email || "No provisto"}</p>
+                {clientData.address && <p className="col-span-2"><strong>Dirección:</strong> {clientData.address}</p>}
+              </div>
+            ) : (
+              <p className="text-sm text-destructive">Cliente no encontrado (ID: {order.clientId}).</p>
+            )}
+        </div>
+
+        <div className="print-section card-print">
+            <h3 className="print-section-title"><Smartphone className="inline-block mr-2 h-4 w-4"/>Datos del Equipo</h3>
+            <div className="grid grid-cols-2 gap-x-4 text-sm">
+                <p><strong>Marca:</strong> {order.deviceBrand}</p>
+                <p><strong>Modelo:</strong> {order.deviceModel}</p>
+                <p><strong>IMEI/Serial:</strong> {order.deviceIMEI}</p>
+                <p><strong>PIN/Patrón:</strong> {order.unlockPatternInfo} <span className="text-xs italic">(Información protegida para uso interno)</span></p>
+                <p className="col-span-2"><strong>Falla Declarada:</strong> {order.declaredFault}</p>
+                <p className="col-span-2"><strong>Daños Preexistentes/Observaciones de Ingreso:</strong> {order.damageRisk || "Sin observaciones específicas de daños."}</p>
+            </div>
+        </div>
+
+        {showChecklistForPrint && (
+            <div className="print-section card-print">
+                <h3 className="print-section-title"><ListChecks className="inline-block mr-2 h-4 w-4"/>Checklist de Recepción</h3>
+                <div className="grid grid-cols-3 gap-x-4 gap-y-1 text-xs">
+                  {CHECKLIST_ITEMS.map(item => (
+                    <div key={item.id} className="flex justify-between">
+                      <span>{item.label}:</span>
+                      <span className={`font-medium ${order.checklist[item.id as keyof Checklist] === 'si' ? 'text-green-600 print:text-black' : 'text-red-600 print:text-black'}`}>
+                        {order.checklist[item.id as keyof Checklist] === 'si' ? 'Sí' : 'No'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+            </div>
         )}
-        <h1 className="text-2xl font-bold print-title">{getPrintTitle()}</h1>
-        {order.orderCompanyAddress && <p className="text-sm print-company-info">{order.orderCompanyAddress}</p>}
-        {order.orderCompanyCuit && <p className="text-sm print-company-info">CUIT: {order.orderCompanyCuit}</p>}
+        
+        {showTechnicalCommentsForPrint && (
+            <div className="print-section card-print">
+                <h3 className="print-section-title"><MessageSquare className="inline-block mr-2 h-4 w-4"/>Diagnóstico / Historial Técnico</h3>
+                 <div className="space-y-2 text-sm">
+                    {order.commentsHistory.map((comment, index) => (
+                    <div key={comment.id || index} className="print-comment-item p-2 border-b">
+                        <p className="font-semibold">{comment.userName || `Técnico ID: ${comment.userId}`} <span className="text-xs text-muted-foreground">- {format(new Date(comment.timestamp), "dd/MM/yy HH:mm", { locale: es })}</span></p>
+                        <p className="whitespace-pre-line">{comment.description}</p>
+                    </div>
+                    ))}
+                </div>
+            </div>
+        )}
+
+        {showBudgetForPrint && (
+           <div className="print-section card-print">
+            <h3 className="print-section-title"><DollarSign className="inline-block mr-2 h-4 w-4"/>Presupuesto</h3>
+            <table className="w-full text-sm">
+                <tbody>
+                    <tr><td className="py-1">Costo Repuestos:</td><td className="text-right py-1">${order.costSparePart.toFixed(2)}</td></tr>
+                    <tr><td className="py-1">Costo Mano de Obra:</td><td className="text-right py-1">${order.costLabor.toFixed(2)}</td></tr>
+                    <tr className="font-bold border-t"><td className="py-1">Total Estimado:</td><td className="text-right py-1">${(order.costSparePart + order.costLabor).toFixed(2)}</td></tr>
+                    {order.costPending > 0 && <tr className="italic"><td className="py-1">Monto Pendiente de Pago:</td><td className="text-right py-1">${order.costPending.toFixed(2)}</td></tr>}
+                </tbody>
+            </table>
+           </div>
+        )}
+        
+        {showWarrantyDetailsForPrint && (
+            <div className="print-section card-print">
+                <h3 className="print-section-title"><PackageCheck className="inline-block mr-2 h-4 w-4"/>Detalles de Garantía</h3>
+                <div className="text-sm space-y-1">
+                    <p><strong>Tipo de Garantía:</strong> {order.warrantyType === '30d' ? '30 Días' : order.warrantyType === '60d' ? '60 Días' : order.warrantyType === '90d' ? '90 Días' : order.warrantyType === 'custom' ? `Personalizada (${format(new Date(order.warrantyStartDate!), "dd/MM/yy", { locale: es })} - ${format(new Date(order.warrantyEndDate!), "dd/MM/yy", { locale: es })})` : 'N/A'}</p>
+                    {order.warrantyStartDate && !['custom'].includes(order.warrantyType || "") && <p><strong>Periodo:</strong> {format(new Date(order.warrantyStartDate), "dd/MM/yyyy", { locale: es })} - {format(new Date(order.warrantyEndDate!), "dd/MM/yyyy", { locale: es })}</p>}
+                    {order.warrantyCoveredItem && <p><strong>Pieza/Procedimiento Cubierto:</strong> {order.warrantyCoveredItem}</p>}
+                    {order.warrantyNotes && <p><strong>Notas de Garantía:</strong> {order.warrantyNotes}</p>}
+                </div>
+            </div>
+        )}
+
+        <div className="print-signature-section-container mt-6 space-y-8">
+            {showClientReceptionSignature && (
+                 <div className="print-signature-area">
+                    <p className="text-xs">El cliente declara conocer y aceptar los términos y condiciones del servicio, el descargo de responsabilidad por pérdida de datos y la política de privacidad detallados al pie de este documento, así como el estado de recepción del equipo.</p>
+                    <div className="mt-10">
+                        <p className="print-signature-line">Firma Cliente (Recepción):</p>
+                        <p className="print-signature-clarification">Aclaración: {order.customerSignatureName || (clientData ? `${clientData.name} ${clientData.lastName}`: '____________________')}</p>
+                        <p className="print-signature-clarification">DNI: {clientData?.dni || '____________________'}</p>
+                    </div>
+                </div>
+            )}
+            {showTechnicianReceptionSignature && (
+                 <div className="print-signature-area">
+                     <p className="text-xs">El técnico abajo firmante constata el estado de recepción del equipo y los detalles declarados por el cliente.</p>
+                    <div className="mt-10">
+                        <p className="print-signature-line">Firma Técnico (Recepción/Verificación):</p>
+                        <p className="print-signature-clarification">Aclaración:</p>
+                        <p className="print-signature-clarification">Legajo/ID Técnico:</p>
+                    </div>
+                </div>
+            )}
+            {showClientBudgetSignature && (
+                <div className="print-signature-area">
+                    <p className="text-xs">El cliente declara ACEPTAR / RECHAZAR (tachar lo que no corresponda) el presupuesto detallado y autoriza la reparación bajo las condiciones indicadas.</p>
+                    <div className="mt-10">
+                        <p className="print-signature-line">Firma Cliente (Presupuesto):</p>
+                        <p className="print-signature-clarification">Aclaración:</p>
+                        <p className="print-signature-clarification">DNI:</p>
+                    </div>
+                </div>
+            )}
+            {showClientDeliverySignature && (
+                 <div className="print-signature-area">
+                    <p className="text-xs">El cliente declara recibir el equipo reparado de conformidad y acepta las condiciones de garantía si aplicasen.</p>
+                    <div className="mt-10">
+                        <p className="print-signature-line">Firma Cliente (Entrega):</p>
+                        <p className="print-signature-clarification">Aclaración:</p>
+                        <p className="print-signature-clarification">DNI:</p>
+                    </div>
+                </div>
+            )}
+        </div>
+        
+        <div className="print-footer-container mt-8 pt-4 border-t">
+            <h4 className="print-section-title text-xs mb-1">Términos y Condiciones Generales:</h4>
+            <div className="text-xs space-y-1 print-terms">
+                {order.orderSnapshottedDataLossDisclaimer && <p><strong>PÉRDIDA DE DATOS:</strong> {order.orderSnapshottedDataLossDisclaimer}</p>}
+                {order.orderWarrantyConditions && <p><strong>CONDICIONES DE GARANTÍA:</strong> {order.orderWarrantyConditions}</p>}
+                {order.orderPickupConditions && <p><strong>CONDICIONES DE RETIRO Y ABANDONO:</strong> {order.orderPickupConditions} {order.orderAbandonmentPolicyDays60 && `Equipos no retirados luego de ${order.orderAbandonmentPolicyDays60} días podrán ser declarados en abandono y el taller podrá disponer de los mismos según la ley vigente.`}</p>}
+                {order.orderSnapshottedPrivacyPolicy && <p><strong>POLÍTICA DE PRIVACIDAD Y ACCESO AL DISPOSITIVO:</strong> {order.orderSnapshottedPrivacyPolicy}</p>}
+                {order.orderCompanyContactDetails && <p className="whitespace-pre-line mt-2 text-center font-semibold"><strong>{order.orderCompanyName}</strong><br/>{order.orderCompanyContactDetails}</p>}
+            </div>
+        </div>
       </div>
-      <Card className="print-container shadow-xl">
-        <CardHeader className="flex flex-row justify-between items-start no-print">
+      {/* ----- END PRINT ONLY VIEW ----- */}
+
+
+      {/* ----- UI VIEW (NO-PRINT) ----- */}
+      <Card className="no-print shadow-xl">
+        <CardHeader className="flex flex-row justify-between items-start">
           <div>
             <CardTitle className="flex items-center gap-2 mb-1">
               <FileText className="h-6 w-6 text-primary" />
@@ -217,9 +387,9 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
               Fecha de Ingreso: {format(new Date(order.entryDate), "dd MMM yyyy, HH:mm", { locale: es })}
             </CardDescription>
              <div className="mt-2 flex items-center gap-2">
-                <Badge variant={getStatusBadgeVariant(order.status)} className="text-sm px-3 py-1 badge-print">{order.status}</Badge>
+                <Badge variant={getStatusBadgeVariant(order.status)} className="text-sm px-3 py-1">{order.status}</Badge>
                 {abandonmentWarning && (
-                  <Badge variant="destructive" className="ml-2 text-sm px-3 py-1 animate-pulse badge-print">
+                  <Badge variant="destructive" className="ml-2 text-sm px-3 py-1 animate-pulse">
                     <AlertCircle className="mr-1 h-4 w-4" /> {abandonmentWarning}
                   </Badge>
                 )}
@@ -230,24 +400,13 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
                 )}
               </div>
           </div>
-          <Button onClick={handlePrint} variant="outline" className="no-print"><Printer className="mr-2 h-4 w-4" /> Imprimir</Button>
+          <Button onClick={handlePrint} variant="outline"><Printer className="mr-2 h-4 w-4" /> Imprimir</Button>
         </CardHeader>
         
-        <div className="print-status-info hidden print:block mb-4 p-6 border-b">
-            <p><strong>Fecha de Ingreso:</strong> {format(new Date(order.entryDate), "dd MMMM yyyy, HH:mm", { locale: es })}</p>
-            <p><strong>Estado Actual:</strong> <span className="font-semibold">{order.status}</span></p>
-             {abandonmentWarning && (
-                <p className="font-bold text-red-600 mt-1">ALERTA: {abandonmentWarning}</p>
-            )}
-            {order.previousOrderId && (
-                <p><strong>Orden Anterior Vinculada:</strong> {order.previousOrderId}</p>
-            )}
-        </div>
-
         <CardContent className="space-y-6">
           <div className="grid md:grid-cols-2 gap-6">
-            <Card className="bg-muted/30 card-print">
-              <CardHeader><CardTitle className="text-lg flex items-center gap-2 print-section-title"><UserIcon className="h-5 w-5 text-primary"/>Datos del Cliente</CardTitle></CardHeader>
+            <Card className="bg-muted/30">
+              <CardHeader><CardTitle className="text-lg flex items-center gap-2"><UserIcon className="h-5 w-5 text-primary"/>Datos del Cliente</CardTitle></CardHeader>
               <CardContent className="text-sm space-y-1">
                 {isLoadingClient ? (
                     <div className="flex items-center gap-2"><LoadingSpinner size={16}/> Cargando cliente...</div>
@@ -265,28 +424,28 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
                 )}
               </CardContent>
             </Card>
-            <Card className="bg-muted/30 card-print">
-              <CardHeader><CardTitle className="text-lg flex items-center gap-2 print-section-title"><Smartphone className="h-5 w-5 text-primary"/>Datos del Equipo</CardTitle></CardHeader>
+            <Card className="bg-muted/30">
+              <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Smartphone className="h-5 w-5 text-primary"/>Datos del Equipo</CardTitle></CardHeader>
               <CardContent className="text-sm space-y-1">
                 <p><strong>Marca:</strong> {order.deviceBrand}</p>
                 <p><strong>Modelo:</strong> {order.deviceModel}</p>
-                <p><strong>IMEI:</strong> {order.deviceIMEI}</p>
+                <p><strong>IMEI/Serial:</strong> {order.deviceIMEI}</p>
                 <p><strong>Falla Declarada:</strong> {order.declaredFault}</p>
-                <p><strong>Clave/Patrón:</strong> {order.unlockPatternInfo}</p>
+                <p><strong>Clave/Patrón:</strong> {order.unlockPatternInfo} <span className="text-xs italic">(Protegido)</span></p>
               </CardContent>
             </Card>
           </div>
 
-          {(showChecklistForPrint || (order.checklist && Object.keys(order.checklist).length > 0)) && (
+          {(order.checklist && Object.keys(order.checklist).length > 0) && (
             <>
-              <Separator className="print-separator"/>
-              <div className="card-print print-section">
-                <h3 className="text-lg font-semibold mb-2 flex items-center gap-2 print-section-title"><ListChecks className="h-5 w-5 text-primary"/>Checklist de Recepción</h3>
+              <Separator/>
+              <div>
+                <h3 className="text-lg font-semibold mb-2 flex items-center gap-2"><ListChecks className="h-5 w-5 text-primary"/>Checklist de Recepción</h3>
                 <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-2 text-sm">
                   {CHECKLIST_ITEMS.map(item => (
                     <div key={item.id} className="flex justify-between">
                       <span>{item.label}:</span>
-                      <span className={`font-medium ${order.checklist[item.id as keyof Checklist] === 'si' ? 'text-green-600 print:text-black' : 'text-red-600 print:text-black'}`}>
+                      <span className={`font-medium ${order.checklist[item.id as keyof Checklist] === 'si' ? 'text-green-600' : 'text-red-600'}`}>
                         {order.checklist[item.id as keyof Checklist] === 'si' ? 'Sí' : 'No'}
                       </span>
                     </div>
@@ -296,11 +455,11 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
             </>
           )}
 
-          <Separator className="print-separator"/>
-          <div className="card-print print-section">
+          <Separator/>
+          <div>
             <div className="grid md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                  <h3 className="text-lg font-semibold flex items-center gap-2 print-section-title"><AlertCircle className="h-5 w-5 text-primary"/>Riesgos y Condiciones</h3>
+                  <h3 className="text-lg font-semibold flex items-center gap-2"><AlertCircle className="h-5 w-5 text-primary"/>Riesgos y Condiciones</h3>
                   <p className="text-sm"><strong>Riesgo de Rotura (Daños Preexistentes):</strong> {order.damageRisk || "Ninguno especificado"}</p>
                   <ul className="text-sm list-disc list-inside pl-1">
                       {order.pantalla_parcial && <li>Pantalla con daño parcial</li>}
@@ -310,7 +469,7 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
                   </ul>
               </div>
                <div className="space-y-2">
-                  <h3 className="text-lg font-semibold flex items-center gap-2 print-section-title"><Info className="h-5 w-5 text-primary"/>Otros Detalles</h3>
+                  <h3 className="text-lg font-semibold flex items-center gap-2"><Info className="h-5 w-5 text-primary"/>Otros Detalles</h3>
                   <p className="text-sm"><strong>Clasificación (Para Stock):</strong> {order.classification || "No clasificado"}</p>
                   <p className="text-sm"><strong>Observaciones Generales:</strong> {order.observations || "Sin observaciones"}</p>
                   <p className="text-sm"><strong>Aceptado por:</strong> {order.customerSignatureName} (Aceptado: {order.customerAccepted ? "Sí" : "No"})</p>
@@ -319,14 +478,14 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
             </div>
           </div>
           
-          {showTechnicalCommentsForPrint && (
+          {(order.commentsHistory && order.commentsHistory.length > 0) && (
             <>
-            <Separator className="print-separator" />
-            <div className="card-print print-section">
-                <h3 className="text-lg font-semibold mb-2 flex items-center gap-2 print-section-title"><MessageSquare className="h-5 w-5 text-primary"/>Historial Técnico / Diagnóstico</h3>
-                 <div className="space-y-4 max-h-60 overflow-y-auto pr-2 no-print-scroll">
+            <Separator />
+            <div>
+                <h3 className="text-lg font-semibold mb-2 flex items-center gap-2"><MessageSquare className="h-5 w-5 text-primary"/>Historial Técnico / Diagnóstico</h3>
+                 <div className="space-y-4 max-h-60 overflow-y-auto pr-2">
                     {order.commentsHistory.map((comment, index) => (
-                    <div key={comment.id || index} className="text-sm p-3 bg-muted/30 rounded-md border print-comment-item">
+                    <div key={comment.id || index} className="text-sm p-3 bg-muted/30 rounded-md border">
                         <p className="font-semibold">{comment.userName || `Usuario ID: ${comment.userId}`} <span className="text-xs text-muted-foreground">- {format(new Date(comment.timestamp), "dd MMM yyyy, HH:mm", { locale: es })}</span></p>
                         <p>{comment.description}</p>
                     </div>
@@ -336,19 +495,18 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
             </>
           )}
 
-          {(showBudgetForPrint || (order.costSparePart > 0 || order.costLabor > 0)) && (
+          {(order.costSparePart > 0 || order.costLabor > 0) && (
             <>
-              <Separator className="print-separator"/>
-               <div className="card-print print-section">
-                <div className="flex justify-between items-center mb-2 no-print">
-                    <h3 className="text-lg font-semibold flex items-center gap-2 print-section-title"><DollarSign className="h-5 w-5 text-primary"/>Costos / Presupuesto</h3>
+              <Separator/>
+               <div>
+                <div className="flex justify-between items-center mb-2">
+                    <h3 className="text-lg font-semibold flex items-center gap-2"><DollarSign className="h-5 w-5 text-primary"/>Costos / Presupuesto</h3>
                     {!isEditingCosts && (
-                      <Button variant="outline" size="sm" onClick={() => setIsEditingCosts(true)} className="no-print"><Edit className="mr-2 h-4 w-4"/>Editar Costos</Button>
+                      <Button variant="outline" size="sm" onClick={() => setIsEditingCosts(true)}><Edit className="mr-2 h-4 w-4"/>Editar Costos</Button>
                     )}
                 </div>
-                 <h3 className="text-lg font-semibold mb-2 flex items-center gap-2 print-section-title hidden print:flex"><DollarSign className="h-5 w-5 text-primary"/>Costos / Presupuesto</h3>
                 {isEditingCosts ? (
-                    <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-4 items-end p-4 border rounded-md bg-muted/20 no-print">
+                    <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-4 items-end p-4 border rounded-md bg-muted/20">
                         <div className="space-y-1">
                             <label htmlFor="costSparePartEdit" className="text-xs font-medium">Repuesto ($)</label>
                             <Input id="costSparePartEdit" name="costSparePart" type="number" value={editableCosts.costSparePart} onChange={handleCostChange} className="h-9"/>
@@ -380,11 +538,11 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
             </>
           )}
           
-          {showWarrantyForPrint && (
+          {order.hasWarranty && (
              <>
-                <Separator className="print-separator"/>
-                <div className="card-print print-section">
-                    <h3 className="text-lg font-semibold mb-2 flex items-center gap-2 print-section-title"><PackageCheck className="h-5 w-5 text-primary"/>Detalles de Garantía</h3>
+                <Separator/>
+                <div>
+                    <h3 className="text-lg font-semibold mb-2 flex items-center gap-2"><PackageCheck className="h-5 w-5 text-primary"/>Detalles de Garantía</h3>
                     <div className="text-sm space-y-1">
                         <p><strong>Tipo de Garantía:</strong> {order.warrantyType === '30d' ? '30 Días' : order.warrantyType === '60d' ? '60 Días' : order.warrantyType === '90d' ? '90 Días' : order.warrantyType === 'custom' ? 'Personalizada' : 'N/A'}</p>
                         {order.warrantyStartDate && <p><strong>Inicio Garantía:</strong> {format(new Date(order.warrantyStartDate), "dd MMM yyyy", { locale: es })}</p>}
@@ -397,48 +555,15 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
           )}
 
 
-          <Separator className="print-separator"/>
-          <div className="card-print print-section">
-            <h3 className="text-lg font-semibold mb-2 flex items-center gap-2 print-section-title"><PackageCheck className="h-5 w-5 text-primary"/>Seguimiento y Fechas</h3>
+          <Separator/>
+          <div>
+            <h3 className="text-lg font-semibold mb-2 flex items-center gap-2"><CalendarDays className="h-5 w-5 text-primary"/>Seguimiento y Fechas</h3>
             <div className="text-sm space-y-1">
                 <p><strong>Última Actualización:</strong> {format(new Date(order.updatedAt), "dd MMM yyyy, HH:mm", { locale: es })} {user?.uid === order.lastUpdatedBy ? `por ${user.name}` : ``}</p>
                 {order.readyForPickupDate && <p><strong>Listo para Retirar:</strong> {format(new Date(order.readyForPickupDate), "dd MMM yyyy, HH:mm", { locale: es })}</p>}
                 {order.deliveryDate && <p><strong>Entregado:</strong> {format(new Date(order.deliveryDate), "dd MMM yyyy, HH:mm", { locale: es })}</p>}
             </div>
           </div>
-          
-          <div className="print-footer-container hidden print:block mt-8 pt-4 border-t print-section">
-            {order.customerAccepted && ["Recibido", "En Diagnóstico"].includes(order.status) && (
-                 <div className="print-signature-area mb-6">
-                    <p className="text-sm"><strong>Firma Cliente (Ingreso):</strong> _________________________</p>
-                    <p className="text-sm mt-1"><strong>Aclaración:</strong> {order.customerSignatureName || (clientData ? `${clientData.name} ${clientData.lastName}`: '____________________')}</p>
-                    <p className="text-sm mt-1"><strong>Fecha:</strong> {format(new Date(order.entryDate), "dd/MM/yyyy", { locale: es })}</p>
-                </div>
-            )}
-            {showApprovalSignatureSpace && (
-                <div className="print-signature-area mb-6">
-                    <p className="text-sm"><strong>Firma Aprobación Presupuesto:</strong> _________________________</p>
-                    <p className="text-sm mt-1"><strong>Aclaración:</strong> _________________________</p>
-                    <p className="text-sm mt-1"><strong>Fecha:</strong> ____/____/________</p>
-                </div>
-            )}
-            {showDeliverySignatureSpace && (
-                 <div className="print-signature-area mb-6">
-                    <p className="text-sm"><strong>Firma Conformidad Entrega:</strong> _________________________</p>
-                    <p className="text-sm mt-1"><strong>Aclaración:</strong> _________________________</p>
-                    <p className="text-sm mt-1"><strong>Fecha:</strong> ____/____/________</p>
-                </div>
-            )}
-
-            { (
-                <div className="text-xs mt-4 space-y-1 print-terms">
-                    {order.orderWarrantyConditions && <p><strong>CONDICIONES DE GARANTÍA:</strong> {order.orderWarrantyConditions}</p>}
-                    {order.orderPickupConditions && <p><strong>CONDICIONES DE RETIRO:</strong> {order.orderPickupConditions} {order.orderAbandonmentPolicyDays60 && `Equipos no retirados luego de ${order.orderAbandonmentPolicyDays60} días podrán ser declarados en abandono.`}</p>}
-                    {order.orderCompanyContactDetails && <p className="whitespace-pre-line mt-2"><strong>CONTACTO:</strong><br/>{order.orderCompanyContactDetails}</p>}
-                </div>
-            )}
-          </div>
-
         </CardContent>
       </Card>
 
