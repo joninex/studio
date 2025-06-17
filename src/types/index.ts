@@ -16,46 +16,48 @@ export interface StoreSettings {
   abandonmentPolicyDays60?: number;
 }
 
+export type UserRole = 'admin' | 'tecnico' | 'recepcionista';
+
 export interface User {
-  uid: string; // Corresponds to id_usuario
-  name: string; // Corresponds to nombre_usuario
+  uid: string;
+  name: string;
   email: string;
-  role: 'admin' | 'tecnico' | 'recepcionista'; // Updated roles
-  status: UserStatus; 
+  role: UserRole;
+  status: UserStatus;
   storeSettings?: StoreSettings;
-  createdAt: Timestamp | Date | string; 
+  createdAt: Timestamp | Date | string;
   updatedAt: Timestamp | Date | string;
 }
 
-export interface Client { 
-  id: string; 
-  name: string; 
-  lastName: string; // Added lastName
-  dni: string; 
-  phone: string; 
-  email?: string; 
-  address?: string; 
-  notes?: string; 
+export interface Client {
+  id: string;
+  name: string;
+  lastName: string;
+  dni: string;
+  phone: string;
+  email?: string;
+  address?: string;
+  notes?: string;
   createdAt?: Timestamp | Date | string;
   updatedAt?: Timestamp | Date | string;
 }
 
 export interface Checklist {
-  marca_golpes: 'si' | 'no';
-  cristal_astillado: 'si' | 'no';
-  marco_roto: 'si' | 'no';
-  tapa_astillada: 'si' | 'no';
-  lente_camara: 'si' | 'no'; 
+  golpe: 'si' | 'no'; // Antes marca_golpes
+  cristal: 'si' | 'no'; // Antes cristal_astillado
+  marco: 'si' | 'no'; // Antes marco_roto
+  tapa: 'si' | 'no'; // Antes tapa_astillada
+  lente_camara: 'si' | 'no';
   enciende: 'si' | 'no';
-  tactil_funciona: 'si' | 'no';
-  imagen_pantalla: 'si' | 'no'; 
-  botones_funcionales: 'si' | 'no';
-  camara_trasera: 'si' | 'no'; 
-  camara_delantera: 'si' | 'no'; 
+  tactil: 'si' | 'no'; // Antes tactil_funciona
+  imagen: 'si' | 'no'; // Antes imagen_pantalla
+  botones: 'si' | 'no'; // Antes botones_funcionales
+  cam_trasera: 'si' | 'no'; // Antes camara_trasera
+  cam_delantera: 'si' | 'no'; // Antes camara_delantera
   vibrador: 'si' | 'no';
-  microfono: 'si' | 'no'; 
-  auricular: 'si' | 'no'; 
-  parlante: 'si' | 'no'; 
+  microfono: 'si' | 'no';
+  auricular: 'si' | 'no';
+  parlante: 'si' | 'no';
   sensor_huella: 'si' | 'no';
   senal: 'si' | 'no';
   wifi_bluetooth: 'si' | 'no';
@@ -77,50 +79,49 @@ export type OrderStatus =
   | "abandonado"
   | "";
 
-export interface Comment { 
-  id?: string; 
-  userId: string; 
-  userName?: string; 
-  description: string; 
-  timestamp: Timestamp | Date | string; 
+export interface Comment {
+  id?: string;
+  userId: string;
+  userName?: string;
+  description: string;
+  timestamp: Timestamp | Date | string;
 }
 
 export interface Order {
-  id?: string; 
-  orderNumber: string; 
+  id?: string;
+  orderNumber: string;
 
-  clientId: string; // Link to CLIENTES
-  clientName?: string; // For display in lists, populated by getOrders
-  clientLastName?: string; // For display in lists, populated by getOrders
+  clientId: string;
+  clientName?: string; // For display in lists
+  clientLastName?: string; // For display in lists
 
-  createdByUserId: string; 
+  createdByUserId: string; // FK to USUARIOS id_usuario
 
-  deviceBrand: string; 
-  deviceModel: string; 
-  deviceIMEI: string; 
-  declaredFault: string; 
-  unlockPatternInfo: UnlockPatternInfo; 
+  deviceBrand: string; // Corresponds to marca
+  deviceModel: string; // Corresponds to modelo
+  deviceIMEI: string; // Corresponds to IMEI
+  declaredFault: string; // Corresponds to falla_reportada
+  unlockPatternInfo: UnlockPatternInfo; // Corresponds to patron_desbloqueo
 
-  damageRisk?: string; 
+  damageRisk?: string; // Corresponds to riesgo_rotura
   pantalla_parcial?: boolean;
   equipo_sin_acceso?: boolean;
   perdida_informacion?: boolean;
 
-  classification: Classification; 
-  observations?: string; 
+  classification: Classification; // Corresponds to para_stock
+  observations?: string;
 
-  status: OrderStatus; 
+  status: OrderStatus;
   previousOrderId?: string;
 
-  entryDate: Timestamp | Date | string; 
-  deliveryDate?: Timestamp | Date | string | null; 
-  readyForPickupDate?: Timestamp | Date | string | null;
+  entryDate: Timestamp | Date | string; // Corresponds to fecha_ingreso
+  deliveryDate?: Timestamp | Date | string | null; // Corresponds to fecha_salida
 
+  commentsHistory: Comment[];
 
-  commentsHistory: Comment[]; 
+  checklist: Checklist;
 
-  checklist: Checklist; 
-
+  // Snapshot of store settings at time of order creation
   orderCompanyName?: string;
   orderCompanyLogoUrl?: string;
   orderCompanyCuit?: string;
@@ -129,12 +130,13 @@ export interface Order {
   orderWarrantyConditions?: string;
   orderPickupConditions?: string;
   orderAbandonmentPolicyDays60?: number;
+  branchInfo?: string; // Snapshot of branch info from user's store settings
 
-  costSparePart: number;
-  costLabor: number;
-  costPending: number;
+  costSparePart: number; // Will be part of DIAGNOSTICOS later
+  costLabor: number; // Will be part of DIAGNOSTICOS later
+  costPending: number; // Will be part of DIAGNOSTICOS later
 
-  lastUpdatedBy: string; 
+  lastUpdatedBy: string; // FK to USUARIOS id_usuario
   updatedAt: Timestamp | Date | string;
   createdAt?: Timestamp | Date | string;
 
@@ -147,4 +149,5 @@ export type AISuggestion = {
   suggestedSolutions: string;
 };
 
+// Kept for settings page, represents User's Store Settings
 export interface Configurations extends StoreSettings {}

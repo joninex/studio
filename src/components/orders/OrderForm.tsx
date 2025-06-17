@@ -9,7 +9,7 @@ import type { z } from "zod";
 
 import { OrderSchema, type OrderFormData } from "@/lib/schemas";
 import { createOrder, getRepairSuggestions, updateOrder, getOrderById } from "@/lib/actions/order.actions";
-import { getStoreSettingsForUser } from "@/lib/actions/settings.actions"; 
+import { getStoreSettingsForUser } from "@/lib/actions/settings.actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -20,14 +20,14 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/providers/AuthProvider";
-import { AISuggestion, type Order, type StoreSettings } from "@/types"; 
+import { AISuggestion, type Order, type StoreSettings } from "@/types";
 import { CHECKLIST_ITEMS, CLASSIFICATION_OPTIONS, ORDER_STATUSES, SPECIFIC_SECTORS_OPTIONS, UNLOCK_PATTERN_OPTIONS, YES_NO_OPTIONS, DEFAULT_STORE_SETTINGS } from "@/lib/constants";
 import { AlertCircle, Bot, DollarSign, Info, ListChecks, LucideSparkles, User, Wrench, LinkIcon, Building, UserSquare } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 
 interface OrderFormProps {
-  orderId?: string; 
+  orderId?: string;
 }
 
 const NONE_CLASSIFICATION_VALUE = "__NONE_CLASSIFICATION_VALUE__";
@@ -40,22 +40,22 @@ export function OrderForm({ orderId }: OrderFormProps) {
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [aiSuggestion, setAiSuggestion] = useState<AISuggestion | null>(null);
   const [isLoadingOrder, setIsLoadingOrder] = useState(!!orderId);
-  const [isLoadingStoreSettings, setIsLoadingStoreSettings] = useState(!orderId); 
+  const [isLoadingStoreSettings, setIsLoadingStoreSettings] = useState(!orderId);
 
 
   const form = useForm<OrderFormData>({
     resolver: zodResolver(OrderSchema),
     defaultValues: {
-      clientId: "", // New field for client ID
-      branchInfo: DEFAULT_STORE_SETTINGS.branchInfo || "Sucursal Principal", 
+      clientId: "",
+      branchInfo: DEFAULT_STORE_SETTINGS.branchInfo || "Sucursal Principal",
       deviceBrand: "", deviceModel: "", deviceIMEI: "", declaredFault: "",
       unlockPatternInfo: undefined,
       checklist: CHECKLIST_ITEMS.reduce((acc, item) => {
         // @ts-ignore
-        acc[item.id] = item.id === 'enciende' || item.id === 'tactil_funciona' || item.id === 'imagen_pantalla' || item.id === 'botones_funcionales' || item.id === 'camara_trasera' || item.id === 'camara_delantera' || item.id === 'vibrador' || item.id === 'microfono' || item.id === 'auricular' || item.id === 'parlante' || item.id === 'sensor_huella' || item.id === 'senal' || item.id === 'wifi_bluetooth' || item.id === 'pin_carga' ? 'si' : 'no';
+        acc[item.id] = ['enciende', 'tactil', 'imagen', 'botones', 'cam_trasera', 'cam_delantera', 'vibrador', 'microfono', 'auricular', 'parlante', 'sensor_huella', 'senal', 'wifi_bluetooth', 'pin_carga', 'lente_camara'].includes(item.id) ? 'si' : 'no';
         return acc;
       }, {} as OrderFormData['checklist']),
-      damageRisk: "", 
+      damageRisk: "",
       pantalla_parcial: false,
       equipo_sin_acceso: false,
       perdida_informacion: false,
@@ -72,11 +72,11 @@ export function OrderForm({ orderId }: OrderFormProps) {
 
   useEffect(() => {
     async function fetchInitialData() {
-      if (!orderId && user) { 
+      if (!orderId && user) {
         setIsLoadingStoreSettings(true);
         try {
           const userSettings = await getStoreSettingsForUser(user.uid);
-          form.setValue('branchInfo', userSettings.branchInfo || DEFAULT_STORE_SETTINGS.branchInfo || "Sucursal Principal"); 
+          form.setValue('branchInfo', userSettings.branchInfo || DEFAULT_STORE_SETTINGS.branchInfo || "Sucursal Principal");
         } catch (error) {
           console.error("Failed to load user store settings for new order form:", error);
           toast({ variant: "destructive", title: "Error", description: "No se pudo cargar la configuración de su tienda." });
@@ -91,9 +91,20 @@ export function OrderForm({ orderId }: OrderFormProps) {
         try {
           const order = await getOrderById(orderId);
           if (order) {
+            // Ensure checklist defaults are applied correctly if some fields are missing from loaded order
+            const defaultChecklist = CHECKLIST_ITEMS.reduce((acc, item) => {
+                // @ts-ignore
+                acc[item.id] = ['enciende', 'tactil', 'imagen', 'botones', 'cam_trasera', 'cam_delantera', 'vibrador', 'microfono', 'auricular', 'parlante', 'sensor_huella', 'senal', 'wifi_bluetooth', 'pin_carga', 'lente_camara'].includes(item.id) ? 'si' : 'no';
+                return acc;
+            }, {} as OrderFormData['checklist']);
+
             form.reset({
               ...order,
-              clientId: order.clientId, // Set clientId
+              checklist: { // Merge default with loaded, prioritizing loaded
+                ...defaultChecklist,
+                ...(order.checklist || {}),
+              },
+              clientId: order.clientId,
               previousOrderId: order.previousOrderId || "",
               costSparePart: Number(order.costSparePart || 0),
               costLabor: Number(order.costLabor || 0),
@@ -101,8 +112,7 @@ export function OrderForm({ orderId }: OrderFormProps) {
               classification: order.classification || undefined,
               unlockPatternInfo: order.unlockPatternInfo || undefined,
               status: order.status || "ingreso",
-              branchInfo: order.branchInfo, 
-              // Removed direct client fields from reset
+              branchInfo: order.branchInfo,
             });
           } else {
             toast({ variant: "destructive", title: "Error", description: "Orden no encontrada." });
@@ -115,7 +125,7 @@ export function OrderForm({ orderId }: OrderFormProps) {
         }
       }
     }
-    if (user || orderId) { // Ensure user is available for new orders or orderId for edits
+    if (user || orderId) {
         fetchInitialData();
     }
   }, [orderId, user, form, router, toast]);
@@ -136,7 +146,7 @@ export function OrderForm({ orderId }: OrderFormProps) {
       if (orderId) {
         result = await updateOrder(orderId, submissionValues, user.uid);
       } else {
-        result = await createOrder(submissionValues, user.uid); 
+        result = await createOrder(submissionValues, user.uid);
       }
 
       if (result.success && result.order?.id) {
@@ -180,13 +190,13 @@ export function OrderForm({ orderId }: OrderFormProps) {
             <Card>
               <CardHeader><CardTitle className="flex items-center gap-2"><UserSquare className="text-primary"/> Datos del Cliente</CardTitle></CardHeader>
               <CardContent className="space-y-4">
-                 <FormField control={form.control} name="clientId" render={({ field }) => ( 
+                 <FormField control={form.control} name="clientId" render={({ field }) => (
                     <FormItem>
                         <FormLabel>ID del Cliente</FormLabel>
                         <FormControl><Input placeholder="Ej: CLI001" {...field} /></FormControl>
                         <FormDescription>Ingrese el ID de un cliente existente. Próximamente: búsqueda y creación de clientes.</FormDescription>
                         <FormMessage />
-                    </FormItem> 
+                    </FormItem>
                   )} />
               </CardContent>
             </Card>
@@ -194,13 +204,13 @@ export function OrderForm({ orderId }: OrderFormProps) {
             <Card>
               <CardHeader><CardTitle className="flex items-center gap-2"><Wrench className="text-primary"/> Detalles del Equipo y Falla</CardTitle></CardHeader>
               <CardContent className="space-y-4">
-                <FormField control={form.control} name="branchInfo" render={({ field }) => ( 
+                <FormField control={form.control} name="branchInfo" render={({ field }) => (
                   <FormItem>
                     <FormLabel className="flex items-center gap-1"><Building className="h-4 w-4"/>Sucursal/Taller</FormLabel>
                     <FormControl><Input placeholder="Nombre de la sucursal" {...field} disabled={isLoadingStoreSettings && !orderId} /></FormControl>
                     <FormDescription>Información de la sucursal donde se registra la orden. (Configurable en Ajustes)</FormDescription>
                     <FormMessage />
-                  </FormItem> 
+                  </FormItem>
                 )} />
                 <FormField control={form.control} name="deviceBrand" render={({ field }) => ( <FormItem><FormLabel>Marca</FormLabel><FormControl><Input placeholder="Ej: Samsung, Apple" {...field} /></FormControl><FormMessage /></FormItem> )} />
                 <FormField control={form.control} name="deviceModel" render={({ field }) => ( <FormItem><FormLabel>Modelo</FormLabel><FormControl><Input placeholder="Ej: Galaxy S21, iPhone 13" {...field} /></FormControl><FormMessage /></FormItem> )} />
@@ -268,7 +278,7 @@ export function OrderForm({ orderId }: OrderFormProps) {
                         <FormControl>
                           <RadioGroup
                             onValueChange={field.onChange}
-                            value={field.value} 
+                            value={field.value}
                             className="flex space-x-2"
                           >
                             {YES_NO_OPTIONS.map(opt => (
@@ -340,7 +350,7 @@ export function OrderForm({ orderId }: OrderFormProps) {
                     <FormMessage />
                   </FormItem>
                 )} />
-                 {orderId && ( 
+                 {orderId && (
                   <FormField
                     control={form.control}
                     name="status"
@@ -365,12 +375,12 @@ export function OrderForm({ orderId }: OrderFormProps) {
         </div>
 
         <Separator />
-        
+
         <Card>
           <CardHeader><CardTitle className="flex items-center gap-2"><Info className="text-primary"/> Observaciones y Aceptación</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             <FormField control={form.control} name="observations" render={({ field }) => ( <FormItem><FormLabel>Observaciones Adicionales</FormLabel><FormControl><Textarea placeholder="Comentarios o información relevante..." {...field} /></FormControl><FormMessage /></FormItem> )} />
-            
+
             <FormField control={form.control} name="customerSignatureName" render={({ field }) => ( <FormItem><FormLabel>Nombre del Cliente que Acepta</FormLabel><FormControl><Input placeholder="Nombre completo del cliente" {...field} /></FormControl><FormMessage /></FormItem> )} />
             <FormField control={form.control} name="customerAccepted" render={({ field }) => (
               <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 shadow-sm">

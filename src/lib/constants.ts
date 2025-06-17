@@ -1,12 +1,12 @@
-import type { OrderStatus, UnlockPatternInfo, Classification, Checklist, User } from '@/types';
+import type { OrderStatus, UnlockPatternInfo, Classification, Checklist, UserRole } from '@/types';
 
 export const USER_ROLES = {
   ADMIN: 'admin',
   TECNICO: 'tecnico',
-  RECEPCIONISTA: 'recepcionista', // Added new role
+  RECEPCIONISTA: 'recepcionista',
 } as const;
 
-export const USER_ROLES_VALUES = Object.values(USER_ROLES);
+export const USER_ROLES_VALUES = Object.values(USER_ROLES) as [UserRole, ...UserRole[]];
 
 
 // Updated based on ORDENES.estado
@@ -46,19 +46,19 @@ export const SPECIFIC_SECTORS_OPTIONS: string[] = [
   "Pérdida de información",
 ];
 
-// Updated based on new CHECKLIST schema field names
+// Updated based on new CHECKLIST schema field names from user
 export const CHECKLIST_ITEMS: Array<{ id: keyof Checklist; label: string }> = [
-  { id: "marca_golpes", label: "Marcas/golpes en carcasa" },
-  { id: "cristal_astillado", label: "Cristal de pantalla astillado/roto" },
-  { id: "marco_roto", label: "Marco roto/dañado" },
-  { id: "tapa_astillada", label: "Tapa trasera astillada/rota" },
+  { id: "golpe", label: "Marcas/golpes en carcasa" },
+  { id: "cristal", label: "Cristal de pantalla astillado/roto" },
+  { id: "marco", label: "Marco roto/dañado" },
+  { id: "tapa", label: "Tapa trasera astillada/rota" },
   { id: "lente_camara", label: "Lente de cámara (estado físico)" },
   { id: "enciende", label: "Enciende" },
-  { id: "tactil_funciona", label: "Táctil funciona" },
-  { id: "imagen_pantalla", label: "Imagen en pantalla (correcta)" },
-  { id: "botones_funcionales", label: "Botones funcionales (todos)" },
-  { id: "camara_trasera", label: "Cámara trasera (funcional)" },
-  { id: "camara_delantera", label: "Cámara delantera (funcional)" },
+  { id: "tactil", label: "Táctil funciona" },
+  { id: "imagen", label: "Imagen en pantalla (correcta)" },
+  { id: "botones", label: "Botones funcionales (todos)" },
+  { id: "cam_trasera", label: "Cámara trasera (funcional)" },
+  { id: "cam_delantera", label: "Cámara delantera (funcional)" },
   { id: "vibrador", label: "Vibrador (funcional)" },
   { id: "microfono", label: "Micrófono (funcional)" },
   { id: "auricular", label: "Auricular (funcional)" },
@@ -81,7 +81,7 @@ export const DEFAULT_STORE_SETTINGS = {
   companyCuit: "",
   companyAddress: "Mi Dirección 123",
   companyContactDetails: "Tel: (011) 1234-5678\nEmail: contacto@mitaller.com",
-  branchInfo: "Taller Principal", // This will be the default if user hasn't set their own
+  branchInfo: "Taller Principal",
   warrantyConditions: "La garantía cubre la reparación por 90 días. No cubre otros daños.",
   pickupConditions: "Retirar dentro de los 30 días. Luego se cobra almacenaje.",
   abandonmentPolicyDays30: 30,

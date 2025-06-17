@@ -2,17 +2,17 @@
 "use client";
 
 import { useState, useEffect, useTransition } from "react";
-import type { User, UserStatus } from "@/types";
+import type { User, UserStatus, UserRole } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { 
-  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose 
+import {
+  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose
 } from "@/components/ui/dialog";
-import { 
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, 
-  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger 
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
+  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger
 } from "@/components/ui/alert-dialog";
 import { PlusCircle, Edit, Trash2, Search, UserPlus, CheckCircle, XCircle, Clock } from "lucide-react";
 import { useForm } from "react-hook-form";
@@ -25,6 +25,7 @@ import { useToast } from "@/hooks/use-toast";
 import { LoadingSpinner } from "../shared/LoadingSpinner";
 import { getUsers, createUser, updateUser, deleteUser, updateUserStatus } from "@/lib/actions/user.actions";
 import { Badge } from "@/components/ui/badge";
+import { USER_ROLES_VALUES } from "@/lib/constants";
 
 
 export function UserManagementClient() {
@@ -58,7 +59,7 @@ export function UserManagementClient() {
   useEffect(() => {
     loadUsers();
   }, []);
-  
+
   const handleFormSubmit = (values: z.infer<typeof UserSchema>) => {
     startTransition(async () => {
       let result;
@@ -83,10 +84,10 @@ export function UserManagementClient() {
       }
     });
   };
-  
+
   const handleEditUser = (user: User) => {
     setEditingUser(user);
-    form.reset({ name: user.name, email: user.email, role: user.role, password: "" }); 
+    form.reset({ name: user.name, email: user.email, role: user.role, password: "" });
     setIsFormOpen(true);
   };
 
@@ -109,7 +110,7 @@ export function UserManagementClient() {
       setUserToDelete(null);
     });
   };
-  
+
   const openNewUserForm = () => {
     setEditingUser(null);
     form.reset({ name: "", email: "", role: "tecnico", password: "" });
@@ -204,7 +205,7 @@ export function UserManagementClient() {
                 <TableRow key={user.uid}>
                   <TableCell className="font-medium">{user.name}</TableCell>
                   <TableCell>{user.email}</TableCell>
-                  <TableCell><Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>{user.role}</Badge></TableCell>
+                  <TableCell><Badge variant={user.role === 'admin' ? 'default' : (user.role === 'tecnico' ? 'secondary' : 'outline') }>{user.role}</Badge></TableCell>
                   <TableCell>{getStatusBadge(user.status)}</TableCell>
                   <TableCell className="text-right space-x-1">
                     {user.status === 'pending' && (
@@ -252,11 +253,14 @@ export function UserManagementClient() {
               <FormField control={form.control} name="role" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Rol</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value as UserRole}>
                     <FormControl><SelectTrigger><SelectValue placeholder="Seleccione un rol" /></SelectTrigger></FormControl>
                     <SelectContent>
-                      <SelectItem value="tecnico">Técnico</SelectItem>
-                      <SelectItem value="admin">Administrador</SelectItem>
+                      {USER_ROLES_VALUES.map(roleValue => (
+                        <SelectItem key={roleValue} value={roleValue}>
+                          {roleValue.charAt(0).toUpperCase() + roleValue.slice(1)}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <FormMessage />

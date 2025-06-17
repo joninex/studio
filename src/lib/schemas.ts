@@ -1,11 +1,12 @@
 import { z } from 'zod';
-import { 
-  UNLOCK_PATTERN_OPTIONS, 
-  CLASSIFICATION_OPTIONS, 
-  ORDER_STATUSES, 
+import {
+  UNLOCK_PATTERN_OPTIONS,
+  CLASSIFICATION_OPTIONS,
+  ORDER_STATUSES,
   USER_ROLES_VALUES,
-  CHECKLIST_ITEMS 
+  CHECKLIST_ITEMS
 } from './constants';
+import type { UserRole } from '@/types'; // Import UserRole type
 
 export const LoginSchema = z.object({
   email: z.string().email({ message: "Por favor ingrese un email válido." }),
@@ -42,15 +43,15 @@ export const ChecklistSchema = z.object(checklistShapeObject);
 
 
 export const OrderSchema = z.object({
-  clientId: z.string().min(1, "ID de Cliente es requerido."), 
-  
+  clientId: z.string().min(1, "ID de Cliente es requerido."),
+
   branchInfo: z.string().min(1, "Información de sucursal es requerida."),
 
   deviceBrand: z.string().min(1, "Marca del equipo es requerida."),
   deviceModel: z.string().min(1, "Modelo del equipo es requerida."),
   deviceIMEI: z.string().min(14, "IMEI debe tener al menos 14 caracteres.").max(16, "IMEI no puede exceder 16 caracteres."),
   declaredFault: z.string().min(1, "Falla declarada es requerida."),
-  unlockPatternInfo: z.enum(UNLOCK_PATTERN_OPTIONS, { required_error: "Información de desbloqueo es requerida."}),
+  unlockPatternInfo: z.enum(UNLOCK_PATTERN_OPTIONS as [string, ...string[]], { required_error: "Información de desbloqueo es requerida."}),
 
   checklist: ChecklistSchema,
 
@@ -58,7 +59,7 @@ export const OrderSchema = z.object({
   pantalla_parcial: z.boolean().optional().default(false),
   equipo_sin_acceso: z.boolean().optional().default(false),
   perdida_informacion: z.boolean().optional().default(false),
-  
+
   previousOrderId: z.string().optional().or(z.literal('')),
 
   costSparePart: z.preprocess(
@@ -74,13 +75,13 @@ export const OrderSchema = z.object({
     z.number({ invalid_type_error: "Debe ser un número" }).nonnegative("Costo debe ser no negativo.")
   ).default(0),
 
-  classification: z.enum(CLASSIFICATION_OPTIONS, { errorMap: () => ({ message: "Clasificación es requerida."}) }).optional().or(z.literal("")),
+  classification: z.enum(CLASSIFICATION_OPTIONS as [string, ...string[]], { errorMap: () => ({ message: "Clasificación es requerida."}) }).optional().or(z.literal("")),
   observations: z.string().optional().or(z.literal('')),
 
   customerAccepted: z.boolean().optional().refine(val => val === true, { message: "El cliente debe aceptar los términos." }),
   customerSignatureName: z.string().min(1, "El nombre para la firma es requerido si se aceptan los términos.").optional().or(z.literal('')),
-  
-  status: z.enum(ORDER_STATUSES, { required_error: "Estado es requerido."}).default("ingreso"),
+
+  status: z.enum(ORDER_STATUSES as [string, ...string[]], { required_error: "Estado es requerido."}).default("ingreso"),
 }).superRefine((data, ctx) => {
   if (data.customerAccepted && !data.customerSignatureName) {
     ctx.addIssue({
@@ -100,7 +101,7 @@ export const ResetPasswordSchema = z.object({
 export const UserSchema = z.object({
   name: z.string().min(1, "Nombre es requerido."),
   email: z.string().email("Email inválido."),
-  role: z.enum(USER_ROLES_VALUES, { required_error: "Rol es requerido."}), 
+  role: z.enum(USER_ROLES_VALUES as [UserRole, ...UserRole[]], { required_error: "Rol es requerido."}),
   password: z.string().min(6, "Contraseña debe tener al menos 6 caracteres.").optional().or(z.literal('')),
 });
 
