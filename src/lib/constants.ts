@@ -27,7 +27,7 @@ export const ORDER_STATUSES: Array<OrderStatus | ""> = [
 
 export const UNLOCK_PATTERN_INFO_SUGGESTIONS: string[] = [
   "No tiene",
-  "No recuerda",
+  "No recuerda / sabe",
   "No proporciona",
   "Cliente proveyó patrón/clave",
 ];
@@ -84,41 +84,38 @@ export const SALE_CON_HUELLA_OPTIONS = [
 ];
 
 
-export const WARRANTY_TYPES: WarrantyType[] = ['30d', '60d', '90d', 'custom', ''];
+export const WARRANTY_TYPES: WarrantyType[] = ['30d', '60d', '90d', 'custom']; // Removed ""
 
 export const WARRANTY_TYPE_OPTIONS: Array<{ value: WarrantyType; label: string }> = [
   { value: "30d", label: "30 Días" },
   { value: "60d", label: "60 Días" },
   { value: "90d", label: "90 Días" },
   { value: "custom", label: "Personalizado" },
-  // No empty value "" here to prevent SelectItem error
 ];
 
 
 export const DEFAULT_STORE_SETTINGS: StoreSettings = {
   companyName: "Mi Taller (TecnoLand Ejemplo)",
-  companyLogoUrl: "https://placehold.co/150x70.png?text=TU+LOGO", // Placeholder for "TU LOGO"
+  companyLogoUrl: "https://placehold.co/150x70.png?text=TU+LOGO",
   companyCuit: "XX-XXXXXXXX-X",
   companyAddress: "La Rioja 1799-1699, N3301 Posadas, Misiones (Ejemplo)",
   companyContactDetails: "Tel/WhatsApp: 11 3016-5093 (Ejemplo)\nEmail: contacto@mitaller.com",
   branchInfo: "Taller Principal",
   
-  warrantyConditions: "TecnoLand garantiza la reparación por noventa (90) días calendario a partir de la fecha de entrega, únicamente sobre la/s falla/s especificada/s en la presente orden y sobre el/los repuesto/s utilizado/s si los hubiere. La garantía podrá ser anulada si se detecta dolo o fraude por parte del cliente o terceros.",
-  pickupConditions: "El cliente deberá retirar el equipo dentro de los plazos establecidos. Consultar políticas de abandono.", // Simplified, full text in abandonmentPolicyText
+  warrantyConditions: "CONDICIONES GENERALES DE GARANTÍA: TecnoLand garantiza la reparación por noventa (90) días calendario a partir de la fecha de entrega, únicamente sobre la/s falla/s especificada/s en la presente orden y sobre el/los repuesto/s utilizado/s si los hubiere. La garantía podrá ser anulada si se detecta dolo o fraude por parte del cliente o terceros.",
+  pickupConditions: "CONDICIONES GENERALES DE RETIRO: El cliente deberá retirar el equipo dentro de los plazos establecidos. Consultar políticas de abandono.",
   
-  abandonmentPolicyDays30: 30, // Still useful for logic if needed
-  abandonmentPolicyDays60: 60, // Still useful for logic if needed
+  abandonmentPolicyDays30: 30,
+  abandonmentPolicyDays60: 60,
   
-  dataLossDisclaimerText: "El cliente comprende y acepta que durante el proceso de diagnóstico y/o reparación existe el riesgo de pérdida total o parcial de la información almacenada en el dispositivo. Se recomienda realizar una copia de seguridad previa. El taller no se responsabiliza por la pérdida de datos.",
-  privacyPolicyText: "El cliente autoriza al taller a acceder a la información del dispositivo necesaria para realizar el diagnóstico y/o reparación. Los datos personales y la información del dispositivo serán tratados con confidencialidad y solo para los fines del servicio.",
-
-  // New specific legal texts - using placeholders, admin should fill these
-  importantUnlockDisclaimer: "IMPORTANTE: Si no se informa el patrón/clave de desbloqueo o si el informado es incorrecto, es imposible realizar un test de funcionalidad completo del equipo. TecnoLand NO será responsable de los componentes no testeados. La garantía será únicamente por el repuesto utilizado si no se pueden verificar las funciones del equipo.",
-  abandonmentPolicyText: "ABANDONO DEL EQUIPO: Pasados los 30 (treinta) días de la notificación de equipo 'LISTO PARA RETIRAR' o 'PRESUPUESTADO', el valor de la reparación o presupuesto se actualizará según la inflación vigente. Pasados los 60 (sesenta) días corridos desde dicha notificación sin que el equipo sea retirado, se considerará en estado de abandono según Art. 2525 y 2526 CCCN, facultando a TecnoLand a disponer del mismo para cubrir gastos, sin derecho a reclamo por parte del cliente.",
-  dataRetrievalPolicyText: "PÉRDIDA DE INFORMACIÓN: TecnoLand NO se responsabiliza por la pérdida total o parcial de información (contactos, fotos, videos, etc.) alojada en el equipo. Es responsabilidad del cliente realizar un backup previo. El cliente puede solicitar un servicio de backup con costo adicional.",
+  // More specific legal texts
+  unlockDisclaimerText: "IMPORTANTE (DESBLOQUEO): Si no se informa el patrón/clave de desbloqueo o si el informado es incorrecto, es imposible realizar un test de funcionalidad completo del equipo. TecnoLand NO será responsable de los componentes no testeados. La garantía será únicamente por el repuesto utilizado si no se pueden verificar las funciones del equipo.",
+  abandonmentPolicyText: "POLÍTICA DE ABANDONO DE EQUIPO: Pasados los 30 (treinta) días de la notificación de equipo 'LISTO PARA RETIRAR' o 'PRESUPUESTADO', el valor de la reparación o presupuesto se actualizará según la inflación vigente. Pasados los 60 (sesenta) días corridos desde dicha notificación sin que el equipo sea retirado, se considerará en estado de abandono según Art. 2525 y 2526 CCCN, facultando a TecnoLand a disponer del mismo para cubrir gastos, sin derecho a reclamo por parte del cliente.",
+  dataLossPolicyText: "PÉRDIDA DE INFORMACIÓN Y POLÍTICA DE PRIVACIDAD: TecnoLand NO se responsabiliza por la pérdida total o parcial de información (contactos, fotos, videos, etc.) alojada en el equipo. Es responsabilidad del cliente realizar un backup previo. El cliente puede solicitar un servicio de backup con costo adicional. El cliente autoriza al taller a acceder a la información del dispositivo necesaria para realizar el diagnóstico y/o reparación. Los datos personales y la información del dispositivo serán tratados con confidencialidad y solo para los fines del servicio.",
   untestedDevicePolicyText: "EQUIPOS SIN ENCENDER O CON CLAVE/PATRÓN NO INFORMADO: Estos equipos se entregan sin el testeo completo de funcionalidad. La garantía será sobre el repuesto o la falla informada. Para hacer efectiva la garantía en caso de reingreso, el cliente deberá informar el patrón o clave de desbloqueo.",
   budgetVariationText: "PRESUPUESTO: El presupuesto informado se basa en la falla declarada por el cliente y/o en la revisión inicial. Si durante la reparación se detectan fallas adicionales no contempladas, se informará al cliente un nuevo presupuesto. Si no es aceptado, se cobrará el valor del diagnóstico inicial si correspondiera.",
-  highRiskDeviceText: "TELÉFONOS CON RIESGOS: Equipos mojados, sulfatados, con golpes fuertes, intervenidos previamente por terceros o con problemas de placa madre pueden presentar riesgos adicionales durante el desarme o reparación, pudiendo dejar de funcionar o agravar su estado. El cliente acepta estos riesgos. TecnoLand ofrecerá opciones si el equipo se ve afectado.",
+  highRiskDeviceText: "TELÉFONOS CON RIESGOS ESPECIALES: Equipos mojados, sulfatados, con golpes fuertes, intervenidos previamente por terceros o con problemas de placa madre pueden presentar riesgos adicionales durante el desarme o reparación, pudiendo dejar de funcionar o agravar su estado. El cliente acepta estos riesgos. TecnoLand ofrecerá opciones si el equipo se ve afectado.",
   partialDamageDisplayText: "PANTALLAS CON DAÑO PARCIAL: En equipos con pantallas parcialmente funcionales (ej. imagen con manchas, líneas, táctil fallando en sectores), la falla puede incrementarse o dejar de funcionar por completo durante el desarme. TecnoLand no se responsabiliza por dicho agravamiento. Si el cliente decide retirar el equipo sin reparación, se devolverá con la pantalla original en el estado en que se encuentre tras el intento de reparación.",
   warrantyVoidConditionsText: "ANULACIÓN DE GARANTÍA: La garantía quedará anulada por: Excesos o picos de tensión eléctrica; ingreso de humedad o líquidos; intervención de terceros no autorizados; uso inadecuado o negligente; golpes, caídas o roturas posteriores a la reparación; uso de cargadores no originales o defectuosos; instalación de software no autorizado, virus o malware; deformaciones estéticas o daños no relacionados con la reparación original. EQUIPOS REPARADOS POR HUMEDAD, SOFTWARE O CORTOS ELÉCTRICOS cuentan con una garantía de 72 horas únicamente sobre la falla reparada.",
+  privacyPolicyText: "POLÍTICA DE PRIVACIDAD ADICIONAL: [El administrador puede agregar aquí texto adicional sobre privacidad si es necesario, complementando lo indicado en la política de pérdida de datos.]", // Kept separate for more flexibility if needed
 };

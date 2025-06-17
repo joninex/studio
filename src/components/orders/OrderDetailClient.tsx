@@ -18,7 +18,7 @@ import { useAuth } from "@/providers/AuthProvider";
 import { addOrderComment, updateOrderStatus, updateOrderCosts } from "@/lib/actions/order.actions";
 import { getClientById } from "@/lib/actions/client.actions"; 
 import { CHECKLIST_ITEMS, ORDER_STATUSES, SALE_CON_HUELLA_OPTIONS } from "@/lib/constants";
-import { AlertCircle, Bot, CalendarDays, DollarSign, Edit, FileText, Info, ListChecks, MessageSquare, Printer, User as UserIcon, Wrench, PackageCheck, Smartphone, LinkIcon, QrCode, GripVertical } from "lucide-react";
+import { AlertCircle, Bot, CalendarDays, DollarSign, Edit, FileText, Info, ListChecks, MessageSquare, Printer, User as UserIcon, Wrench, PackageCheck, Smartphone, LinkIcon, QrCode, GripVertical, FileLock2, LockKeyhole } from "lucide-react";
 import { Input } from "../ui/input";
 import { LoadingSpinner } from "../shared/LoadingSpinner";
 
@@ -28,7 +28,6 @@ interface OrderDetailClientProps {
   order: Order;
 }
 
-// Helper to render checklist item value for print
 const renderChecklistItemValueForPrint = (itemKey: keyof Checklist, value: any) => {
   const itemConfig = CHECKLIST_ITEMS.find(ci => ci.id === itemKey);
   if (itemConfig?.type === 'boolean') {
@@ -141,12 +140,10 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
   const daysSinceReady = order.readyForPickupDate && order.status !== "Entregado" && order.status !== "Sin Reparación" && order.status !== "Presupuesto Rechazado"
     ? differenceInDays(new Date(), new Date(order.readyForPickupDate))
     : null;
-
-  // This should use the text from order.orderSnapshottedAbandonmentPolicyText if available
-  // For now, it's a simple warning
+  
   let abandonmentWarning = "";
-  if (daysSinceReady !== null && order.orderSnapshottedAbandonmentPolicyText) { // Check if the policy text exists
-    const abandonmentPolicyDays = order.orderCompanyContactDetails?.includes("60") ? 60 : (order.orderCompanyContactDetails?.includes("30") ? 30 : 60) ; // Simplified logic, use settings later
+  if (daysSinceReady !== null && order.orderSnapshottedAbandonmentPolicyText) { 
+    const abandonmentPolicyDays = order.orderCompanyContactDetails?.includes("60") ? 60 : (order.orderCompanyContactDetails?.includes("30") ? 30 : (DEFAULT_STORE_SETTINGS.abandonmentPolicyDays60 || 60)) ; 
     const firstWarningDays = abandonmentPolicyDays / 2;
     if (daysSinceReady >= abandonmentPolicyDays) abandonmentWarning = `Equipo considerado abandonado (${abandonmentPolicyDays}+ días).`;
     else if (daysSinceReady >= firstWarningDays) abandonmentWarning = `Equipo en riesgo de abandono (${Math.round(firstWarningDays)}+ días).`;
@@ -184,21 +181,20 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
       case "Presupuestado":
       case "Presupuesto Rechazado":
         return `Presupuesto N°: ${order.orderNumber}`;
-      case "Reparado":
-      case "En Control de Calidad":
       case "Listo para Entrega":
       case "Entregado":
         return `Comprobante de Entrega N°: ${order.orderNumber}`;
       case "Presupuesto Aprobado":
       case "En Espera de Repuestos":
       case "En Reparación":
-         return `Orden de Trabajo N°: ${order.orderNumber}`; // Or similar
+      case "Reparado":
+      case "En Control de Calidad":
+         return `Orden de Trabajo N°: ${order.orderNumber}`; 
       default:
         return `Documento Orden N°: ${order.orderNumber}`;
     }
   };
 
-  // Determine which sections to show for print based on status
   const isIngresoContext = ["Recibido", "En Diagnóstico"].includes(order.status);
   const isPresupuestoContext = ["Presupuestado", "Presupuesto Rechazado", "Presupuesto Aprobado"].includes(order.status);
   const isEntregaContext = ["Listo para Entrega", "Entregado"].includes(order.status);
@@ -210,7 +206,7 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
   const showWarrantyDetailsForPrint = order.hasWarranty;
   
   const showClientReceptionSignature = isIngresoContext && order.customerAccepted;
-  const showTechnicianReceptionSignature = isIngresoContext; // Always show for technician on ingreso
+  const showTechnicianReceptionSignature = isIngresoContext; 
   const showClientBudgetSignature = isPresupuestoContext && (order.status === "Presupuestado" || order.status === "Presupuesto Aprobado" || order.status === "Presupuesto Rechazado");
   const showClientDeliverySignature = isEntregaContext;
 
@@ -277,12 +273,12 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
                 <p><strong>Modelo:</strong> {order.deviceModel}</p>
                 <p><strong>IMEI/Serial:</strong> {order.deviceIMEI}</p>
                 <div className="col-span-2 flex items-center">
-                    <strong>Patrón/Clave:</strong>
-                    <span className="ml-2 mr-1">{order.unlockPatternInfo}</span>
-                    <div className="grid grid-cols-3 gap-0.5 p-0.5 border border-gray-400 bg-gray-100 print-pattern-grid">
-                        {Array(9).fill(0).map((_, i) => <div key={i} className="w-2 h-2 bg-gray-300 rounded-full"></div>)}
+                    <LockKeyhole className="inline-block mr-1 h-3 w-3 text-muted-foreground"/><strong>Patrón/Clave:</strong>
+                    <span className="ml-2 mr-1">{order.unlockPatternInfo ? "Registrado en sistema" : "No provisto / No aplica"}</span>
+                    <div className="print-pattern-grid ml-2">
+                        {Array(9).fill(0).map((_, i) => <div key={i}></div>)}
                     </div>
-                     <span className="text-xs italic ml-1">(Si aplica. Información protegida)</span>
+                    {order.unlockPatternInfo && <span className="text-xs italic ml-1">(Información sensible)</span>}
                 </div>
                 <p className="col-span-2"><strong>Falla Declarada:</strong> {order.declaredFault}</p>
                 <p className="col-span-2"><strong>Daños Preexistentes/Observaciones de Ingreso (Riesgo de Rotura):</strong> {order.damageRisk || "Sin observaciones específicas de daños."}</p>
@@ -347,22 +343,24 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
                     {order.warrantyCoveredItem && <p><strong>Pieza/Procedimiento Cubierto:</strong> {order.warrantyCoveredItem}</p>}
                     {order.warrantyNotes && <p><strong>Notas de Garantía Extendida:</strong> {order.warrantyNotes}</p>}
                     {order.orderWarrantyConditions && <p className="text-xs mt-1"><strong>Condiciones Generales de Garantía del Taller:</strong> {order.orderWarrantyConditions}</p>}
+                    {order.orderSnapshottedWarrantyVoidConditionsText && <p className="text-xs mt-1"><strong>Condiciones de Anulación de Garantía:</strong> {order.orderSnapshottedWarrantyVoidConditionsText}</p>}
                 </div>
             </div>
         )}
 
         {/* Legal Disclaimers & Policies - Display relevant snapshotted texts */}
         <div className="print-section card-print print-legal-texts">
-            <h3 className="print-section-title">Términos, Condiciones y Políticas del Servicio</h3>
-            {order.orderSnapshottedImportantUnlockDisclaimer && <div className="print-legal-item"><strong>Importante (Desbloqueo):</strong> <p>{order.orderSnapshottedImportantUnlockDisclaimer}</p></div>}
-            {order.orderSnapshottedDataRetrievalPolicyText && <div className="print-legal-item"><strong>Pérdida de Información:</strong> <p>{order.orderSnapshottedDataRetrievalPolicyText}</p></div>}
-            {order.orderSnapshottedPrivacyPolicy && <div className="print-legal-item"><strong>Política de Privacidad y Acceso:</strong> <p>{order.orderSnapshottedPrivacyPolicy}</p></div>}
+            <h3 className="print-section-title"><FileLock2 className="inline-block mr-2 h-4 w-4"/>Términos, Condiciones y Políticas del Servicio</h3>
+            {order.orderSnapshottedUnlockDisclaimer && <div className="print-legal-item"><strong>Importante (Desbloqueo):</strong> <p>{order.orderSnapshottedUnlockDisclaimer}</p></div>}
+            {order.orderSnapshottedDataLossPolicyText && <div className="print-legal-item"><strong>Pérdida de Información y Política de Privacidad:</strong> <p>{order.orderSnapshottedDataLossPolicyText}</p></div>}
+            {order.orderSnapshottedPrivacyPolicy && order.orderSnapshottedDataLossPolicyText !== order.orderSnapshottedPrivacyPolicy && <div className="print-legal-item"><strong>Política de Privacidad Adicional:</strong> <p>{order.orderSnapshottedPrivacyPolicy}</p></div>}
             {order.orderSnapshottedUntestedDevicePolicyText && <div className="print-legal-item"><strong>Equipos Sin Testeo Completo:</strong> <p>{order.orderSnapshottedUntestedDevicePolicyText}</p></div>}
             {order.orderSnapshottedBudgetVariationText && <div className="print-legal-item"><strong>Presupuesto:</strong> <p>{order.orderSnapshottedBudgetVariationText}</p></div>}
             {order.orderSnapshottedHighRiskDeviceText && <div className="print-legal-item"><strong>Equipos con Riesgos Especiales:</strong> <p>{order.orderSnapshottedHighRiskDeviceText}</p></div>}
             {order.orderSnapshottedPartialDamageDisplayText && <div className="print-legal-item"><strong>Pantallas con Daño Parcial:</strong> <p>{order.orderSnapshottedPartialDamageDisplayText}</p></div>}
             {order.orderSnapshottedAbandonmentPolicyText && <div className="print-legal-item"><strong>Política de Retiro y Abandono:</strong> <p>{order.orderSnapshottedAbandonmentPolicyText}</p></div>}
-            {order.orderSnapshottedWarrantyVoidConditionsText && <div className="print-legal-item"><strong>Anulación de Garantía:</strong> <p>{order.orderSnapshottedWarrantyVoidConditionsText}</p></div>}
+             {/* General warranty conditions from store if not part of extended warranty text */}
+            {order.orderWarrantyConditions && !order.hasWarranty && <div className="print-legal-item"><strong>Condiciones Generales de Garantía (Taller):</strong><p>{order.orderWarrantyConditions}</p></div>}
         </div>
 
 
@@ -410,7 +408,6 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
             )}
         </div>
         
-        {/* Footer with store contact can be here if not prominent enough in header */}
         <div className="print-footer-container mt-6 pt-3 border-t border-black text-center">
             <p className="text-xs font-semibold">{order.orderCompanyName} - {order.orderCompanyContactDetails?.split('\n')[0]}</p>
              <p className="text-xs">{order.orderCompanyAddress}</p>
@@ -475,7 +472,7 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
                 <p><strong>Modelo:</strong> {order.deviceModel}</p>
                 <p><strong>IMEI/Serial:</strong> {order.deviceIMEI}</p>
                 <p><strong>Falla Declarada:</strong> {order.declaredFault}</p>
-                <p><strong>Clave/Patrón:</strong> {order.unlockPatternInfo} <span className="text-xs italic">(Protegido)</span></p>
+                <p><strong>Clave/Patrón:</strong> {order.unlockPatternInfo ? "Registrado (Ver en edición)" : "No provisto"} <span className="text-xs italic">(Información sensible)</span></p>
               </CardContent>
             </Card>
           </div>
@@ -594,8 +591,8 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
                         {order.warrantyEndDate && <p><strong>Fin:</strong> {format(new Date(order.warrantyEndDate), "dd MMM yyyy", { locale: es })}</p>}
                         {order.warrantyCoveredItem && <p><strong>Pieza/Procedimiento Cubierto:</strong> {order.warrantyCoveredItem}</p>}
                         {order.warrantyNotes && <p><strong>Notas de Garantía Extendida:</strong> {order.warrantyNotes}</p>}
-                         {/* Display general store warranty conditions if available on order */}
                         {order.orderWarrantyConditions && <p className="text-xs mt-1"><strong>Condiciones Generales de Garantía (Taller):</strong> {order.orderWarrantyConditions}</p>}
+                        {order.orderSnapshottedWarrantyVoidConditionsText && <p className="text-xs mt-1"><strong>Condiciones Anulación Garantía:</strong> {order.orderSnapshottedWarrantyVoidConditionsText}</p>}
                     </div>
                 </div>
              </>

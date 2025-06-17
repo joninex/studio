@@ -136,21 +136,21 @@ body {
     padding: 0 !important;
     box-shadow: none !important;
     border: none !important;
-    font-size: 9pt !important; /* Smaller base font for print */
+    font-size: 9pt !important; 
     line-height: 1.25 !important;
   }
 
   .print-section.card-print {
     page-break-inside: avoid !important;
     border: 1px solid #ccc !important;
-    margin-bottom: 0.5rem !important; /* Reduced margin */
-    padding: 0.5rem !important; /* Reduced padding */
+    margin-bottom: 0.5rem !important; 
+    padding: 0.5rem !important; 
     background-color: #fff !important;
     border-radius: 0.15rem; 
   }
   
   .print-section {
-    margin-bottom: 0.75rem; /* Reduced margin */
+    margin-bottom: 0.75rem; 
     padding-bottom: 0.25rem;
   }
   .print-section:last-child {
@@ -173,7 +173,7 @@ body {
     background-color: transparent !important;
   }
   .print-container-full-page .text-muted-foreground {
-    color: #444 !important; /* Darker muted for print */
+    color: #444 !important; 
   }
 
   .print-header-container {
@@ -187,13 +187,13 @@ body {
     object-fit: contain;
   }
   .print-header-container .print-title {
-    font-size: 14pt !important; /* Reduced title */
+    font-size: 14pt !important; 
     font-weight: bold;
     margin-bottom: 0.05rem !important;
     color: #000 !important;
   }
   .print-header-container .print-company-info {
-    font-size: 8pt !important; /* Smaller company info */
+    font-size: 8pt !important; 
     line-height: 1.2;
     margin-bottom: 0.02rem !important;
   }
@@ -201,21 +201,22 @@ body {
       max-width: 70px; 
       height: auto;
   }
-  .print-pattern-grid { /* For static 3x3 dot grid */
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 2px; /* Adjust gap as needed */
-    width: 24px; /* Adjust size as needed */
-    height: 24px; /* Adjust size as needed */
-    padding: 2px;
-    border: 1px solid #999;
-    background-color: #f0f0f0;
+
+  .print-pattern-grid {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 1px !important; /* Smaller gap for tighter dots */
+    width: 20px !important; /* Adjust overall size */
+    height: 20px !important;
+    padding: 1px !important;
+    border: 1px solid #bbb !important; /* Slightly lighter border */
+    background-color: #f8f8f8 !important; /* Lighter background */
   }
   .print-pattern-grid div {
-    width: 6px; /* Adjust dot size */
-    height: 6px; /* Adjust dot size */
-    background-color: #777;
-    border-radius: 50%;
+    width: 4px !important; /* Adjust dot size */
+    height: 4px !important;
+    background-color: #999 !important; /* Lighter dots */
+    border-radius: 50% !important;
   }
 
 
@@ -227,7 +228,7 @@ body {
   .print-status-info p { margin-bottom: 0.15rem !important; }
 
   .print-section-title {
-    font-size: 11pt !important; /* Reduced section title */
+    font-size: 11pt !important; 
     font-weight: bold !important;
     margin-bottom: 0.3rem !important;
     border-bottom: 1px solid #eee;
@@ -308,13 +309,13 @@ body {
 
   .print-signature-section-container {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); /* Adjusted minmax */
-      gap: 1rem; /* Reduced gap */
-      margin-top: 1rem; /* Reduced margin */
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); 
+      gap: 1rem; 
+      margin-top: 1rem; 
   }
   .print-signature-area {
-    padding-top: 0.5rem; /* Reduced padding */
-    border-top: 1px solid #bbb; /* Slightly darker border */
+    padding-top: 0.5rem; 
+    border-top: 1px solid #bbb; 
     min-height: 80px; 
     display: flex;
     flex-direction: column;
@@ -326,7 +327,7 @@ body {
   }
   .print-signature-line {
       border-bottom: 1px solid #000;
-      padding-bottom: 1.5rem; /* Space for signature */
+      padding-bottom: 1.5rem; 
       margin-bottom: 0.15rem;
       font-weight: bold;
   }
@@ -340,7 +341,7 @@ body {
       padding-top: 0.5rem;
       border-top: 2px solid #000;
   }
-  .print-terms p { /* Kept for compatibility if used elsewhere */
+  .print-terms p { 
     font-size: 7pt !important; 
     line-height: 1.15 !important;
     margin-bottom: 0.15rem !important;
@@ -364,6 +365,6 @@ body {
   
   @page {
     size: A4;
-    margin: 10mm; /* Slightly reduced margins */
+    margin: 10mm; 
   }
 }

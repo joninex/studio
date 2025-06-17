@@ -8,26 +8,26 @@ export interface StoreSettings {
   companyLogoUrl?: string;
   companyCuit?: string;
   companyAddress?: string;
-  companyContactDetails?: string; // Should allow for phone, WhatsApp, address as in user example
+  companyContactDetails?: string; 
   branchInfo?: string;
 
-  // Existing legal/policy texts
-  warrantyConditions?: string; // General warranty conditions from store
-  pickupConditions?: string; // General pickup conditions
-  abandonmentPolicyDays30?: number; // Kept for logic if needed, main text in abandonmentPolicyText
-  abandonmentPolicyDays60?: number; // Kept for logic if needed, main text in abandonmentPolicyText
-  dataLossDisclaimerText?: string; 
-  privacyPolicyText?: string; 
+  warrantyConditions?: string; 
+  pickupConditions?: string; 
+  
+  // Detailed legal texts
+  unlockDisclaimerText?: string; // Formerly importantUnlockDisclaimer
+  abandonmentPolicyText?: string; 
+  dataLossPolicyText?: string; // Formerly dataRetrievalPolicyText & dataLossDisclaimerText
+  untestedDevicePolicyText?: string;
+  budgetVariationText?: string; 
+  highRiskDeviceText?: string; 
+  partialDamageDisplayText?: string; 
+  warrantyVoidConditionsText?: string; 
+  privacyPolicyText?: string;
 
-  // New specific legal texts from user's detailed example
-  importantUnlockDisclaimer?: string; // "Importante: Si no se informa el desbloqueo..."
-  abandonmentPolicyText?: string; // Detailed abandonment policy text "Si el equipo no se retira en 30 días..."
-  dataRetrievalPolicyText?: string; // "Pérdida de Información: TecnoLand no se responsabiliza..."
-  untestedDevicePolicyText?: string; // "Equipos sin Encender o con Clave/Patrón no Informado..."
-  budgetVariationText?: string; // "Presupuesto: El presupuesto se basa en la falla declarada..."
-  highRiskDeviceText?: string; // "Teléfonos con Riesgos: Se informa sobre riesgos especiales..."
-  partialDamageDisplayText?: string; // "Pantallas con Daño Parcial: Se advierte que una falla parcial..."
-  warrantyVoidConditionsText?: string; // Detailed "Anulación de Garantía" list
+  // These might be derived or part of abandonmentPolicyText logic now
+  abandonmentPolicyDays30?: number; 
+  abandonmentPolicyDays60?: number;
 }
 
 export type UserRole = 'admin' | 'tecnico' | 'recepcionista';
@@ -57,32 +57,30 @@ export interface Client {
 }
 
 export interface Checklist {
-  // Existing items
-  golpe: 'si' | 'no'; // MARCAS O GOLPES EN CARCASA
-  cristal: 'si' | 'no'; // CRISTAL ASTILLADO
-  marco: 'si' | 'no'; // MARCO ROTO
-  tapa: 'si' | 'no'; // TAPA ASTILLADA
-  lente_camara: 'si' | 'no'; // LENTE DE CÁMARA OK
-  enciende: 'si' | 'no'; // ENCIENDE
-  tactil: 'si' | 'no'; // TÁCTIL FUNCIONANDO
-  imagen: 'si' | 'no'; // EMITE IMAGEN
-  botones: 'si' | 'no'; // BOTONES FUNCIONALES
-  cam_trasera: 'si' | 'no'; // CÁMARA TRASERA
-  cam_delantera: 'si' | 'no'; // CÁMARA DELANTERA
-  vibrador: 'si' | 'no'; // VIBRADOR
-  microfono: 'si' | 'no'; // MICRÓFONO
-  auricular: 'si' | 'no'; // AURICULAR
-  parlante: 'si' | 'no'; // PARLANTE
-  sensor_huella: 'si' | 'no'; // SENSOR DE HUELLA FUNCIONAL
-  senal: 'si' | 'no'; // SEÑAL FUNCIONAL
-  wifi_bluetooth: 'si' | 'no'; // WIFI/BT
-  pin_carga: 'si' | 'no'; // PIN DE CARGA EN BUEN ESTADO
-  humedad: 'si' | 'no'; // SIGNOS DE HUMEDAD
-  // New items from user example
-  equipo_doblado: 'si' | 'no'; // EQUIPO DOBLADO
-  consumoV?: string; // Consumo V: (text input)
-  mah?: string; // mAh: (text input)
-  saleConHuella?: 'si' | 'no' | 'no_tiene'; // Sale con huella: Si / No / No tiene
+  golpe: 'si' | 'no'; 
+  cristal: 'si' | 'no'; 
+  marco: 'si' | 'no'; 
+  tapa: 'si' | 'no'; 
+  lente_camara: 'si' | 'no'; 
+  enciende: 'si' | 'no'; 
+  tactil: 'si' | 'no'; 
+  imagen: 'si' | 'no'; 
+  botones: 'si' | 'no'; 
+  cam_trasera: 'si' | 'no'; 
+  cam_delantera: 'si' | 'no'; 
+  vibrador: 'si' | 'no'; 
+  microfono: 'si' | 'no'; 
+  auricular: 'si' | 'no'; 
+  parlante: 'si' | 'no'; 
+  sensor_huella: 'si' | 'no'; 
+  senal: 'si' | 'no'; 
+  wifi_bluetooth: 'si' | 'no'; 
+  pin_carga: 'si' | 'no'; 
+  humedad: 'si' | 'no'; 
+  equipo_doblado: 'si' | 'no'; 
+  consumoV?: string; 
+  mah?: string; 
+  saleConHuella?: 'si' | 'no' | 'no_tiene'; 
 }
 
 
@@ -151,25 +149,20 @@ export interface Order {
   orderCompanyName?: string;
   orderCompanyLogoUrl?: string;
   orderCompanyCuit?: string;
-  orderCompanyAddress?: string; // Should be full address from StoreSettings
-  orderCompanyContactDetails?: string; // Should include phone, WhatsApp, etc. from StoreSettings
+  orderCompanyAddress?: string; 
+  orderCompanyContactDetails?: string; 
 
-  // General warranty text from store, distinct from extended warranty below
-  orderWarrantyConditions?: string; 
-  orderPickupConditions?: string; // General pickup conditions (might be part of abandonmentPolicyText)
-  
-  // Specific snapshotted legal texts
-  orderSnapshottedDataLossDisclaimer?: string;
-  orderSnapshottedPrivacyPolicy?: string;
-  orderSnapshottedImportantUnlockDisclaimer?: string;
+  // Snapshotted specific legal texts
+  orderSnapshottedUnlockDisclaimer?: string;
   orderSnapshottedAbandonmentPolicyText?: string;
-  orderSnapshottedDataRetrievalPolicyText?: string;
+  orderSnapshottedDataLossPolicyText?: string;
   orderSnapshottedUntestedDevicePolicyText?: string;
   orderSnapshottedBudgetVariationText?: string;
   orderSnapshottedHighRiskDeviceText?: string;
   orderSnapshottedPartialDamageDisplayText?: string;
-  orderSnapshottedWarrantyVoidConditionsText?: string; // For the detailed "Anulación de Garantía"
-
+  orderSnapshottedWarrantyVoidConditionsText?: string;
+  orderSnapshottedPrivacyPolicy?: string;
+  orderWarrantyConditions?: string; // General store warranty, can complement warrantyVoidConditions
 
   costSparePart: number;
   costLabor: number;
@@ -184,7 +177,7 @@ export interface Order {
   dataLossDisclaimerAccepted?: boolean; 
   privacyPolicyAccepted?: boolean; 
 
-  hasWarranty?: boolean; // For extended warranty
+  hasWarranty?: boolean; 
   warrantyType?: WarrantyType;
   warrantyStartDate?: string | null; 
   warrantyEndDate?: string | null;   

@@ -16,18 +16,18 @@ let mockOrders: Order[] = [
     clientId: "CLI001", 
     branchInfo: "Taller Central (Admin)",
     deviceBrand: "Samsung", deviceModel: "Galaxy S21", deviceIMEI: "123456789012345", declaredFault: "Pantalla rota", 
-    unlockPatternInfo: "1234",
-    checklist: CHECKLIST_ITEMS.reduce((acc, item) => { // Default checklist
-        if (item.type === 'boolean') { // @ts-ignore
-            acc[item.id] = ['enciende', 'tactil', 'imagen', 'botones', 'cam_trasera', 'cam_delantera', 'vibrador', 'microfono', 'auricular', 'parlante', 'sensor_huella', 'senal', 'wifi_bluetooth', 'pin_carga', 'lente_camara'].includes(item.id) ? 'si' : 'no';
-        } else if (item.id === 'consumoV') { // @ts-ignore
+    unlockPatternInfo: "1234", // Now a free text field
+    checklist: CHECKLIST_ITEMS.reduce((acc, item) => { 
+        if (item.id === 'consumoV') { // @ts-ignore
             acc[item.id] = "0.5A";
         } else if (item.id === 'mah') { // @ts-ignore
             acc[item.id] = "4000mAh";
         } else if (item.id === 'saleConHuella') { // @ts-ignore
             acc[item.id] = "si";
+        } else if (item.type === 'boolean') { // @ts-ignore
+            acc[item.id] = ['enciende', 'tactil', 'imagen', 'botones', 'cam_trasera', 'cam_delantera', 'vibrador', 'microfono', 'auricular', 'parlante', 'sensor_huella', 'senal', 'wifi_bluetooth', 'pin_carga', 'lente_camara', 'equipo_doblado'].includes(item.id) ? 'si' : 'no';
         } else { // @ts-ignore
-            acc[item.id] = item.type === 'boolean' ? 'no' : "";
+             acc[item.id] = "";
         }
         return acc;
     }, {} as Checklist),
@@ -35,8 +35,8 @@ let mockOrders: Order[] = [
     costSparePart: 15000, costLabor: 5000, costPending: 0,
     classification: "rojo", observations: "Cliente indica que se cayó.",
     customerAccepted: true, customerSignatureName: "Juan Perez",
-    dataLossDisclaimerAccepted: true,
-    privacyPolicyAccepted: true,
+    dataLossDisclaimerAccepted: true, // Corresponds to dataLossPolicyText
+    privacyPolicyAccepted: true,    // Corresponds to privacyPolicyText
     status: "En Diagnóstico", previousOrderId: "",
     entryDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
     commentsHistory: [],
@@ -47,18 +47,18 @@ let mockOrders: Order[] = [
     orderCompanyAddress: DEFAULT_STORE_SETTINGS.companyAddress,
     orderCompanyContactDetails: DEFAULT_STORE_SETTINGS.companyContactDetails,
     orderWarrantyConditions: DEFAULT_STORE_SETTINGS.warrantyConditions,
-    orderPickupConditions: DEFAULT_STORE_SETTINGS.pickupConditions,
-    // orderAbandonmentPolicyDays60: DEFAULT_STORE_SETTINGS.abandonmentPolicyDays60, // This is now part of abandonmentPolicyText
-    orderSnapshottedDataLossDisclaimer: DEFAULT_STORE_SETTINGS.dataLossDisclaimerText,
-    orderSnapshottedPrivacyPolicy: DEFAULT_STORE_SETTINGS.privacyPolicyText,
-    orderSnapshottedImportantUnlockDisclaimer: DEFAULT_STORE_SETTINGS.importantUnlockDisclaimer,
+    
+    // Snapshotted specific legal texts
+    orderSnapshottedUnlockDisclaimer: DEFAULT_STORE_SETTINGS.unlockDisclaimerText,
     orderSnapshottedAbandonmentPolicyText: DEFAULT_STORE_SETTINGS.abandonmentPolicyText,
-    orderSnapshottedDataRetrievalPolicyText: DEFAULT_STORE_SETTINGS.dataRetrievalPolicyText,
+    orderSnapshottedDataLossPolicyText: DEFAULT_STORE_SETTINGS.dataLossPolicyText,
     orderSnapshottedUntestedDevicePolicyText: DEFAULT_STORE_SETTINGS.untestedDevicePolicyText,
     orderSnapshottedBudgetVariationText: DEFAULT_STORE_SETTINGS.budgetVariationText,
     orderSnapshottedHighRiskDeviceText: DEFAULT_STORE_SETTINGS.highRiskDeviceText,
     orderSnapshottedPartialDamageDisplayText: DEFAULT_STORE_SETTINGS.partialDamageDisplayText,
     orderSnapshottedWarrantyVoidConditionsText: DEFAULT_STORE_SETTINGS.warrantyVoidConditionsText,
+    orderSnapshottedPrivacyPolicy: DEFAULT_STORE_SETTINGS.privacyPolicyText,
+
     createdByUserId: "admin123", lastUpdatedBy: "admin123",
     updatedAt: new Date().toISOString(), createdAt: new Date().toISOString(),
     hasWarranty: true,
@@ -68,7 +68,6 @@ let mockOrders: Order[] = [
     warrantyCoveredItem: "Pantalla completa",
     warrantyNotes: "Garantía no cubre daños por líquidos o mal uso.",
   },
-  // Add another mock order if needed for testing different scenarios
 ];
 let orderCounter = mockOrders.length;
 
@@ -76,6 +75,10 @@ function generateOrderNumber(): string {
   orderCounter += 1;
   return `ORD${String(orderCounter).padStart(3, '0')}`;
 }
+
+// TODO: Implement actual encryption/decryption for unlockPatternInfo
+// async function encryptUnlockPattern(pattern: string): Promise<string> { return `encrypted_${pattern}`; }
+// async function decryptUnlockPattern(encryptedPattern: string): Promise<string> { return encryptedPattern.replace('encrypted_', ''); }
 
 export async function createOrder(
   values: z.infer<typeof OrderSchema>,
@@ -94,13 +97,14 @@ export async function createOrder(
   const data = validatedFields.data;
   const newOrderNumber = generateOrderNumber();
   
-  const finalUnlockPatternInfo = data.unlockPatternInfo; 
+  // const encryptedUnlockPattern = await encryptUnlockPattern(data.unlockPatternInfo); // TODO: Encrypt
 
   const newOrder: Order = {
     id: newOrderNumber,
     orderNumber: newOrderNumber,
     ...data, 
-    unlockPatternInfo: finalUnlockPatternInfo,
+    // unlockPatternInfo: encryptedUnlockPattern, // Store encrypted
+    unlockPatternInfo: data.unlockPatternInfo, // Storing plain for mock
     previousOrderId: data.previousOrderId || "",
     entryDate: new Date().toISOString(),
     commentsHistory: [],
@@ -112,21 +116,18 @@ export async function createOrder(
     orderCompanyAddress: settingsToSnapshot.companyAddress,
     orderCompanyContactDetails: settingsToSnapshot.companyContactDetails,
     
-    // Snapshot general conditions
     orderWarrantyConditions: settingsToSnapshot.warrantyConditions,
-    orderPickupConditions: settingsToSnapshot.pickupConditions, // May be redundant if covered by abandonmentPolicyText
-
+    
     // Snapshot specific legal texts
-    orderSnapshottedDataLossDisclaimer: settingsToSnapshot.dataLossDisclaimerText,
-    orderSnapshottedPrivacyPolicy: settingsToSnapshot.privacyPolicyText,
-    orderSnapshottedImportantUnlockDisclaimer: settingsToSnapshot.importantUnlockDisclaimer,
+    orderSnapshottedUnlockDisclaimer: settingsToSnapshot.unlockDisclaimerText,
     orderSnapshottedAbandonmentPolicyText: settingsToSnapshot.abandonmentPolicyText,
-    orderSnapshottedDataRetrievalPolicyText: settingsToSnapshot.dataRetrievalPolicyText,
+    orderSnapshottedDataLossPolicyText: settingsToSnapshot.dataLossPolicyText,
     orderSnapshottedUntestedDevicePolicyText: settingsToSnapshot.untestedDevicePolicyText,
     orderSnapshottedBudgetVariationText: settingsToSnapshot.budgetVariationText,
     orderSnapshottedHighRiskDeviceText: settingsToSnapshot.highRiskDeviceText,
     orderSnapshottedPartialDamageDisplayText: settingsToSnapshot.partialDamageDisplayText,
     orderSnapshottedWarrantyVoidConditionsText: settingsToSnapshot.warrantyVoidConditionsText,
+    orderSnapshottedPrivacyPolicy: settingsToSnapshot.privacyPolicyText,
 
     createdByUserId: creatingUserId,
     lastUpdatedBy: creatingUserId, 
@@ -191,7 +192,9 @@ export async function getOrderById(id: string): Promise<Order | null> {
   await new Promise(resolve => setTimeout(resolve, 300));
   const order = mockOrders.find(o => o.id === id);
   if (order) {
-    return JSON.parse(JSON.stringify(order));
+    // const decryptedOrder = { ...order, unlockPatternInfo: await decryptUnlockPattern(order.unlockPatternInfo) }; // TODO: Decrypt
+    // return JSON.parse(JSON.stringify(decryptedOrder));
+    return JSON.parse(JSON.stringify(order)); // Returning plain for mock
   }
   return null;
 }
@@ -280,7 +283,7 @@ export async function getRepairSuggestions(
 
 export async function updateOrder(
   orderId: string,
-  values: Partial<Omit<Order, 'id' | 'orderNumber' | 'entryDate' | 'createdAt' | 'createdByUserId' | 'orderCompanyName' | 'orderCompanyLogoUrl' | 'orderCompanyCuit' | 'orderCompanyAddress' | 'orderCompanyContactDetails' | 'orderWarrantyConditions' | 'orderPickupConditions' | 'clientName' | 'clientLastName' >>,
+  values: Partial<Omit<Order, 'id' | 'orderNumber' | 'entryDate' | 'createdAt' | 'createdByUserId' | 'orderCompanyName' | 'orderCompanyLogoUrl' | 'orderCompanyCuit' | 'orderCompanyAddress' | 'orderCompanyContactDetails' | 'orderWarrantyConditions' | 'clientName' | 'clientLastName' >>,
   userId: string 
 ): Promise<{ success: boolean; message: string; order?: Order }> {
   
@@ -297,16 +300,16 @@ export async function updateOrder(
   }
   
   const currentOrder = mockOrders[orderIndex];
-  let finalUnlockPatternInfo = currentOrder.unlockPatternInfo;
+  
+  // if (validatedFields.data.unlockPatternInfo && validatedFields.data.unlockPatternInfo !== currentOrder.unlockPatternInfo) {
+  //   validatedFields.data.unlockPatternInfo = await encryptUnlockPattern(validatedFields.data.unlockPatternInfo); // TODO: Encrypt if changed
+  // }
 
-  if (validatedFields.data.unlockPatternInfo && validatedFields.data.unlockPatternInfo !== currentOrder.unlockPatternInfo) {
-    finalUnlockPatternInfo = validatedFields.data.unlockPatternInfo;
-  }
 
   const updatedOrderData: Order = {
     ...currentOrder,
     ...validatedFields.data, 
-    unlockPatternInfo: finalUnlockPatternInfo,
+    unlockPatternInfo: validatedFields.data.unlockPatternInfo || currentOrder.unlockPatternInfo, // Use new if provided, else keep old
     lastUpdatedBy: userId, 
     updatedAt: new Date().toISOString(),
   };

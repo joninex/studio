@@ -27,7 +27,7 @@ import { useAuth } from "@/providers/AuthProvider";
 import { AISuggestion, type Order, type StoreSettings, WarrantyType, OrderStatus, Classification, Checklist } from "@/types";
 import { 
   CHECKLIST_ITEMS, CLASSIFICATION_OPTIONS, ORDER_STATUSES, 
-  YES_NO_OPTIONS, DEFAULT_STORE_SETTINGS, WARRANTY_TYPE_OPTIONS, WARRANTY_TYPES, SALE_CON_HUELLA_OPTIONS
+  YES_NO_OPTIONS, DEFAULT_STORE_SETTINGS, WARRANTY_TYPE_OPTIONS, SALE_CON_HUELLA_OPTIONS
 } from "@/lib/constants";
 import { AlertCircle, Bot, CalendarIcon, DollarSign, Info, ListChecks, LucideSparkles, User, Wrench, LinkIcon, Building, UserSquare, ShieldCheck, FileLock2, FileTextIcon, LockKeyhole, ClipboardSignature } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
@@ -39,7 +39,7 @@ interface OrderFormProps {
 }
 
 const NONE_CLASSIFICATION_VALUE = "__NONE_CLASSIFICATION_VALUE__";
-const NONE_WARRANTY_TYPE_VALUE = "";
+const NONE_WARRANTY_TYPE_VALUE = ""; // This is fine for Select value, but not SelectItem
 
 const validOrderStatusOptions = ORDER_STATUSES.filter(status => status !== "") as OrderStatus[];
 const validClassificationOptions = CLASSIFICATION_OPTIONS.filter(opt => opt !== "") as Classification[];
@@ -53,13 +53,13 @@ export function OrderForm({ orderId }: OrderFormProps) {
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [aiSuggestion, setAiSuggestion] = useState<AISuggestion | null>(null);
   const [isLoadingOrder, setIsLoadingOrder] = useState(!!orderId);
-  const [isLoadingStoreSettings, setIsLoadingStoreSettings] = useState(!orderId); // Initially true if new order
+  const [isLoadingStoreSettings, setIsLoadingStoreSettings] = useState(!orderId); 
   const [currentStoreSettings, setCurrentStoreSettings] = useState<StoreSettings | null>(null);
 
   const defaultChecklistValues = CHECKLIST_ITEMS.reduce((acc, item) => {
     if (item.type === 'boolean') {
       // @ts-ignore
-      acc[item.id] = ['enciende', 'tactil', 'imagen', 'botones', 'cam_trasera', 'cam_delantera', 'vibrador', 'microfono', 'auricular', 'parlante', 'sensor_huella', 'senal', 'wifi_bluetooth', 'pin_carga', 'lente_camara'].includes(item.id) ? 'si' : 'no';
+      acc[item.id] = ['enciende', 'tactil', 'imagen', 'botones', 'cam_trasera', 'cam_delantera', 'vibrador', 'microfono', 'auricular', 'parlante', 'sensor_huella', 'senal', 'wifi_bluetooth', 'pin_carga', 'lente_camara', 'equipo_doblado'].includes(item.id) ? 'si' : 'no';
     } else if (item.type === 'text') {
       // @ts-ignore
       acc[item.id] = "";
@@ -77,7 +77,7 @@ export function OrderForm({ orderId }: OrderFormProps) {
       clientId: "",
       branchInfo: DEFAULT_STORE_SETTINGS.branchInfo || "Sucursal Principal",
       deviceBrand: "", deviceModel: "", deviceIMEI: "", declaredFault: "",
-      unlockPatternInfo: "",
+      unlockPatternInfo: "", // Now a free text field
       checklist: defaultChecklistValues,
       damageRisk: "",
       pantalla_parcial: false,
@@ -89,22 +89,22 @@ export function OrderForm({ orderId }: OrderFormProps) {
       customerAccepted: false, 
       customerSignatureName: "",
       // Snapshotted texts will be filled from store settings on load or from existing order
-      orderSnapshottedDataLossDisclaimer: "",
-      orderSnapshottedPrivacyPolicy: "",
-      orderSnapshottedImportantUnlockDisclaimer: "",
+      orderSnapshottedUnlockDisclaimer: "",
       orderSnapshottedAbandonmentPolicyText: "",
-      orderSnapshottedDataRetrievalPolicyText: "",
+      orderSnapshottedDataLossPolicyText: "",
       orderSnapshottedUntestedDevicePolicyText: "",
       orderSnapshottedBudgetVariationText: "",
       orderSnapshottedHighRiskDeviceText: "",
       orderSnapshottedPartialDamageDisplayText: "",
       orderSnapshottedWarrantyVoidConditionsText: "",
+      orderSnapshottedPrivacyPolicy: "",
+      orderWarrantyConditions: "",
       // Acceptance flags
       dataLossDisclaimerAccepted: false,
       privacyPolicyAccepted: false,
       status: "Recibido",
       hasWarranty: false,
-      warrantyType: NONE_WARRANTY_TYPE_VALUE as WarrantyType,
+      warrantyType: null, // Use null for no selection initially
       warrantyStartDate: null,
       warrantyEndDate: null,
       warrantyCoveredItem: "",
@@ -120,42 +120,16 @@ export function OrderForm({ orderId }: OrderFormProps) {
 
   useEffect(() => {
     async function fetchInitialData() {
+      let fetchedStoreSettings = DEFAULT_STORE_SETTINGS;
       if (user) {
         setIsLoadingStoreSettings(true);
         try {
-          const userSettings = await getStoreSettingsForUser(user.uid);
-          setCurrentStoreSettings(userSettings); // Store fetched settings
-          if (!orderId) { // New order: Apply user's current store settings
-            form.setValue('branchInfo', userSettings.branchInfo || DEFAULT_STORE_SETTINGS.branchInfo || "Sucursal Principal");
-            // Snapshot all relevant legal texts
-            form.setValue('orderSnapshottedDataLossDisclaimer', userSettings.dataLossDisclaimerText || "");
-            form.setValue('orderSnapshottedPrivacyPolicy', userSettings.privacyPolicyText || "");
-            form.setValue('orderSnapshottedImportantUnlockDisclaimer', userSettings.importantUnlockDisclaimer || "");
-            form.setValue('orderSnapshottedAbandonmentPolicyText', userSettings.abandonmentPolicyText || "");
-            form.setValue('orderSnapshottedDataRetrievalPolicyText', userSettings.dataRetrievalPolicyText || "");
-            form.setValue('orderSnapshottedUntestedDevicePolicyText', userSettings.untestedDevicePolicyText || "");
-            form.setValue('orderSnapshottedBudgetVariationText', userSettings.budgetVariationText || "");
-            form.setValue('orderSnapshottedHighRiskDeviceText', userSettings.highRiskDeviceText || "");
-            form.setValue('orderSnapshottedPartialDamageDisplayText', userSettings.partialDamageDisplayText || "");
-            form.setValue('orderSnapshottedWarrantyVoidConditionsText', userSettings.warrantyVoidConditionsText || "");
-          }
+          fetchedStoreSettings = await getStoreSettingsForUser(user.uid);
+          setCurrentStoreSettings(fetchedStoreSettings);
         } catch (error) {
           console.error("Failed to load user store settings:", error);
           toast({ variant: "destructive", title: "Error", description: "No se pudo cargar la configuración de su tienda. Se usarán valores por defecto." });
-          setCurrentStoreSettings(DEFAULT_STORE_SETTINGS); // Fallback to defaults
-           if (!orderId) { // Apply defaults if new order and fetch failed
-            form.setValue('branchInfo', DEFAULT_STORE_SETTINGS.branchInfo || "Error carga config");
-            form.setValue('orderSnapshottedDataLossDisclaimer', DEFAULT_STORE_SETTINGS.dataLossDisclaimerText || "");
-            form.setValue('orderSnapshottedPrivacyPolicy', DEFAULT_STORE_SETTINGS.privacyPolicyText || "");
-            form.setValue('orderSnapshottedImportantUnlockDisclaimer', DEFAULT_STORE_SETTINGS.importantUnlockDisclaimer || "");
-            form.setValue('orderSnapshottedAbandonmentPolicyText', DEFAULT_STORE_SETTINGS.abandonmentPolicyText || "");
-            form.setValue('orderSnapshottedDataRetrievalPolicyText', DEFAULT_STORE_SETTINGS.dataRetrievalPolicyText || "");
-            form.setValue('orderSnapshottedUntestedDevicePolicyText', DEFAULT_STORE_SETTINGS.untestedDevicePolicyText || "");
-            form.setValue('orderSnapshottedBudgetVariationText', DEFAULT_STORE_SETTINGS.budgetVariationText || "");
-            form.setValue('orderSnapshottedHighRiskDeviceText', DEFAULT_STORE_SETTINGS.highRiskDeviceText || "");
-            form.setValue('orderSnapshottedPartialDamageDisplayText', DEFAULT_STORE_SETTINGS.partialDamageDisplayText || "");
-            form.setValue('orderSnapshottedWarrantyVoidConditionsText', DEFAULT_STORE_SETTINGS.warrantyVoidConditionsText || "");
-          }
+          setCurrentStoreSettings(DEFAULT_STORE_SETTINGS); 
         } finally {
           setIsLoadingStoreSettings(false);
         }
@@ -169,8 +143,8 @@ export function OrderForm({ orderId }: OrderFormProps) {
             form.reset({
               ...order,
               checklist: { 
-                ...defaultChecklistValues, // Start with defaults
-                ...(order.checklist || {}), // Override with actual order values
+                ...defaultChecklistValues, 
+                ...(order.checklist || {}), 
               },
               clientId: order.clientId,
               unlockPatternInfo: order.unlockPatternInfo || "",
@@ -184,21 +158,21 @@ export function OrderForm({ orderId }: OrderFormProps) {
               customerAccepted: order.customerAccepted || false,
               customerSignatureName: order.customerSignatureName || "",
               // Reset snapshotted texts from the loaded order
-              orderSnapshottedDataLossDisclaimer: order.orderSnapshottedDataLossDisclaimer || "",
-              orderSnapshottedPrivacyPolicy: order.orderSnapshottedPrivacyPolicy || "",
-              orderSnapshottedImportantUnlockDisclaimer: order.orderSnapshottedImportantUnlockDisclaimer || "",
-              orderSnapshottedAbandonmentPolicyText: order.orderSnapshottedAbandonmentPolicyText || "",
-              orderSnapshottedDataRetrievalPolicyText: order.orderSnapshottedDataRetrievalPolicyText || "",
-              orderSnapshottedUntestedDevicePolicyText: order.orderSnapshottedUntestedDevicePolicyText || "",
-              orderSnapshottedBudgetVariationText: order.orderSnapshottedBudgetVariationText || "",
-              orderSnapshottedHighRiskDeviceText: order.orderSnapshottedHighRiskDeviceText || "",
-              orderSnapshottedPartialDamageDisplayText: order.orderSnapshottedPartialDamageDisplayText || "",
-              orderSnapshottedWarrantyVoidConditionsText: order.orderSnapshottedWarrantyVoidConditionsText || "",
+              orderSnapshottedUnlockDisclaimer: order.orderSnapshottedUnlockDisclaimer || fetchedStoreSettings.unlockDisclaimerText || "",
+              orderSnapshottedAbandonmentPolicyText: order.orderSnapshottedAbandonmentPolicyText || fetchedStoreSettings.abandonmentPolicyText || "",
+              orderSnapshottedDataLossPolicyText: order.orderSnapshottedDataLossPolicyText || fetchedStoreSettings.dataLossPolicyText || "",
+              orderSnapshottedUntestedDevicePolicyText: order.orderSnapshottedUntestedDevicePolicyText || fetchedStoreSettings.untestedDevicePolicyText || "",
+              orderSnapshottedBudgetVariationText: order.orderSnapshottedBudgetVariationText || fetchedStoreSettings.budgetVariationText || "",
+              orderSnapshottedHighRiskDeviceText: order.orderSnapshottedHighRiskDeviceText || fetchedStoreSettings.highRiskDeviceText || "",
+              orderSnapshottedPartialDamageDisplayText: order.orderSnapshottedPartialDamageDisplayText || fetchedStoreSettings.partialDamageDisplayText || "",
+              orderSnapshottedWarrantyVoidConditionsText: order.orderSnapshottedWarrantyVoidConditionsText || fetchedStoreSettings.warrantyVoidConditionsText || "",
+              orderSnapshottedPrivacyPolicy: order.orderSnapshottedPrivacyPolicy || fetchedStoreSettings.privacyPolicyText || "",
+              orderWarrantyConditions: order.orderWarrantyConditions || fetchedStoreSettings.warrantyConditions || "",
               // Acceptance flags
               dataLossDisclaimerAccepted: order.dataLossDisclaimerAccepted || false,
               privacyPolicyAccepted: order.privacyPolicyAccepted || false,
               hasWarranty: order.hasWarranty || false,
-              warrantyType: order.warrantyType || NONE_WARRANTY_TYPE_VALUE as WarrantyType,
+              warrantyType: order.warrantyType || null,
               warrantyStartDate: order.warrantyStartDate ? format(new Date(order.warrantyStartDate), "yyyy-MM-dd") : null,
               warrantyEndDate: order.warrantyEndDate ? format(new Date(order.warrantyEndDate), "yyyy-MM-dd") : null,
               warrantyCoveredItem: order.warrantyCoveredItem || "",
@@ -213,11 +187,21 @@ export function OrderForm({ orderId }: OrderFormProps) {
         } finally {
           setIsLoadingOrder(false);
         }
+      } else { // New order
+          form.setValue('branchInfo', fetchedStoreSettings.branchInfo || DEFAULT_STORE_SETTINGS.branchInfo || "Sucursal Principal");
+          form.setValue('orderSnapshottedUnlockDisclaimer', fetchedStoreSettings.unlockDisclaimerText || "");
+          form.setValue('orderSnapshottedAbandonmentPolicyText', fetchedStoreSettings.abandonmentPolicyText || "");
+          form.setValue('orderSnapshottedDataLossPolicyText', fetchedStoreSettings.dataLossPolicyText || "");
+          form.setValue('orderSnapshottedUntestedDevicePolicyText', fetchedStoreSettings.untestedDevicePolicyText || "");
+          form.setValue('orderSnapshottedBudgetVariationText', fetchedStoreSettings.budgetVariationText || "");
+          form.setValue('orderSnapshottedHighRiskDeviceText', fetchedStoreSettings.highRiskDeviceText || "");
+          form.setValue('orderSnapshottedPartialDamageDisplayText', fetchedStoreSettings.partialDamageDisplayText || "");
+          form.setValue('orderSnapshottedWarrantyVoidConditionsText', fetchedStoreSettings.warrantyVoidConditionsText || "");
+          form.setValue('orderSnapshottedPrivacyPolicy', fetchedStoreSettings.privacyPolicyText || "");
+          form.setValue('orderWarrantyConditions', fetchedStoreSettings.warrantyConditions || "");
       }
     }
-    if (user) {
-        fetchInitialData();
-    }
+    fetchInitialData();
   }, [orderId, user, form, router, toast, defaultChecklistValues]);
 
   useEffect(() => {
@@ -237,14 +221,14 @@ export function OrderForm({ orderId }: OrderFormProps) {
         }
       } catch (error) {
         console.error("Error calculating warranty end date:", error);
-         form.setValue('warrantyEndDate', null); // Clear if error
+         form.setValue('warrantyEndDate', null); 
       }
     } else if (hasWarrantyWatch && warrantyTypeWatch === 'custom') {
-      // Allow manual input, no automatic calculation
+      // Allow manual input
     } else if (!hasWarrantyWatch) {
         form.setValue('warrantyEndDate', null);
         form.setValue('warrantyStartDate', null);
-        form.setValue('warrantyType', NONE_WARRANTY_TYPE_VALUE as WarrantyType);
+        form.setValue('warrantyType', null);
         form.setValue('warrantyCoveredItem', "");
         form.setValue('warrantyNotes', "");
     }
@@ -258,45 +242,39 @@ export function OrderForm({ orderId }: OrderFormProps) {
     }
     startTransition(async () => {
       let result;
-      // Ensure snapshotted texts are set from currentStoreSettings if creating new, or existing if editing
-      // If it's a new order, currentStoreSettings should already be in form values from useEffect
-      // If it's an existing order, the form values for snapshotted texts are already from the loaded order.
-      // So, we just use values directly.
+      const settingsSource = currentStoreSettings || DEFAULT_STORE_SETTINGS;
 
       const submissionValues: OrderFormData = {
         ...values,
-        unlockPatternInfo: values.unlockPatternInfo,
+        unlockPatternInfo: values.unlockPatternInfo, // TODO: Consider encryption before sending to server
         previousOrderId: values.previousOrderId?.trim() === "" ? undefined : values.previousOrderId?.trim(),
-        warrantyType: values.hasWarranty ? values.warrantyType : NONE_WARRANTY_TYPE_VALUE as WarrantyType,
+        warrantyType: values.hasWarranty ? values.warrantyType : null,
         warrantyStartDate: values.hasWarranty && values.warrantyStartDate ? values.warrantyStartDate : null,
         warrantyEndDate: values.hasWarranty && values.warrantyEndDate ? values.warrantyEndDate : null,
         warrantyCoveredItem: values.hasWarranty ? values.warrantyCoveredItem : "",
         warrantyNotes: values.hasWarranty ? values.warrantyNotes : "",
         status: values.status || "Recibido", 
-        // Ensure checklist values are correct
         checklist: CHECKLIST_ITEMS.reduce((acc, item) => {
           // @ts-ignore
           acc[item.id] = values.checklist[item.id] || (item.type === 'boolean' ? 'no' : (item.type === 'enum_saleConHuella' ? 'no_tiene' : ''));
           return acc;
         }, {} as Checklist),
+        // Ensure all snapshotted texts are from settings if creating, or existing if editing
+        orderSnapshottedUnlockDisclaimer: orderId ? values.orderSnapshottedUnlockDisclaimer : settingsSource.unlockDisclaimerText,
+        orderSnapshottedAbandonmentPolicyText: orderId ? values.orderSnapshottedAbandonmentPolicyText : settingsSource.abandonmentPolicyText,
+        orderSnapshottedDataLossPolicyText: orderId ? values.orderSnapshottedDataLossPolicyText : settingsSource.dataLossPolicyText,
+        orderSnapshottedUntestedDevicePolicyText: orderId ? values.orderSnapshottedUntestedDevicePolicyText : settingsSource.untestedDevicePolicyText,
+        orderSnapshottedBudgetVariationText: orderId ? values.orderSnapshottedBudgetVariationText : settingsSource.budgetVariationText,
+        orderSnapshottedHighRiskDeviceText: orderId ? values.orderSnapshottedHighRiskDeviceText : settingsSource.highRiskDeviceText,
+        orderSnapshottedPartialDamageDisplayText: orderId ? values.orderSnapshottedPartialDamageDisplayText : settingsSource.partialDamageDisplayText,
+        orderSnapshottedWarrantyVoidConditionsText: orderId ? values.orderSnapshottedWarrantyVoidConditionsText : settingsSource.warrantyVoidConditionsText,
+        orderSnapshottedPrivacyPolicy: orderId ? values.orderSnapshottedPrivacyPolicy : settingsSource.privacyPolicyText,
+        orderWarrantyConditions: orderId ? values.orderWarrantyConditions : settingsSource.warrantyConditions,
       };
 
       if (orderId) {
         result = await updateOrder(orderId, submissionValues, user.uid);
       } else {
-        // For new orders, explicitly set snapshotted texts from currentStoreSettings (or defaults if not loaded)
-        // This ensures they are captured at creation time.
-        const settingsSource = currentStoreSettings || DEFAULT_STORE_SETTINGS;
-        submissionValues.orderSnapshottedDataLossDisclaimer = settingsSource.dataLossDisclaimerText || "";
-        submissionValues.orderSnapshottedPrivacyPolicy = settingsSource.privacyPolicyText || "";
-        submissionValues.orderSnapshottedImportantUnlockDisclaimer = settingsSource.importantUnlockDisclaimer || "";
-        submissionValues.orderSnapshottedAbandonmentPolicyText = settingsSource.abandonmentPolicyText || "";
-        submissionValues.orderSnapshottedDataRetrievalPolicyText = settingsSource.dataRetrievalPolicyText || "";
-        submissionValues.orderSnapshottedUntestedDevicePolicyText = settingsSource.untestedDevicePolicyText || "";
-        submissionValues.orderSnapshottedBudgetVariationText = settingsSource.budgetVariationText || "";
-        submissionValues.orderSnapshottedHighRiskDeviceText = settingsSource.highRiskDeviceText || "";
-        submissionValues.orderSnapshottedPartialDamageDisplayText = settingsSource.partialDamageDisplayText || "";
-        submissionValues.orderSnapshottedWarrantyVoidConditionsText = settingsSource.warrantyVoidConditionsText || "";
         result = await createOrder(submissionValues, user.uid);
       }
 
@@ -328,13 +306,12 @@ export function OrderForm({ orderId }: OrderFormProps) {
     setIsAiLoading(false);
   };
 
-  if ((isLoadingOrder && orderId) || (isLoadingStoreSettings && !currentStoreSettings) ) {
+  if ((isLoadingOrder && orderId) || (isLoadingStoreSettings && !currentStoreSettings && !orderId) ) {
     return <div className="flex justify-center items-center h-64"><LoadingSpinner size={48}/> <p className="ml-4">Cargando datos del formulario...</p></div>;
   }
-
-  // Get current snapshotted texts for display in acceptance section
-  const displayDataLossDisclaimer = form.watch('orderSnapshottedDataLossDisclaimer') || currentStoreSettings?.dataLossDisclaimerText || DEFAULT_STORE_SETTINGS.dataLossDisclaimerText;
-  const displayPrivacyPolicy = form.watch('orderSnapshottedPrivacyPolicy') || currentStoreSettings?.privacyPolicyText || DEFAULT_STORE_SETTINGS.privacyPolicyText;
+  
+  const displayDataLossPolicyText = form.watch('orderSnapshottedDataLossPolicyText') || currentStoreSettings?.dataLossPolicyText || DEFAULT_STORE_SETTINGS.dataLossPolicyText;
+  const displayPrivacyPolicyText = form.watch('orderSnapshottedPrivacyPolicy') || currentStoreSettings?.privacyPolicyText || DEFAULT_STORE_SETTINGS.privacyPolicyText;
 
 
   return (
@@ -370,7 +347,7 @@ export function OrderForm({ orderId }: OrderFormProps) {
                 )} />
                 <FormField control={form.control} name="deviceBrand" render={({ field }) => ( <FormItem><FormLabel>Marca</FormLabel><FormControl><Input placeholder="Ej: Samsung, Apple" {...field} /></FormControl><FormMessage /></FormItem> )} />
                 <FormField control={form.control} name="deviceModel" render={({ field }) => ( <FormItem><FormLabel>Modelo</FormLabel><FormControl><Input placeholder="Ej: Galaxy S21, iPhone 13" {...field} /></FormControl><FormMessage /></FormItem> )} />
-                <FormField control={form.control} name="deviceIMEI" render={({ field }) => ( <FormItem><FormLabel>IMEI</FormLabel><FormControl><Input placeholder="IMEI del equipo" {...field} /></FormControl><FormMessage /></FormItem> )} />
+                <FormField control={form.control} name="deviceIMEI" render={({ field }) => ( <FormItem><FormLabel>IMEI/Serial</FormLabel><FormControl><Input placeholder="IMEI o N° Serie del equipo" {...field} /></FormControl><FormMessage /></FormItem> )} />
                 <FormField control={form.control} name="declaredFault" render={({ field }) => ( <FormItem><FormLabel>Falla Declarada por el Cliente</FormLabel><FormControl><Textarea placeholder="Descripción de la falla" {...field} /></FormControl><FormMessage /></FormItem> )} />
                 <FormField control={form.control} name="unlockPatternInfo" render={({ field }) => (
                   <FormItem>
@@ -428,7 +405,7 @@ export function OrderForm({ orderId }: OrderFormProps) {
                         <FormLabel className="text-sm font-normal">{item.label}</FormLabel>
                         <FormControl>
                           {item.type === 'boolean' ? (
-                            <RadioGroup onValueChange={field.onChange} value={field.value} className="flex space-x-2">
+                            <RadioGroup onValueChange={field.onChange} value={field.value as string || 'no'} className="flex space-x-2">
                               {YES_NO_OPTIONS.map(opt => (
                                 <FormItem key={opt.value} className="flex items-center space-x-1 space-y-0">
                                   <FormControl><RadioGroupItem value={opt.value} /></FormControl>
@@ -437,9 +414,9 @@ export function OrderForm({ orderId }: OrderFormProps) {
                               ))}
                             </RadioGroup>
                           ) : item.type === 'text' ? (
-                            <Input type="text" {...field} className="h-8 text-xs w-20"/>
+                            <Input type="text" {...field} className="h-8 text-xs w-20" value={field.value as string || ''}/>
                           ) : item.type === 'enum_saleConHuella' ? (
-                             <RadioGroup onValueChange={field.onChange} value={field.value} className="flex space-x-1 sm:space-x-2">
+                             <RadioGroup onValueChange={field.onChange} value={field.value as string || 'no_tiene'} className="flex space-x-1 sm:space-x-2">
                               {SALE_CON_HUELLA_OPTIONS.map(opt => (
                                 <FormItem key={opt.value} className="flex items-center space-x-0.5 sm:space-x-1 space-y-0">
                                   <FormControl><RadioGroupItem value={opt.value} /></FormControl>
@@ -595,7 +572,7 @@ export function OrderForm({ orderId }: OrderFormProps) {
                               )}
                             >
                               {field.value ? (
-                                format(new Date(field.value  + 'T00:00:00'), "PPP", { weekStartsOn: 1 }) // Ensure date is parsed correctly
+                                format(new Date(field.value  + 'T00:00:00'), "PPP", { weekStartsOn: 1 }) 
                               ) : (
                                 <span>Seleccione fecha</span>
                               )}
@@ -631,7 +608,7 @@ export function OrderForm({ orderId }: OrderFormProps) {
                                 "w-full pl-3 text-left font-normal",
                                 !field.value && "text-muted-foreground"
                               )}
-                              disabled={warrantyTypeWatch !== 'custom' && warrantyTypeWatch !== NONE_WARRANTY_TYPE_VALUE}
+                              disabled={warrantyTypeWatch !== 'custom' && warrantyTypeWatch !== null && warrantyTypeWatch !== NONE_WARRANTY_TYPE_VALUE}
                             >
                               {field.value ? (
                                 format(new Date(field.value + 'T00:00:00'), "PPP", { weekStartsOn: 1 })
@@ -655,7 +632,7 @@ export function OrderForm({ orderId }: OrderFormProps) {
                         </PopoverContent>
                       </Popover>
                       <FormDescription>
-                        {warrantyTypeWatch !== 'custom' && warrantyTypeWatch !== NONE_WARRANTY_TYPE_VALUE ? "Calculada automáticamente. " : ""}
+                        {warrantyTypeWatch && warrantyTypeWatch !== 'custom' && warrantyTypeWatch !== NONE_WARRANTY_TYPE_VALUE ? "Calculada automáticamente. " : ""}
                         {warrantyTypeWatch === 'custom' ? "Ingrese manualmente." : ""}
                       </FormDescription>
                       <FormMessage />
@@ -709,34 +686,33 @@ export function OrderForm({ orderId }: OrderFormProps) {
               </FormItem>
             )} />
             
-            {/* Displaying the text for acceptance if available */}
-            {(displayDataLossDisclaimer && displayDataLossDisclaimer.trim() !== "") && (
+            {(displayDataLossPolicyText && displayDataLossPolicyText.trim() !== "") && (
               <FormField control={form.control} name="dataLossDisclaimerAccepted" render={({ field }) => (
                 <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 shadow-sm">
                   <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
                   <div className="space-y-1 leading-none">
-                    <FormLabel>Aceptación del Descargo por Pérdida de Datos</FormLabel>
-                    <FormDescription className="text-xs max-h-20 overflow-y-auto">{displayDataLossDisclaimer}</FormDescription>
+                    <FormLabel>Aceptación del Descargo por Pérdida de Datos y Política de Privacidad</FormLabel>
+                    <FormDescription className="text-xs max-h-20 overflow-y-auto">{displayDataLossPolicyText}</FormDescription>
                     <FormMessage />
                   </div>
                 </FormItem>
               )} />
             )}
 
-            {(displayPrivacyPolicy && displayPrivacyPolicy.trim() !== "") && (
+            {(displayPrivacyPolicyText && displayPrivacyPolicyText.trim() !== "" && displayDataLossPolicyText !== displayPrivacyPolicyText) && (
               <FormField control={form.control} name="privacyPolicyAccepted" render={({ field }) => (
                 <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 shadow-sm">
                   <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
                   <div className="space-y-1 leading-none">
-                    <FormLabel>Aceptación de la Política de Privacidad y Acceso al Dispositivo</FormLabel>
-                    <FormDescription className="text-xs max-h-20 overflow-y-auto">{displayPrivacyPolicy}</FormDescription>
+                    <FormLabel>Aceptación de la Política de Privacidad Adicional</FormLabel>
+                    <FormDescription className="text-xs max-h-20 overflow-y-auto">{displayPrivacyPolicyText}</FormDescription>
                     <FormMessage />
                   </div>
                 </FormItem>
               )} />
             )}
              <FormDescription className="text-xs italic">
-                Las políticas completas (Desbloqueo, Abandono, Variación de Presupuesto, Riesgos, etc.) configuradas por el taller se imprimirán en el comprobante final y se consideran aceptadas con la "Aceptación General".
+                Las políticas completas (Desbloqueo, Abandono, Variación de Presupuesto, Riesgos, Garantía, etc.) configuradas por el taller se imprimirán en el comprobante final y se consideran aceptadas con la "Aceptación General".
             </FormDescription>
           </CardContent>
         </Card>

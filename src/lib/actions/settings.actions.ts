@@ -12,11 +12,9 @@ export async function getStoreSettingsForUser(userId: string): Promise<StoreSett
   await new Promise(resolve => setTimeout(resolve, 200)); 
   const user = await getUserById(userId);
   if (user && user.storeSettings) {
-    // Ensure all default fields are present, overlaying with user's saved settings
     const mergedSettings: StoreSettings = {
       ...DEFAULT_STORE_SETTINGS,
       ...user.storeSettings,
-      // Ensure numbers are numbers
       abandonmentPolicyDays30: Number(user.storeSettings.abandonmentPolicyDays30 ?? DEFAULT_STORE_SETTINGS.abandonmentPolicyDays30),
       abandonmentPolicyDays60: Number(user.storeSettings.abandonmentPolicyDays60 ?? DEFAULT_STORE_SETTINGS.abandonmentPolicyDays60),
     };
@@ -50,7 +48,6 @@ export async function updateStoreSettingsForUser(
     ...(currentUsers[userIndex].storeSettings || {}), 
     ...validatedFields.data,
     id: `store_config_${userId}`,
-    // Ensure numbers are stored as numbers
     abandonmentPolicyDays30: Number(validatedFields.data.abandonmentPolicyDays30 ?? DEFAULT_STORE_SETTINGS.abandonmentPolicyDays30),
     abandonmentPolicyDays60: Number(validatedFields.data.abandonmentPolicyDays60 ?? DEFAULT_STORE_SETTINGS.abandonmentPolicyDays60),
   };
