@@ -246,8 +246,8 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
               {CHECKLIST_ITEMS.map(item => (
                 <div key={item.id} className="flex justify-between">
                   <span>{item.label}:</span>
-                  <span className={`font-medium ${order.checklist[item.id] === 'si' ? 'text-green-600 print:text-black' : 'text-red-600 print:text-black'}`}>
-                    {order.checklist[item.id] === 'si' ? 'Sí' : 'No'}
+                  <span className={`font-medium ${order.checklist[item.id as keyof Checklist] === 'si' ? 'text-green-600 print:text-black' : 'text-red-600 print:text-black'}`}>
+                    {order.checklist[item.id as keyof Checklist] === 'si' ? 'Sí' : 'No'}
                   </span>
                 </div>
               ))}
@@ -349,7 +349,6 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
             <Select value={newStatus || ""} onValueChange={(value: OrderStatus) => setNewStatus(value)}>
               <SelectTrigger id="statusSelect"><SelectValue placeholder="Seleccionar estado" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="" disabled>Seleccione un estado</SelectItem>
                 {ORDER_STATUSES.filter(opt => opt !== "").map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
               </SelectContent>
             </Select>
