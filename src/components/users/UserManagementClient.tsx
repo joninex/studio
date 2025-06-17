@@ -1,0 +1,230 @@
+// src/components/users/UserManagementClient.tsx
+"use client";
+
+import { useState, useEffect, useTransition } from "react";
+import type { User } from "@/types";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from "@/components/ui/dialog";
+import { PlusCircle, Edit, Trash2, Search, UserPlus } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { UserSchema } from "@/lib/schemas";
+import type { z } from "zod";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
+import { LoadingSpinner } from "../shared/LoadingSpinner";
+
+// Mock server actions for users
+async function getUsersMock(): Promise<User[]> {
+  await new Promise(resolve => setTimeout(resolve, 500));
+  return [
+    { uid: "admin123", name: "Jesús Admin", email: "jesus@mobyland.com.ar", role: "admin", createdAt: new Date(), updatedAt: new Date() },
+    { uid: "tech123", name: "Carlos Técnico", email: "carlos@mobyland.com.ar", role: "tecnico", createdAt: new Date(), updatedAt: new Date() },
+  ];
+}
+async function createUserMock(data: z.infer<typeof UserSchema>): Promise<{ success: boolean; message: string; user?: User }> {
+  await new Promise(resolve => setTimeout(resolve, 500));
+  console.log("Creating user (mock):", data);
+  // This should check for email uniqueness in a real app
+  const newUser: User = { uid: `newUser${Date.now()}`, ...data, createdAt: new Date(), updatedAt: new Date() };
+  // Add to a mock list if maintaining state, or just return success
+  return { success: true, message: "Usuario creado exitosamente (mock).", user: newUser };
+}
+async function updateUserMock(uid: string, data: Partial<z.infer<typeof UserSchema>>): Promise<{ success: boolean; message: string; user?: User }> {
+  await new Promise(resolve => setTimeout(resolve, 500));
+  console.log("Updating user (mock):", uid, data);
+  // Find and update in a mock list if maintaining state
+  return { success: true, message: "Usuario actualizado exitosamente (mock)." };
+}
+async function deleteUserMock(uid: string): Promise<{ success: boolean; message: string }> {
+  await new Promise(resolve => setTimeout(resolve, 500));
+  console.log("Deleting user (mock):", uid);
+  return { success: true, message: "Usuario eliminado exitosamente (mock)." };
+}
+
+
+export function UserManagementClient() {
+  const [users, setUsers] = useState<User[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isPending, startTransition] = useTransition();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const { toast } = useToast();
+
+  const form = useForm<z.infer<typeof UserSchema>>({
+    resolver: zodResolver(UserSchema),
+    defaultValues: { name: "", email: "", role: "tecnico", password: "" },
+  });
+
+  useEffect(() => {
+    async function loadUsers() {
+      setIsLoading(true);
+      const fetchedUsers = await getUsersMock();
+      setUsers(fetchedUsers);
+      setIsLoading(false);
+    }
+    loadUsers();
+  }, []);
+  
+  const handleFormSubmit = (values: z.infer<typeof UserSchema>) => {
+    startTransition(async () => {
+      let result;
+      if (editingUser) {
+        // For updates, password might be optional or handled differently
+        const updateData = {...values};
+        if(!values.password) delete updateData.password; // Don't send empty password if not changing
+        result = await updateUserMock(editingUser.uid, updateData);
+      } else {
+        result = await createUserMock(values);
+      }
+
+      if (result.success) {
+        toast({ title: "Éxito", description: result.message });
+        setIsFormOpen(false);
+        setEditingUser(null);
+        form.reset({ name: "", email: "", role: "tecnico", password: "" });
+        // Refresh users list
+        const fetchedUsers = await getUsersMock();
+        setUsers(fetchedUsers);
+      } else {
+        toast({ variant: "destructive", title: "Error", description: result.message });
+      }
+    });
+  };
+  
+  const handleEditUser = (user: User) => {
+    setEditingUser(user);
+    form.reset({ name: user.name, email: user.email, role: user.role, password: "" }); // Clear password for edit form
+    setIsFormOpen(true);
+  };
+
+  const handleDeleteUser = (uid: string) => {
+    if (!confirm("¿Está seguro de que desea eliminar este usuario? Esta acción no se puede deshacer.")) return;
+    startTransition(async () => {
+      const result = await deleteUserMock(uid);
+       if (result.success) {
+        toast({ title: "Éxito", description: result.message });
+        const fetchedUsers = await getUsersMock(); // Refresh users list
+        setUsers(fetchedUsers);
+      } else {
+        toast({ variant: "destructive", title: "Error", description: result.message });
+      }
+    });
+  };
+  
+  const openNewUserForm = () => {
+    setEditingUser(null);
+    form.reset({ name: "", email: "", role: "tecnico", password: "" });
+    setIsFormOpen(true);
+  };
+
+
+  const filteredUsers = users.filter(user =>
+    user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    user.email.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  return (
+    <Card className="shadow-xl">
+      <CardHeader className="flex flex-col md:flex-row justify-between items-center gap-4">
+        <div>
+            <CardTitle>Listado de Usuarios</CardTitle>
+            <CardDescription>Usuarios registrados en el sistema.</CardDescription>
+        </div>
+        <div className="flex gap-2 w-full md:w-auto">
+            <div className="relative flex-grow md:flex-grow-0">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                    type="search"
+                    placeholder="Buscar por nombre o email..."
+                    className="pl-8 sm:w-[300px] md:w-[200px] lg:w-[300px]"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                />
+            </div>
+            <Button onClick={openNewUserForm}>
+             <UserPlus className="mr-2 h-4 w-4" /> Nuevo Usuario
+            </Button>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <div className="flex justify-center items-center py-10"><LoadingSpinner size={32}/> <p className="ml-2">Cargando usuarios...</p></div>
+        ) : filteredUsers.length === 0 ? (
+          <p className="text-center text-muted-foreground py-10">No se encontraron usuarios.</p>
+        ) : (
+          <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Nombre</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Rol</TableHead>
+                <TableHead className="text-right">Acciones</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredUsers.map((user) => (
+                <TableRow key={user.uid}>
+                  <TableCell className="font-medium">{user.name}</TableCell>
+                  <TableCell>{user.email}</TableCell>
+                  <TableCell><Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>{user.role}</Badge></TableCell>
+                  <TableCell className="text-right">
+                    <Button variant="ghost" size="icon" onClick={() => handleEditUser(user)}><Edit className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="icon" onClick={() => handleDeleteUser(user.uid)} disabled={user.email === 'jesus@mobyland.com.ar'}> {/* Prevent deleting main admin */}
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+          </div>
+        )}
+      </CardContent>
+
+      <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>{editingUser ? "Editar Usuario" : "Nuevo Usuario"}</DialogTitle>
+            <DialogDescription>
+              {editingUser ? "Modifique los detalles del usuario." : "Complete los datos para crear un nuevo usuario."}
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 py-4">
+              <FormField control={form.control} name="name" render={({ field }) => ( <FormItem><FormLabel>Nombre Completo</FormLabel><FormControl><Input placeholder="Nombre Apellido" {...field} /></FormControl><FormMessage /></FormItem> )} />
+              <FormField control={form.control} name="email" render={({ field }) => ( <FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" placeholder="usuario@ejemplo.com" {...field} /></FormControl><FormMessage /></FormItem> )} />
+              <FormField control={form.control} name="role" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Rol</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl><SelectTrigger><SelectValue placeholder="Seleccione un rol" /></SelectTrigger></FormControl>
+                    <SelectContent>
+                      <SelectItem value="tecnico">Técnico</SelectItem>
+                      <SelectItem value="admin">Administrador</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )} />
+              <FormField control={form.control} name="password" render={({ field }) => ( <FormItem><FormLabel>Contraseña {editingUser ? "(Dejar en blanco para no cambiar)" : ""}</FormLabel><FormControl><Input type="password" placeholder="••••••••" {...field} /></FormControl><FormMessage /></FormItem> )} />
+              <DialogFooter>
+                <DialogClose asChild><Button type="button" variant="outline">Cancelar</Button></DialogClose>
+                <Button type="submit" disabled={isPending}>
+                  {isPending && <LoadingSpinner size={16} className="mr-2"/>}
+                  {editingUser ? "Guardar Cambios" : "Crear Usuario"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+    </Card>
+  );
+}
