@@ -12,7 +12,15 @@ export async function getStoreSettingsForUser(userId: string): Promise<StoreSett
   await new Promise(resolve => setTimeout(resolve, 200)); 
   const user = await getUserById(userId);
   if (user && user.storeSettings) {
-    return { ...DEFAULT_STORE_SETTINGS, ...user.storeSettings };
+    // Ensure all default fields are present, overlaying with user's saved settings
+    const mergedSettings: StoreSettings = {
+      ...DEFAULT_STORE_SETTINGS,
+      ...user.storeSettings,
+      // Ensure numbers are numbers
+      abandonmentPolicyDays30: Number(user.storeSettings.abandonmentPolicyDays30 ?? DEFAULT_STORE_SETTINGS.abandonmentPolicyDays30),
+      abandonmentPolicyDays60: Number(user.storeSettings.abandonmentPolicyDays60 ?? DEFAULT_STORE_SETTINGS.abandonmentPolicyDays60),
+    };
+    return mergedSettings;
   }
   return { ...DEFAULT_STORE_SETTINGS };
 }
@@ -30,7 +38,7 @@ export async function updateStoreSettingsForUser(
   
   await new Promise(resolve => setTimeout(resolve, 200));
   
-  const currentUsers = await getAllMockUsers(); // Use await here
+  const currentUsers = await getAllMockUsers();
   const userIndex = currentUsers.findIndex(u => u.uid === userId);
 
   if (userIndex === -1) {
@@ -41,11 +49,14 @@ export async function updateStoreSettingsForUser(
     ...DEFAULT_STORE_SETTINGS, 
     ...(currentUsers[userIndex].storeSettings || {}), 
     ...validatedFields.data,
-    id: `store_config_${userId}` 
+    id: `store_config_${userId}`,
+    // Ensure numbers are stored as numbers
+    abandonmentPolicyDays30: Number(validatedFields.data.abandonmentPolicyDays30 ?? DEFAULT_STORE_SETTINGS.abandonmentPolicyDays30),
+    abandonmentPolicyDays60: Number(validatedFields.data.abandonmentPolicyDays60 ?? DEFAULT_STORE_SETTINGS.abandonmentPolicyDays60),
   };
   currentUsers[userIndex].storeSettings = newSettings;
   currentUsers[userIndex].updatedAt = new Date().toISOString();
-  await updateAllMockUsers(currentUsers); // Use await here
+  await updateAllMockUsers(currentUsers);
   
   console.log(`Updating store settings for user ${userId} (mock):`, newSettings);
   return { 

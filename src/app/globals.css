@@ -129,29 +129,29 @@ body {
     display: block !important;
   }
 
-  .print-container-full-page { /* Renamed for clarity */
+  .print-container-full-page {
     width: 100% !important;
-    max-width: 100% !important; /* Ensure it doesn't get constrained */
-    margin: 0 auto !important; /* Center on page */
-    padding: 0 !important; /* Padding will be handled by @page margins */
+    max-width: 100% !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
     box-shadow: none !important;
     border: none !important;
-    font-size: 10pt !important;
-    line-height: 1.3 !important;
+    font-size: 9pt !important; /* Smaller base font for print */
+    line-height: 1.25 !important;
   }
 
-  .print-section.card-print { /* Keep card-like appearance for sections */
+  .print-section.card-print {
     page-break-inside: avoid !important;
-    border: 1px solid #ddd !important;
-    margin-bottom: 0.75rem !important;
-    padding: 0.75rem !important;
+    border: 1px solid #ccc !important;
+    margin-bottom: 0.5rem !important; /* Reduced margin */
+    padding: 0.5rem !important; /* Reduced padding */
     background-color: #fff !important;
-    border-radius: 0.25rem; /* Slight rounding for cards */
+    border-radius: 0.15rem; 
   }
   
   .print-section {
-    margin-bottom: 1rem;
-    padding-bottom: 0.5rem;
+    margin-bottom: 0.75rem; /* Reduced margin */
+    padding-bottom: 0.25rem;
   }
   .print-section:last-child {
     margin-bottom: 0;
@@ -173,66 +173,82 @@ body {
     background-color: transparent !important;
   }
   .print-container-full-page .text-muted-foreground {
-    color: #555 !important;
+    color: #444 !important; /* Darker muted for print */
   }
 
   .print-header-container {
-    padding: 0.5rem; /* Add some padding to the header itself */
+    padding: 0.5rem; 
     border-bottom: 2px solid #000;
-    margin-bottom: 1rem !important;
+    margin-bottom: 0.75rem !important;
   }
   .print-header-container .print-logo {
-    max-height: 50px; /* Max height for logo */
+    max-height: 45px; 
     width: auto;
     object-fit: contain;
   }
   .print-header-container .print-title {
-    font-size: 16pt !important;
+    font-size: 14pt !important; /* Reduced title */
     font-weight: bold;
-    margin-bottom: 0.1rem !important;
+    margin-bottom: 0.05rem !important;
     color: #000 !important;
   }
   .print-header-container .print-company-info {
-    font-size: 9pt !important;
+    font-size: 8pt !important; /* Smaller company info */
     line-height: 1.2;
-    margin-bottom: 0.05rem !important;
+    margin-bottom: 0.02rem !important;
   }
   .print-header-container .print-qr-code {
-      max-width: 80px; /* QR code size */
+      max-width: 70px; 
       height: auto;
   }
-
-
-  .print-status-info { /* Used if a separate status block is needed */
-    font-size: 10pt !important;
-    padding: 0.5rem !important;
-    border-bottom: 1px solid #ccc !important;
+  .print-pattern-grid { /* For static 3x3 dot grid */
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2px; /* Adjust gap as needed */
+    width: 24px; /* Adjust size as needed */
+    height: 24px; /* Adjust size as needed */
+    padding: 2px;
+    border: 1px solid #999;
+    background-color: #f0f0f0;
   }
-  .print-status-info p { margin-bottom: 0.2rem !important; }
+  .print-pattern-grid div {
+    width: 6px; /* Adjust dot size */
+    height: 6px; /* Adjust dot size */
+    background-color: #777;
+    border-radius: 50%;
+  }
+
+
+  .print-status-info { 
+    font-size: 9pt !important;
+    padding: 0.4rem !important;
+    border-bottom: 1px solid #ddd !important;
+  }
+  .print-status-info p { margin-bottom: 0.15rem !important; }
 
   .print-section-title {
-    font-size: 12pt !important;
+    font-size: 11pt !important; /* Reduced section title */
     font-weight: bold !important;
-    margin-bottom: 0.5rem !important;
+    margin-bottom: 0.3rem !important;
     border-bottom: 1px solid #eee;
-    padding-bottom: 0.25rem;
+    padding-bottom: 0.15rem;
     color: #000 !important;
   }
-  .print-section-title .lucide { /* For icons in titles */
-      width: 0.9rem !important;
-      height: 0.9rem !important;
+  .print-section-title .lucide { 
+      width: 0.8rem !important;
+      height: 0.8rem !important;
       vertical-align: middle;
   }
   
-  .print-container-full-page .badge-print { /* For status badges if ever printed */
+  .print-container-full-page .badge-print { 
     border: 1px solid #000 !important;
     color: #000 !important;
     background-color: #fff !important;
-    padding: 0.1rem 0.3rem;
-    font-size: 8pt !important; /* Smaller badge font */
+    padding: 0.05rem 0.25rem;
+    font-size: 7pt !important; 
   }
 
-  .print-container-full-page img { /* General image rule for print */
+  .print-container-full-page img { 
     max-width: 100% !important;
     height: auto;
   }
@@ -252,87 +268,102 @@ body {
    .print-container-full-page .text-red-600 {
       color: #c00 !important;
   }
+  .print-legal-texts .print-legal-item {
+    margin-bottom: 0.4rem;
+    page-break-inside: avoid;
+  }
+  .print-legal-texts .print-legal-item strong {
+    display: block;
+    font-size: 8.5pt;
+    margin-bottom: 0.05rem;
+  }
+  .print-legal-texts .print-legal-item p {
+    font-size: 7.5pt;
+    line-height: 1.2;
+    text-align: justify;
+    margin-bottom: 0;
+  }
 
 
-  main { /* Remove padding from main for print */
+  main { 
     padding: 0 !important;
   }
 
   .print-separator {
     border-top: 1px dashed #ccc !important;
-    margin-top: 0.5rem !important;
-    margin-bottom: 0.5rem !important;
+    margin-top: 0.4rem !important;
+    margin-bottom: 0.4rem !important;
   }
   
-  .print-comment-item { /* Styling for individual comments if printed */
+  .print-comment-item { 
     border: 1px solid #eee !important;
-    padding: 0.5rem !important;
-    margin-bottom: 0.5rem !important;
+    padding: 0.4rem !important;
+    margin-bottom: 0.4rem !important;
     page-break-inside: avoid;
   }
-  .no-print-scroll { /* Remove scroll from comment history for print */
+  .no-print-scroll { 
     max-height: none !important;
     overflow-y: visible !important;
   }
 
   .print-signature-section-container {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); /* Responsive columns for signatures */
-      gap: 1.5rem;
-      margin-top: 1.5rem;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); /* Adjusted minmax */
+      gap: 1rem; /* Reduced gap */
+      margin-top: 1rem; /* Reduced margin */
   }
   .print-signature-area {
-    padding-top: 1rem;
-    border-top: 1px solid #ccc;
-    min-height: 100px; /* Ensure space for signature */
+    padding-top: 0.5rem; /* Reduced padding */
+    border-top: 1px solid #bbb; /* Slightly darker border */
+    min-height: 80px; 
     display: flex;
     flex-direction: column;
     justify-content: space-between;
   }
   .print-signature-area p {
-    font-size: 9pt !important; /* Smaller font for signature text */
-    margin-bottom: 0.25rem !important;
+    font-size: 8pt !important; 
+    margin-bottom: 0.15rem !important;
   }
   .print-signature-line {
       border-bottom: 1px solid #000;
-      padding-bottom: 2rem; /* More space above the line for actual signature */
-      margin-bottom: 0.25rem;
+      padding-bottom: 1.5rem; /* Space for signature */
+      margin-bottom: 0.15rem;
       font-weight: bold;
   }
   .print-signature-clarification {
-      font-size: 8pt !important;
-      margin-top: 0.1rem;
+      font-size: 7pt !important;
+      margin-top: 0.05rem;
   }
   
   .print-footer-container {
-      margin-top: 1.5rem;
-      padding-top: 0.75rem;
+      margin-top: 1rem;
+      padding-top: 0.5rem;
       border-top: 2px solid #000;
   }
-  .print-terms p {
-    font-size: 7.5pt !important; /* Smaller font for terms */
-    line-height: 1.2 !important;
-    margin-bottom: 0.25rem !important;
+  .print-terms p { /* Kept for compatibility if used elsewhere */
+    font-size: 7pt !important; 
+    line-height: 1.15 !important;
+    margin-bottom: 0.15rem !important;
     text-align: justify;
   }
   .print-terms strong {
       font-weight: bold;
   }
 
-  .page-header-print { /* For page headers on non-order pages, if any */
+  .page-header-print { 
     border-bottom: 1px solid #ccc;
-    padding-bottom: 0.5rem;
-    margin-bottom: 1rem;
+    padding-bottom: 0.4rem;
+    margin-bottom: 0.75rem;
   }
   .page-header-print h1 {
-    font-size: 1.5rem; 
+    font-size: 1.4rem; 
   }
   .page-header-print p {
-    font-size: 0.9rem;
+    font-size: 0.85rem;
   }
   
   @page {
     size: A4;
-    margin: 12mm; /* Adjusted margins */
+    margin: 10mm; /* Slightly reduced margins */
   }
 }

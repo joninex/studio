@@ -24,12 +24,12 @@ import { Calendar } from "@/components/ui/calendar";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/providers/AuthProvider";
-import { AISuggestion, type Order, type StoreSettings, WarrantyType, OrderStatus, Classification } from "@/types";
+import { AISuggestion, type Order, type StoreSettings, WarrantyType, OrderStatus, Classification, Checklist } from "@/types";
 import { 
   CHECKLIST_ITEMS, CLASSIFICATION_OPTIONS, ORDER_STATUSES, 
-  YES_NO_OPTIONS, DEFAULT_STORE_SETTINGS, WARRANTY_TYPE_OPTIONS, WARRANTY_TYPES, UNLOCK_PATTERN_INFO_SUGGESTIONS
+  YES_NO_OPTIONS, DEFAULT_STORE_SETTINGS, WARRANTY_TYPE_OPTIONS, WARRANTY_TYPES, SALE_CON_HUELLA_OPTIONS
 } from "@/lib/constants";
-import { AlertCircle, Bot, CalendarIcon, DollarSign, Info, ListChecks, LucideSparkles, User, Wrench, LinkIcon, Building, UserSquare, ShieldCheck, FileLock2, FileTextIcon, LockKeyhole } from "lucide-react";
+import { AlertCircle, Bot, CalendarIcon, DollarSign, Info, ListChecks, LucideSparkles, User, Wrench, LinkIcon, Building, UserSquare, ShieldCheck, FileLock2, FileTextIcon, LockKeyhole, ClipboardSignature } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import { cn } from "@/lib/utils";
@@ -53,8 +53,22 @@ export function OrderForm({ orderId }: OrderFormProps) {
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [aiSuggestion, setAiSuggestion] = useState<AISuggestion | null>(null);
   const [isLoadingOrder, setIsLoadingOrder] = useState(!!orderId);
-  const [isLoadingStoreSettings, setIsLoadingStoreSettings] = useState(!orderId);
+  const [isLoadingStoreSettings, setIsLoadingStoreSettings] = useState(!orderId); // Initially true if new order
   const [currentStoreSettings, setCurrentStoreSettings] = useState<StoreSettings | null>(null);
+
+  const defaultChecklistValues = CHECKLIST_ITEMS.reduce((acc, item) => {
+    if (item.type === 'boolean') {
+      // @ts-ignore
+      acc[item.id] = ['enciende', 'tactil', 'imagen', 'botones', 'cam_trasera', 'cam_delantera', 'vibrador', 'microfono', 'auricular', 'parlante', 'sensor_huella', 'senal', 'wifi_bluetooth', 'pin_carga', 'lente_camara'].includes(item.id) ? 'si' : 'no';
+    } else if (item.type === 'text') {
+      // @ts-ignore
+      acc[item.id] = "";
+    } else if (item.type === 'enum_saleConHuella') {
+      // @ts-ignore
+      acc[item.id] = "no_tiene";
+    }
+    return acc;
+  }, {} as OrderFormData['checklist']);
 
 
   const form = useForm<OrderFormData>({
@@ -63,25 +77,31 @@ export function OrderForm({ orderId }: OrderFormProps) {
       clientId: "",
       branchInfo: DEFAULT_STORE_SETTINGS.branchInfo || "Sucursal Principal",
       deviceBrand: "", deviceModel: "", deviceIMEI: "", declaredFault: "",
-      unlockPatternInfo: "", // Now a string
-      checklist: CHECKLIST_ITEMS.reduce((acc, item) => {
-        // @ts-ignore
-        acc[item.id] = ['enciende', 'tactil', 'imagen', 'botones', 'cam_trasera', 'cam_delantera', 'vibrador', 'microfono', 'auricular', 'parlante', 'sensor_huella', 'senal', 'wifi_bluetooth', 'pin_carga', 'lente_camara'].includes(item.id) ? 'si' : 'no';
-        return acc;
-      }, {} as OrderFormData['checklist']),
+      unlockPatternInfo: "",
+      checklist: defaultChecklistValues,
       damageRisk: "",
       pantalla_parcial: false,
       equipo_sin_acceso: false,
-      perdida_informacion: false, // Risk checkbox
+      perdida_informacion: false,
       previousOrderId: "",
       costSparePart: 0, costLabor: 0, costPending: 0,
       classification: undefined, observations: "",
       customerAccepted: false, 
       customerSignatureName: "",
-      dataLossDisclaimerAccepted: false,
-      privacyPolicyAccepted: false,
+      // Snapshotted texts will be filled from store settings on load or from existing order
       orderSnapshottedDataLossDisclaimer: "",
       orderSnapshottedPrivacyPolicy: "",
+      orderSnapshottedImportantUnlockDisclaimer: "",
+      orderSnapshottedAbandonmentPolicyText: "",
+      orderSnapshottedDataRetrievalPolicyText: "",
+      orderSnapshottedUntestedDevicePolicyText: "",
+      orderSnapshottedBudgetVariationText: "",
+      orderSnapshottedHighRiskDeviceText: "",
+      orderSnapshottedPartialDamageDisplayText: "",
+      orderSnapshottedWarrantyVoidConditionsText: "",
+      // Acceptance flags
+      dataLossDisclaimerAccepted: false,
+      privacyPolicyAccepted: false,
       status: "Recibido",
       hasWarranty: false,
       warrantyType: NONE_WARRANTY_TYPE_VALUE as WarrantyType,
@@ -98,31 +118,44 @@ export function OrderForm({ orderId }: OrderFormProps) {
   const warrantyTypeWatch = useWatch({ control: form.control, name: "warrantyType" });
   const warrantyStartDateWatch = useWatch({ control: form.control, name: "warrantyStartDate" });
 
-  const dataLossDisclaimerTextWatch = currentStoreSettings?.dataLossDisclaimerText;
-  const privacyPolicyTextWatch = currentStoreSettings?.privacyPolicyText;
-
-
   useEffect(() => {
     async function fetchInitialData() {
-      if (user) { // Always fetch user settings if user is available
+      if (user) {
         setIsLoadingStoreSettings(true);
         try {
           const userSettings = await getStoreSettingsForUser(user.uid);
-          setCurrentStoreSettings(userSettings);
-          if (!orderId) { // Only set branchInfo if it's a new order
+          setCurrentStoreSettings(userSettings); // Store fetched settings
+          if (!orderId) { // New order: Apply user's current store settings
             form.setValue('branchInfo', userSettings.branchInfo || DEFAULT_STORE_SETTINGS.branchInfo || "Sucursal Principal");
+            // Snapshot all relevant legal texts
             form.setValue('orderSnapshottedDataLossDisclaimer', userSettings.dataLossDisclaimerText || "");
             form.setValue('orderSnapshottedPrivacyPolicy', userSettings.privacyPolicyText || "");
+            form.setValue('orderSnapshottedImportantUnlockDisclaimer', userSettings.importantUnlockDisclaimer || "");
+            form.setValue('orderSnapshottedAbandonmentPolicyText', userSettings.abandonmentPolicyText || "");
+            form.setValue('orderSnapshottedDataRetrievalPolicyText', userSettings.dataRetrievalPolicyText || "");
+            form.setValue('orderSnapshottedUntestedDevicePolicyText', userSettings.untestedDevicePolicyText || "");
+            form.setValue('orderSnapshottedBudgetVariationText', userSettings.budgetVariationText || "");
+            form.setValue('orderSnapshottedHighRiskDeviceText', userSettings.highRiskDeviceText || "");
+            form.setValue('orderSnapshottedPartialDamageDisplayText', userSettings.partialDamageDisplayText || "");
+            form.setValue('orderSnapshottedWarrantyVoidConditionsText', userSettings.warrantyVoidConditionsText || "");
           }
         } catch (error) {
           console.error("Failed to load user store settings:", error);
-          toast({ variant: "destructive", title: "Error", description: "No se pudo cargar la configuración de su tienda." });
-          if (!orderId) {
+          toast({ variant: "destructive", title: "Error", description: "No se pudo cargar la configuración de su tienda. Se usarán valores por defecto." });
+          setCurrentStoreSettings(DEFAULT_STORE_SETTINGS); // Fallback to defaults
+           if (!orderId) { // Apply defaults if new order and fetch failed
             form.setValue('branchInfo', DEFAULT_STORE_SETTINGS.branchInfo || "Error carga config");
             form.setValue('orderSnapshottedDataLossDisclaimer', DEFAULT_STORE_SETTINGS.dataLossDisclaimerText || "");
             form.setValue('orderSnapshottedPrivacyPolicy', DEFAULT_STORE_SETTINGS.privacyPolicyText || "");
+            form.setValue('orderSnapshottedImportantUnlockDisclaimer', DEFAULT_STORE_SETTINGS.importantUnlockDisclaimer || "");
+            form.setValue('orderSnapshottedAbandonmentPolicyText', DEFAULT_STORE_SETTINGS.abandonmentPolicyText || "");
+            form.setValue('orderSnapshottedDataRetrievalPolicyText', DEFAULT_STORE_SETTINGS.dataRetrievalPolicyText || "");
+            form.setValue('orderSnapshottedUntestedDevicePolicyText', DEFAULT_STORE_SETTINGS.untestedDevicePolicyText || "");
+            form.setValue('orderSnapshottedBudgetVariationText', DEFAULT_STORE_SETTINGS.budgetVariationText || "");
+            form.setValue('orderSnapshottedHighRiskDeviceText', DEFAULT_STORE_SETTINGS.highRiskDeviceText || "");
+            form.setValue('orderSnapshottedPartialDamageDisplayText', DEFAULT_STORE_SETTINGS.partialDamageDisplayText || "");
+            form.setValue('orderSnapshottedWarrantyVoidConditionsText', DEFAULT_STORE_SETTINGS.warrantyVoidConditionsText || "");
           }
-           setCurrentStoreSettings(DEFAULT_STORE_SETTINGS); // Fallback
         } finally {
           setIsLoadingStoreSettings(false);
         }
@@ -133,33 +166,37 @@ export function OrderForm({ orderId }: OrderFormProps) {
         try {
           const order = await getOrderById(orderId);
           if (order) {
-            const defaultChecklist = CHECKLIST_ITEMS.reduce((acc, item) => {
-                // @ts-ignore
-                acc[item.id] = ['enciende', 'tactil', 'imagen', 'botones', 'cam_trasera', 'cam_delantera', 'vibrador', 'microfono', 'auricular', 'parlante', 'sensor_huella', 'senal', 'wifi_bluetooth', 'pin_carga', 'lente_camara'].includes(item.id) ? 'si' : 'no';
-                return acc;
-            }, {} as OrderFormData['checklist']);
-
             form.reset({
               ...order,
               checklist: { 
-                ...defaultChecklist,
-                ...(order.checklist || {}),
+                ...defaultChecklistValues, // Start with defaults
+                ...(order.checklist || {}), // Override with actual order values
               },
               clientId: order.clientId,
-              unlockPatternInfo: order.unlockPatternInfo || "", // Ensure it's a string
+              unlockPatternInfo: order.unlockPatternInfo || "",
               previousOrderId: order.previousOrderId || "",
               costSparePart: Number(order.costSparePart || 0),
               costLabor: Number(order.costLabor || 0),
               costPending: Number(order.costPending || 0),
               classification: order.classification as Classification || undefined,
               status: order.status || "Recibido",
-              branchInfo: order.branchInfo, // Use existing branchInfo from order
+              branchInfo: order.branchInfo,
               customerAccepted: order.customerAccepted || false,
               customerSignatureName: order.customerSignatureName || "",
-              dataLossDisclaimerAccepted: order.dataLossDisclaimerAccepted || false,
-              privacyPolicyAccepted: order.privacyPolicyAccepted || false,
+              // Reset snapshotted texts from the loaded order
               orderSnapshottedDataLossDisclaimer: order.orderSnapshottedDataLossDisclaimer || "",
               orderSnapshottedPrivacyPolicy: order.orderSnapshottedPrivacyPolicy || "",
+              orderSnapshottedImportantUnlockDisclaimer: order.orderSnapshottedImportantUnlockDisclaimer || "",
+              orderSnapshottedAbandonmentPolicyText: order.orderSnapshottedAbandonmentPolicyText || "",
+              orderSnapshottedDataRetrievalPolicyText: order.orderSnapshottedDataRetrievalPolicyText || "",
+              orderSnapshottedUntestedDevicePolicyText: order.orderSnapshottedUntestedDevicePolicyText || "",
+              orderSnapshottedBudgetVariationText: order.orderSnapshottedBudgetVariationText || "",
+              orderSnapshottedHighRiskDeviceText: order.orderSnapshottedHighRiskDeviceText || "",
+              orderSnapshottedPartialDamageDisplayText: order.orderSnapshottedPartialDamageDisplayText || "",
+              orderSnapshottedWarrantyVoidConditionsText: order.orderSnapshottedWarrantyVoidConditionsText || "",
+              // Acceptance flags
+              dataLossDisclaimerAccepted: order.dataLossDisclaimerAccepted || false,
+              privacyPolicyAccepted: order.privacyPolicyAccepted || false,
               hasWarranty: order.hasWarranty || false,
               warrantyType: order.warrantyType || NONE_WARRANTY_TYPE_VALUE as WarrantyType,
               warrantyStartDate: order.warrantyStartDate ? format(new Date(order.warrantyStartDate), "yyyy-MM-dd") : null,
@@ -178,10 +215,10 @@ export function OrderForm({ orderId }: OrderFormProps) {
         }
       }
     }
-    if (user) { // Condition ensures user info is available
+    if (user) {
         fetchInitialData();
     }
-  }, [orderId, user, form, router, toast]);
+  }, [orderId, user, form, router, toast, defaultChecklistValues]);
 
   useEffect(() => {
     if (hasWarrantyWatch && warrantyStartDateWatch && warrantyTypeWatch && warrantyTypeWatch !== 'custom' && warrantyTypeWatch !== NONE_WARRANTY_TYPE_VALUE) {
@@ -200,9 +237,10 @@ export function OrderForm({ orderId }: OrderFormProps) {
         }
       } catch (error) {
         console.error("Error calculating warranty end date:", error);
+         form.setValue('warrantyEndDate', null); // Clear if error
       }
     } else if (hasWarrantyWatch && warrantyTypeWatch === 'custom') {
-      // Allow manual input
+      // Allow manual input, no automatic calculation
     } else if (!hasWarrantyWatch) {
         form.setValue('warrantyEndDate', null);
         form.setValue('warrantyStartDate', null);
@@ -221,16 +259,13 @@ export function OrderForm({ orderId }: OrderFormProps) {
     startTransition(async () => {
       let result;
       // Ensure snapshotted texts are set from currentStoreSettings if creating new, or existing if editing
-      const finalSnapshottedDataLoss = orderId 
-        ? values.orderSnapshottedDataLossDisclaimer 
-        : currentStoreSettings?.dataLossDisclaimerText || "";
-      const finalSnapshottedPrivacy = orderId 
-        ? values.orderSnapshottedPrivacyPolicy
-        : currentStoreSettings?.privacyPolicyText || "";
+      // If it's a new order, currentStoreSettings should already be in form values from useEffect
+      // If it's an existing order, the form values for snapshotted texts are already from the loaded order.
+      // So, we just use values directly.
 
-      const submissionValues = {
+      const submissionValues: OrderFormData = {
         ...values,
-        unlockPatternInfo: values.unlockPatternInfo, // Already a string
+        unlockPatternInfo: values.unlockPatternInfo,
         previousOrderId: values.previousOrderId?.trim() === "" ? undefined : values.previousOrderId?.trim(),
         warrantyType: values.hasWarranty ? values.warrantyType : NONE_WARRANTY_TYPE_VALUE as WarrantyType,
         warrantyStartDate: values.hasWarranty && values.warrantyStartDate ? values.warrantyStartDate : null,
@@ -238,13 +273,30 @@ export function OrderForm({ orderId }: OrderFormProps) {
         warrantyCoveredItem: values.hasWarranty ? values.warrantyCoveredItem : "",
         warrantyNotes: values.hasWarranty ? values.warrantyNotes : "",
         status: values.status || "Recibido", 
-        orderSnapshottedDataLossDisclaimer: finalSnapshottedDataLoss,
-        orderSnapshottedPrivacyPolicy: finalSnapshottedPrivacy,
+        // Ensure checklist values are correct
+        checklist: CHECKLIST_ITEMS.reduce((acc, item) => {
+          // @ts-ignore
+          acc[item.id] = values.checklist[item.id] || (item.type === 'boolean' ? 'no' : (item.type === 'enum_saleConHuella' ? 'no_tiene' : ''));
+          return acc;
+        }, {} as Checklist),
       };
 
       if (orderId) {
         result = await updateOrder(orderId, submissionValues, user.uid);
       } else {
+        // For new orders, explicitly set snapshotted texts from currentStoreSettings (or defaults if not loaded)
+        // This ensures they are captured at creation time.
+        const settingsSource = currentStoreSettings || DEFAULT_STORE_SETTINGS;
+        submissionValues.orderSnapshottedDataLossDisclaimer = settingsSource.dataLossDisclaimerText || "";
+        submissionValues.orderSnapshottedPrivacyPolicy = settingsSource.privacyPolicyText || "";
+        submissionValues.orderSnapshottedImportantUnlockDisclaimer = settingsSource.importantUnlockDisclaimer || "";
+        submissionValues.orderSnapshottedAbandonmentPolicyText = settingsSource.abandonmentPolicyText || "";
+        submissionValues.orderSnapshottedDataRetrievalPolicyText = settingsSource.dataRetrievalPolicyText || "";
+        submissionValues.orderSnapshottedUntestedDevicePolicyText = settingsSource.untestedDevicePolicyText || "";
+        submissionValues.orderSnapshottedBudgetVariationText = settingsSource.budgetVariationText || "";
+        submissionValues.orderSnapshottedHighRiskDeviceText = settingsSource.highRiskDeviceText || "";
+        submissionValues.orderSnapshottedPartialDamageDisplayText = settingsSource.partialDamageDisplayText || "";
+        submissionValues.orderSnapshottedWarrantyVoidConditionsText = settingsSource.warrantyVoidConditionsText || "";
         result = await createOrder(submissionValues, user.uid);
       }
 
@@ -276,9 +328,14 @@ export function OrderForm({ orderId }: OrderFormProps) {
     setIsAiLoading(false);
   };
 
-  if ((isLoadingOrder && orderId) || (isLoadingStoreSettings && user) ) {
+  if ((isLoadingOrder && orderId) || (isLoadingStoreSettings && !currentStoreSettings) ) {
     return <div className="flex justify-center items-center h-64"><LoadingSpinner size={48}/> <p className="ml-4">Cargando datos del formulario...</p></div>;
   }
+
+  // Get current snapshotted texts for display in acceptance section
+  const displayDataLossDisclaimer = form.watch('orderSnapshottedDataLossDisclaimer') || currentStoreSettings?.dataLossDisclaimerText || DEFAULT_STORE_SETTINGS.dataLossDisclaimerText;
+  const displayPrivacyPolicy = form.watch('orderSnapshottedPrivacyPolicy') || currentStoreSettings?.privacyPolicyText || DEFAULT_STORE_SETTINGS.privacyPolicyText;
+
 
   return (
     <Form {...form}>
@@ -359,60 +416,70 @@ export function OrderForm({ orderId }: OrderFormProps) {
             <Card>
               <CardHeader><CardTitle className="flex items-center gap-2"><ListChecks className="text-primary"/> Checklist de Recepción</CardTitle></CardHeader>
               <CardContent className="space-y-2">
-                <p className="text-sm text-muted-foreground mb-2">Marque Sí/No según corresponda.</p>
+                <p className="text-sm text-muted-foreground mb-2">Marque según corresponda. "Sí" implica funcionalidad al 100% donde aplique.</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
                 {CHECKLIST_ITEMS.map(item => (
                   <FormField
                     key={item.id}
                     control={form.control}
-                    name={`checklist.${item.id}`}
+                    name={`checklist.${item.id as keyof OrderFormData['checklist']}`}
                     render={({ field }) => (
                       <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm bg-card">
                         <FormLabel className="text-sm font-normal">{item.label}</FormLabel>
                         <FormControl>
-                          <RadioGroup
-                            onValueChange={field.onChange}
-                            value={field.value}
-                            className="flex space-x-2"
-                          >
-                            {YES_NO_OPTIONS.map(opt => (
-                              <FormItem key={opt.value} className="flex items-center space-x-1 space-y-0">
-                                <FormControl><RadioGroupItem value={opt.value} /></FormControl>
-                                <FormLabel className="font-normal text-xs">{opt.label}</FormLabel>
-                              </FormItem>
-                            ))}
-                          </RadioGroup>
+                          {item.type === 'boolean' ? (
+                            <RadioGroup onValueChange={field.onChange} value={field.value} className="flex space-x-2">
+                              {YES_NO_OPTIONS.map(opt => (
+                                <FormItem key={opt.value} className="flex items-center space-x-1 space-y-0">
+                                  <FormControl><RadioGroupItem value={opt.value} /></FormControl>
+                                  <FormLabel className="font-normal text-xs">{opt.label}</FormLabel>
+                                </FormItem>
+                              ))}
+                            </RadioGroup>
+                          ) : item.type === 'text' ? (
+                            <Input type="text" {...field} className="h-8 text-xs w-20"/>
+                          ) : item.type === 'enum_saleConHuella' ? (
+                             <RadioGroup onValueChange={field.onChange} value={field.value} className="flex space-x-1 sm:space-x-2">
+                              {SALE_CON_HUELLA_OPTIONS.map(opt => (
+                                <FormItem key={opt.value} className="flex items-center space-x-0.5 sm:space-x-1 space-y-0">
+                                  <FormControl><RadioGroupItem value={opt.value} /></FormControl>
+                                  <FormLabel className="font-normal text-xs">{opt.label}</FormLabel>
+                                </FormItem>
+                              ))}
+                            </RadioGroup>
+                          ) : null}
                         </FormControl>
                       </FormItem>
                     )}
                   />
                 ))}
                 </div>
+                 <FormDescription className="pt-2 text-xs">El checklist se realiza bajo interpretación visual y está sujeto a confirmación y revisión por un técnico especializado.</FormDescription>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader><CardTitle className="flex items-center gap-2"><AlertCircle className="text-primary"/> Riesgos y Condiciones Específicas</CardTitle></CardHeader>
               <CardContent className="space-y-4">
-                <FormField control={form.control} name="damageRisk" render={({ field }) => ( <FormItem><FormLabel>Riesgo de Rotura (Daños preexistentes)</FormLabel><FormControl><Textarea placeholder="Describa daños específicos..." {...field} /></FormControl><FormMessage /></FormItem> )} />
+                <FormField control={form.control} name="damageRisk" render={({ field }) => ( <FormItem><FormLabel>Riesgo de Rotura (Daños preexistentes, ej: Cristal trizado)</FormLabel><FormControl><Textarea placeholder="Describa daños específicos..." {...field} /></FormControl><FormMessage /></FormItem> )} />
                  <div className="space-y-2">
-                    <FormLabel>Condiciones Específicas (Marcar si aplica)</FormLabel>
+                    <FormLabel>Condiciones Específicas Adicionales (Marcar si aplica)</FormLabel>
                     <FormField control={form.control} name="pantalla_parcial" render={({ field }) => (
                         <FormItem className="flex flex-row items-start space-x-3 space-y-0 mt-2">
                             <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
-                            <FormLabel className="text-sm font-normal">Pantalla con daño parcial</FormLabel>
+                            <FormLabel className="text-sm font-normal">Pantalla con daño parcial (puede agravarse al desarmar)</FormLabel>
                         </FormItem>
                     )} />
                     <FormField control={form.control} name="equipo_sin_acceso" render={({ field }) => (
                         <FormItem className="flex flex-row items-start space-x-3 space-y-0 mt-2">
                             <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
-                            <FormLabel className="text-sm font-normal">Equipo sin clave o que no enciende (sin acceso completo)</FormLabel>
+                            <FormLabel className="text-sm font-normal">Equipo sin clave/patrón o que no enciende (testeo limitado)</FormLabel>
                         </FormItem>
                     )} />
-                    <FormField control={form.control} name="perdida_informacion" render={({ field }) => ( // This is the risk checkbox, not the disclaimer acceptance
+                    <FormField control={form.control} name="perdida_informacion" render={({ field }) => (
                         <FormItem className="flex flex-row items-start space-x-3 space-y-0 mt-2">
                             <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
-                            <FormLabel className="text-sm font-normal">Riesgo de pérdida de información (a considerar por el técnico)</FormLabel>
+                            <FormLabel className="text-sm font-normal">Alto riesgo de pérdida de información (a considerar por el técnico)</FormLabel>
                         </FormItem>
                     )} />
                  </div>
@@ -431,8 +498,8 @@ export function OrderForm({ orderId }: OrderFormProps) {
                   <FormItem>
                     <FormLabel>Clasificación (Para Stock)</FormLabel>
                     <Select
-                      onValueChange={(selectedValue) => field.onChange(selectedValue === NONE_CLASSIFICATION_VALUE ? "" : selectedValue)}
-                      value={field.value === "" || field.value === undefined ? NONE_CLASSIFICATION_VALUE : field.value}
+                      onValueChange={(selectedValue) => field.onChange(selectedValue === NONE_CLASSIFICATION_VALUE ? null : selectedValue as Classification)}
+                      value={field.value === null || field.value === undefined || field.value === "" ? NONE_CLASSIFICATION_VALUE : field.value}
                       defaultValue={NONE_CLASSIFICATION_VALUE}
                     >
                       <FormControl><SelectTrigger><SelectValue placeholder="Seleccione clasificación" /></SelectTrigger></FormControl>
@@ -470,7 +537,7 @@ export function OrderForm({ orderId }: OrderFormProps) {
         <Separator />
         
         <Card>
-          <CardHeader><CardTitle className="flex items-center gap-2"><ShieldCheck className="text-primary"/> Detalles de Garantía</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="flex items-center gap-2"><ShieldCheck className="text-primary"/> Detalles de Garantía Extendida</CardTitle></CardHeader>
           <CardContent className="space-y-6">
             <FormField
               control={form.control}
@@ -480,7 +547,7 @@ export function OrderForm({ orderId }: OrderFormProps) {
                   <div className="space-y-0.5">
                     <FormLabel className="text-base">¿Aplicar Garantía Extendida?</FormLabel>
                     <FormDescription>
-                      Marque si esta reparación incluye una garantía extendida.
+                      Marque si esta reparación incluye una garantía extendida por escrito.
                     </FormDescription>
                   </div>
                   <FormControl>
@@ -528,7 +595,7 @@ export function OrderForm({ orderId }: OrderFormProps) {
                               )}
                             >
                               {field.value ? (
-                                format(new Date(field.value), "PPP", { weekStartsOn: 1 }) 
+                                format(new Date(field.value  + 'T00:00:00'), "PPP", { weekStartsOn: 1 }) // Ensure date is parsed correctly
                               ) : (
                                 <span>Seleccione fecha</span>
                               )}
@@ -539,7 +606,7 @@ export function OrderForm({ orderId }: OrderFormProps) {
                         <PopoverContent className="w-auto p-0" align="start">
                           <Calendar
                             mode="single"
-                            selected={field.value ? new Date(field.value) : undefined}
+                            selected={field.value ? new Date(field.value + 'T00:00:00') : undefined}
                             onSelect={(date) => field.onChange(date ? format(date, "yyyy-MM-dd") : null)}
                             initialFocus
                           />
@@ -567,7 +634,7 @@ export function OrderForm({ orderId }: OrderFormProps) {
                               disabled={warrantyTypeWatch !== 'custom' && warrantyTypeWatch !== NONE_WARRANTY_TYPE_VALUE}
                             >
                               {field.value ? (
-                                format(new Date(field.value), "PPP", { weekStartsOn: 1 })
+                                format(new Date(field.value + 'T00:00:00'), "PPP", { weekStartsOn: 1 })
                               ) : (
                                 <span>Seleccione fecha</span>
                               )}
@@ -578,10 +645,10 @@ export function OrderForm({ orderId }: OrderFormProps) {
                         <PopoverContent className="w-auto p-0" align="start">
                           <Calendar
                             mode="single"
-                            selected={field.value ? new Date(field.value) : undefined}
+                            selected={field.value ? new Date(field.value + 'T00:00:00') : undefined}
                             onSelect={(date) => field.onChange(date ? format(date, "yyyy-MM-dd") : null)}
                             disabled={(date) =>
-                              warrantyStartDateWatch ? date < new Date(warrantyStartDateWatch) : false
+                              warrantyStartDateWatch ? date < new Date(warrantyStartDateWatch + 'T00:00:00') : false
                             }
                             initialFocus
                           />
@@ -625,48 +692,52 @@ export function OrderForm({ orderId }: OrderFormProps) {
         <Separator />
 
         <Card>
-          <CardHeader><CardTitle className="flex items-center gap-2"><FileLock2 className="text-primary"/> Aceptación de Términos y Descargos</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="flex items-center gap-2"><ClipboardSignature className="text-primary"/> Aceptación de Términos por el Cliente</CardTitle></CardHeader>
           <CardContent className="space-y-6">
-            <FormField control={form.control} name="observations" render={({ field }) => ( <FormItem><FormLabel>Observaciones Adicionales Generales</FormLabel><FormControl><Textarea placeholder="Comentarios o información relevante..." {...field} /></FormControl><FormMessage /></FormItem> )} />
+            <FormField control={form.control} name="observations" render={({ field }) => ( <FormItem><FormLabel>Observaciones Adicionales Generales de la Orden</FormLabel><FormControl><Textarea placeholder="Comentarios o información relevante para la orden..." {...field} /></FormControl><FormMessage /></FormItem> )} />
             
-            <FormField control={form.control} name="customerSignatureName" render={({ field }) => ( <FormItem><FormLabel>Nombre del Cliente que Acepta</FormLabel><FormControl><Input placeholder="Nombre completo del cliente" {...field} /></FormControl><FormMessage /></FormItem> )} />
+            <FormField control={form.control} name="customerSignatureName" render={({ field }) => ( <FormItem><FormLabel>Nombre del Cliente que Acepta (para registro)</FormLabel><FormControl><Input placeholder="Nombre completo del cliente" {...field} /></FormControl><FormMessage /></FormItem> )} />
             
             <FormField control={form.control} name="customerAccepted" render={({ field }) => (
               <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 shadow-sm">
                 <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
                 <div className="space-y-1 leading-none">
-                  <FormLabel>Aceptación General del Cliente</FormLabel>
-                  <FormDescription>El cliente acepta las condiciones generales del servicio y el estado de recepción del equipo como se describe en el comprobante.</FormDescription>
+                  <FormLabel>Aceptación General de Condiciones y Políticas</FormLabel>
+                  <FormDescription>El cliente acepta las condiciones generales del servicio, el estado de recepción del equipo, las políticas de desbloqueo, pérdida de datos, privacidad, y demás términos detallados que serán impresos en el comprobante.</FormDescription>
                    <FormMessage />
                 </div>
               </FormItem>
             )} />
-
-            {dataLossDisclaimerTextWatch && dataLossDisclaimerTextWatch.trim() !== "" && (
+            
+            {/* Displaying the text for acceptance if available */}
+            {(displayDataLossDisclaimer && displayDataLossDisclaimer.trim() !== "") && (
               <FormField control={form.control} name="dataLossDisclaimerAccepted" render={({ field }) => (
                 <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 shadow-sm">
                   <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
                   <div className="space-y-1 leading-none">
                     <FormLabel>Aceptación del Descargo por Pérdida de Datos</FormLabel>
-                    <FormDescription className="text-xs">{dataLossDisclaimerTextWatch}</FormDescription>
+                    <FormDescription className="text-xs max-h-20 overflow-y-auto">{displayDataLossDisclaimer}</FormDescription>
                     <FormMessage />
                   </div>
                 </FormItem>
               )} />
             )}
 
-            {privacyPolicyTextWatch && privacyPolicyTextWatch.trim() !== "" && (
+            {(displayPrivacyPolicy && displayPrivacyPolicy.trim() !== "") && (
               <FormField control={form.control} name="privacyPolicyAccepted" render={({ field }) => (
                 <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 shadow-sm">
                   <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
                   <div className="space-y-1 leading-none">
                     <FormLabel>Aceptación de la Política de Privacidad y Acceso al Dispositivo</FormLabel>
-                    <FormDescription className="text-xs">{privacyPolicyTextWatch}</FormDescription>
+                    <FormDescription className="text-xs max-h-20 overflow-y-auto">{displayPrivacyPolicy}</FormDescription>
                     <FormMessage />
                   </div>
                 </FormItem>
               )} />
             )}
+             <FormDescription className="text-xs italic">
+                Las políticas completas (Desbloqueo, Abandono, Variación de Presupuesto, Riesgos, etc.) configuradas por el taller se imprimirán en el comprobante final y se consideran aceptadas con la "Aceptación General".
+            </FormDescription>
           </CardContent>
         </Card>
 

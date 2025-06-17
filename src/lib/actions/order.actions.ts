@@ -1,12 +1,12 @@
 // src/lib/actions/order.actions.ts
 "use server";
 
-import type { Order, User, Comment as OrderCommentType, StoreSettings, Client, WarrantyType, OrderStatus } from "@/types";
+import type { Order, User, Comment as OrderCommentType, StoreSettings, Client, WarrantyType, OrderStatus, Checklist } from "@/types";
 import { OrderSchema } from "@/lib/schemas";
 import type { z } from "zod";
 import { suggestRepairSolutions } from "@/ai/flows/suggest-repair-solutions";
 import { getStoreSettingsForUser } from "./settings.actions"; 
-import { DEFAULT_STORE_SETTINGS } from "@/lib/constants";
+import { DEFAULT_STORE_SETTINGS, CHECKLIST_ITEMS } from "@/lib/constants";
 import { getMockClients } from "./client.actions"; 
 
 
@@ -16,27 +16,49 @@ let mockOrders: Order[] = [
     clientId: "CLI001", 
     branchInfo: "Taller Central (Admin)",
     deviceBrand: "Samsung", deviceModel: "Galaxy S21", deviceIMEI: "123456789012345", declaredFault: "Pantalla rota", 
-    unlockPatternInfo: "1234", // Changed to string
-    checklist: { golpe: "si", cristal: "si", marco: "no", tapa: "no", lente_camara: "si", enciende: "si", tactil: "no", imagen: "si", botones: "si", cam_trasera: "si", cam_delantera: "si", vibrador: "si", microfono: "si", auricular: "si", parlante: "si", sensor_huella: "si", senal: "si", wifi_bluetooth: "si", pin_carga: "si", humedad: "no"},
+    unlockPatternInfo: "1234",
+    checklist: CHECKLIST_ITEMS.reduce((acc, item) => { // Default checklist
+        if (item.type === 'boolean') { // @ts-ignore
+            acc[item.id] = ['enciende', 'tactil', 'imagen', 'botones', 'cam_trasera', 'cam_delantera', 'vibrador', 'microfono', 'auricular', 'parlante', 'sensor_huella', 'senal', 'wifi_bluetooth', 'pin_carga', 'lente_camara'].includes(item.id) ? 'si' : 'no';
+        } else if (item.id === 'consumoV') { // @ts-ignore
+            acc[item.id] = "0.5A";
+        } else if (item.id === 'mah') { // @ts-ignore
+            acc[item.id] = "4000mAh";
+        } else if (item.id === 'saleConHuella') { // @ts-ignore
+            acc[item.id] = "si";
+        } else { // @ts-ignore
+            acc[item.id] = item.type === 'boolean' ? 'no' : "";
+        }
+        return acc;
+    }, {} as Checklist),
     damageRisk: "Cristal trizado en esquina superior.", pantalla_parcial: true, equipo_sin_acceso: false, perdida_informacion: false,
     costSparePart: 15000, costLabor: 5000, costPending: 0,
-    classification: "", observations: "Cliente indica que se cayó.",
+    classification: "rojo", observations: "Cliente indica que se cayó.",
     customerAccepted: true, customerSignatureName: "Juan Perez",
     dataLossDisclaimerAccepted: true,
     privacyPolicyAccepted: true,
     status: "En Diagnóstico", previousOrderId: "",
     entryDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
     commentsHistory: [],
-    orderCompanyName: "JO-SERVICE Admin Store",
-    orderCompanyLogoUrl: "https://placehold.co/150x50.png?text=JO-SERVICE",
-    orderCompanyCuit: "30-12345678-9",
-    orderCompanyAddress: "Admin Main Street 123",
-    orderCompanyContactDetails: "Tel: (011) 1111-1111",
-    orderWarrantyConditions: "Admin warranty",
-    orderPickupConditions: "Admin pickup",
-    orderAbandonmentPolicyDays60: 60,
+    // Snapshotted store settings
+    orderCompanyName: DEFAULT_STORE_SETTINGS.companyName,
+    orderCompanyLogoUrl: DEFAULT_STORE_SETTINGS.companyLogoUrl,
+    orderCompanyCuit: DEFAULT_STORE_SETTINGS.companyCuit,
+    orderCompanyAddress: DEFAULT_STORE_SETTINGS.companyAddress,
+    orderCompanyContactDetails: DEFAULT_STORE_SETTINGS.companyContactDetails,
+    orderWarrantyConditions: DEFAULT_STORE_SETTINGS.warrantyConditions,
+    orderPickupConditions: DEFAULT_STORE_SETTINGS.pickupConditions,
+    // orderAbandonmentPolicyDays60: DEFAULT_STORE_SETTINGS.abandonmentPolicyDays60, // This is now part of abandonmentPolicyText
     orderSnapshottedDataLossDisclaimer: DEFAULT_STORE_SETTINGS.dataLossDisclaimerText,
     orderSnapshottedPrivacyPolicy: DEFAULT_STORE_SETTINGS.privacyPolicyText,
+    orderSnapshottedImportantUnlockDisclaimer: DEFAULT_STORE_SETTINGS.importantUnlockDisclaimer,
+    orderSnapshottedAbandonmentPolicyText: DEFAULT_STORE_SETTINGS.abandonmentPolicyText,
+    orderSnapshottedDataRetrievalPolicyText: DEFAULT_STORE_SETTINGS.dataRetrievalPolicyText,
+    orderSnapshottedUntestedDevicePolicyText: DEFAULT_STORE_SETTINGS.untestedDevicePolicyText,
+    orderSnapshottedBudgetVariationText: DEFAULT_STORE_SETTINGS.budgetVariationText,
+    orderSnapshottedHighRiskDeviceText: DEFAULT_STORE_SETTINGS.highRiskDeviceText,
+    orderSnapshottedPartialDamageDisplayText: DEFAULT_STORE_SETTINGS.partialDamageDisplayText,
+    orderSnapshottedWarrantyVoidConditionsText: DEFAULT_STORE_SETTINGS.warrantyVoidConditionsText,
     createdByUserId: "admin123", lastUpdatedBy: "admin123",
     updatedAt: new Date().toISOString(), createdAt: new Date().toISOString(),
     hasWarranty: true,
@@ -46,36 +68,7 @@ let mockOrders: Order[] = [
     warrantyCoveredItem: "Pantalla completa",
     warrantyNotes: "Garantía no cubre daños por líquidos o mal uso.",
   },
-  {
-    id: "ORD002", orderNumber: "ORD002",
-    clientId: "CLI002", 
-    branchInfo: "Taller Norte (Carlos)",
-    deviceBrand: "Apple", deviceModel: "iPhone 12", deviceIMEI: "543210987654321", declaredFault: "No enciende, batería agotada.", 
-    unlockPatternInfo: "No recuerda", // Changed to string
-    checklist: { golpe: "no", cristal: "no", marco: "no", tapa: "no", lente_camara: "si", enciende: "no", tactil: "si", imagen: "si", botones: "si", cam_trasera: "si", cam_delantera: "si", vibrador: "si", microfono: "si", auricular: "si", parlante: "si", sensor_huella: "si", senal: "si", wifi_bluetooth: "si", pin_carga: "si", humedad: "no"},
-    damageRisk: "", pantalla_parcial: false, equipo_sin_acceso: true, perdida_informacion: false,
-    costSparePart: 0, costLabor: 0, costPending: 8000,
-    classification: "rojo", observations: "Revisar pin de carga también.",
-    customerAccepted: true, customerSignatureName: "Maria Lopez",
-    dataLossDisclaimerAccepted: true,
-    privacyPolicyAccepted: false, // Example
-    status: "En Espera de Repuestos", previousOrderId: "ORD001",
-    entryDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-    commentsHistory: [{ id: "cmt1", description: "Batería solicitada", timestamp: new Date().toISOString(), userId: "tech123", userName: "Carlos Técnico" }],
-    orderCompanyName: "Carlos Tech Shop",
-    orderCompanyLogoUrl: "https://placehold.co/150x50.png?text=Carlos+Shop",
-    orderCompanyCuit: "20-87654321-5",
-    orderCompanyAddress: "Tech Street 456",
-    orderCompanyContactDetails: "Tel: (011) 2222-2222",
-    orderWarrantyConditions: "Carlos warranty",
-    orderPickupConditions: "Carlos pickup",
-    orderAbandonmentPolicyDays60: 60,
-    orderSnapshottedDataLossDisclaimer: "Ejemplo de descargo por pérdida de datos para esta orden.",
-    orderSnapshottedPrivacyPolicy: "Ejemplo de política de privacidad para esta orden.",
-    createdByUserId: "tech123", lastUpdatedBy: "tech123",
-    updatedAt: new Date().toISOString(), createdAt: new Date().toISOString(),
-    hasWarranty: false,
-  }
+  // Add another mock order if needed for testing different scenarios
 ];
 let orderCounter = mockOrders.length;
 
@@ -96,19 +89,18 @@ export async function createOrder(
   }
 
   const userStoreSettings = await getStoreSettingsForUser(creatingUserId);
-  const settingsToSnapshot = { ...DEFAULT_STORE_SETTINGS, ...userStoreSettings };
+  const settingsToSnapshot: StoreSettings = { ...DEFAULT_STORE_SETTINGS, ...userStoreSettings };
 
   const data = validatedFields.data;
   const newOrderNumber = generateOrderNumber();
   
-  // TODO: Encrypt data.unlockPatternInfo before saving to newOrder
   const finalUnlockPatternInfo = data.unlockPatternInfo; 
 
   const newOrder: Order = {
     id: newOrderNumber,
     orderNumber: newOrderNumber,
     ...data, 
-    unlockPatternInfo: finalUnlockPatternInfo, // Store potentially encrypted value
+    unlockPatternInfo: finalUnlockPatternInfo,
     previousOrderId: data.previousOrderId || "",
     entryDate: new Date().toISOString(),
     commentsHistory: [],
@@ -119,11 +111,22 @@ export async function createOrder(
     orderCompanyCuit: settingsToSnapshot.companyCuit,
     orderCompanyAddress: settingsToSnapshot.companyAddress,
     orderCompanyContactDetails: settingsToSnapshot.companyContactDetails,
+    
+    // Snapshot general conditions
     orderWarrantyConditions: settingsToSnapshot.warrantyConditions,
-    orderPickupConditions: settingsToSnapshot.pickupConditions,
-    orderAbandonmentPolicyDays60: settingsToSnapshot.abandonmentPolicyDays60,
-    orderSnapshottedDataLossDisclaimer: settingsToSnapshot.dataLossDisclaimerText, // Snapshot
-    orderSnapshottedPrivacyPolicy: settingsToSnapshot.privacyPolicyText,       // Snapshot
+    orderPickupConditions: settingsToSnapshot.pickupConditions, // May be redundant if covered by abandonmentPolicyText
+
+    // Snapshot specific legal texts
+    orderSnapshottedDataLossDisclaimer: settingsToSnapshot.dataLossDisclaimerText,
+    orderSnapshottedPrivacyPolicy: settingsToSnapshot.privacyPolicyText,
+    orderSnapshottedImportantUnlockDisclaimer: settingsToSnapshot.importantUnlockDisclaimer,
+    orderSnapshottedAbandonmentPolicyText: settingsToSnapshot.abandonmentPolicyText,
+    orderSnapshottedDataRetrievalPolicyText: settingsToSnapshot.dataRetrievalPolicyText,
+    orderSnapshottedUntestedDevicePolicyText: settingsToSnapshot.untestedDevicePolicyText,
+    orderSnapshottedBudgetVariationText: settingsToSnapshot.budgetVariationText,
+    orderSnapshottedHighRiskDeviceText: settingsToSnapshot.highRiskDeviceText,
+    orderSnapshottedPartialDamageDisplayText: settingsToSnapshot.partialDamageDisplayText,
+    orderSnapshottedWarrantyVoidConditionsText: settingsToSnapshot.warrantyVoidConditionsText,
 
     createdByUserId: creatingUserId,
     lastUpdatedBy: creatingUserId, 
@@ -137,7 +140,6 @@ export async function createOrder(
     warrantyCoveredItem: data.warrantyCoveredItem,
     warrantyNotes: data.warrantyNotes,
     
-    // Explicitly set acceptance fields from validated data
     customerAccepted: data.customerAccepted,
     customerSignatureName: data.customerSignatureName,
     dataLossDisclaimerAccepted: data.dataLossDisclaimerAccepted,
@@ -175,7 +177,6 @@ export async function getOrders(filters?: { client?: string, orderNumber?: strin
   
   const ordersWithClientNames = filteredOrders.map(order => {
     const client = clients.find(c => c.id === order.clientId);
-    // TODO: Decrypt order.unlockPatternInfo if it was encrypted, for display purposes ONLY IF USER HAS PERMISSION
     return {
       ...order,
       clientName: client?.name || 'N/D',
@@ -190,7 +191,6 @@ export async function getOrderById(id: string): Promise<Order | null> {
   await new Promise(resolve => setTimeout(resolve, 300));
   const order = mockOrders.find(o => o.id === id);
   if (order) {
-    // TODO: Decrypt order.unlockPatternInfo if it was encrypted, for display purposes ONLY IF USER HAS PERMISSION
     return JSON.parse(JSON.stringify(order));
   }
   return null;
@@ -280,11 +280,10 @@ export async function getRepairSuggestions(
 
 export async function updateOrder(
   orderId: string,
-  values: Partial<Omit<Order, 'id' | 'orderNumber' | 'entryDate' | 'createdAt' | 'createdByUserId' | 'orderCompanyName' | 'orderCompanyLogoUrl' | 'orderCompanyCuit' | 'orderCompanyAddress' | 'orderCompanyContactDetails' | 'orderWarrantyConditions' | 'orderPickupConditions' | 'orderAbandonmentPolicyDays60' | 'clientName' | 'clientLastName' >>,
+  values: Partial<Omit<Order, 'id' | 'orderNumber' | 'entryDate' | 'createdAt' | 'createdByUserId' | 'orderCompanyName' | 'orderCompanyLogoUrl' | 'orderCompanyCuit' | 'orderCompanyAddress' | 'orderCompanyContactDetails' | 'orderWarrantyConditions' | 'orderPickupConditions' | 'clientName' | 'clientLastName' >>,
   userId: string 
 ): Promise<{ success: boolean; message: string; order?: Order }> {
   
-  // Use a more specific partial schema for updates if needed, or rely on full OrderSchema parse
   const validatedFields = OrderSchema.partial().safeParse(values); 
 
   if (!validatedFields.success) {
@@ -301,20 +300,17 @@ export async function updateOrder(
   let finalUnlockPatternInfo = currentOrder.unlockPatternInfo;
 
   if (validatedFields.data.unlockPatternInfo && validatedFields.data.unlockPatternInfo !== currentOrder.unlockPatternInfo) {
-    // TODO: Encrypt validatedFields.data.unlockPatternInfo if it's being changed
     finalUnlockPatternInfo = validatedFields.data.unlockPatternInfo;
   }
-
 
   const updatedOrderData: Order = {
     ...currentOrder,
     ...validatedFields.data, 
-    unlockPatternInfo: finalUnlockPatternInfo, // Use potentially new/encrypted value
+    unlockPatternInfo: finalUnlockPatternInfo,
     lastUpdatedBy: userId, 
     updatedAt: new Date().toISOString(),
   };
 
-  // Ensure clientId is correctly handled if passed in validatedFields.data
   if (validatedFields.data.clientId) {
     updatedOrderData.clientId = validatedFields.data.clientId;
   }
