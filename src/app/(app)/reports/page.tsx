@@ -28,9 +28,11 @@ export default function ReportsPage() {
                     <li>Tiempos promedio de reparación.</li>
                     <li>Y mucho más...</li>
                 </ul>
+                {/* Optional: Add a concluding remark if desired, e.g.,
                 <p className="text-muted-foreground mt-6">
-                    Vuelva pronto para descubrir nuevas herramientas de análisis para su negocio.
+                    ¡Vuelva pronto para más actualizaciones!
                 </p>
+                */}
             </div>
         </CardContent>
       </Card>
