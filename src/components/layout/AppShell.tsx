@@ -1,3 +1,4 @@
+
 // src/components/layout/AppShell.tsx
 "use client";
 
@@ -114,7 +115,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {activeSubMenu === item.href && (
               <SidebarMenu className="pl-4 pt-1">
                 {renderNavItems(item.subItems.filter(subItem => !subItem.adminOnly || (user?.role === 'admin')), true)}
-              </SAP_REPLACE_WITH_OPEN_TAG_SIDERBARMENUSUB>
+              </SidebarMenu>
             )}
           </SidebarMenuItem>
         );
@@ -206,24 +207,3 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     </SidebarProvider>
   );
 }
-
-// Note: SAP_REPLACE_WITH_OPEN_TAG_SIDERBARMENUSUB should be <SidebarMenuSub>
-// I cannot use < without escaping it in XML. This is a workaround.
-// The post-processor should replace SAP_REPLACE_WITH_OPEN_TAG_SIDERBARMENUSUB with <SidebarMenuSub>
-// and its corresponding closing tag.
-// For now, I'll use SidebarMenu for submenus as well, styled with padding.
-// The provided Sidebar component does not seem to have SidebarMenuSub as a direct child of SidebarMenuButton,
-// rather SidebarMenuSub is a list itself.
-// A more robust solution for nested menus with the current Sidebar component
-// might involve custom rendering or adjustments.
-// The current approach uses nested SidebarMenu with padding.
-// After reviewing ui/sidebar.tsx, SidebarMenuSub IS available.
-// I'll adjust the logic to use SidebarMenuSub within SidebarMenuItem if item.subItems exists.
-
-// Re-evaluating the structure from ui/sidebar.tsx
-// It seems SidebarMenuSub is intended for a different structure.
-// The current implementation attempts a collapsible section within a SidebarMenuButton.
-// A simpler approach for the provided sidebar component: render sub-items conditionally below the parent button.
-// The current implementation of renderNavItems should work okay by conditionally rendering another SidebarMenu.
-// The ui/sidebar.tsx component has SidebarMenuSub for use within an Accordion-like pattern, which this is not.
-// The current logic of expanding/collapsing by toggling visibility of a nested SidebarMenu is fine.
