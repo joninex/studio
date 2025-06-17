@@ -117,8 +117,15 @@ export function OrderForm({ orderId }: OrderFormProps) {
 
       if (result.success) {
         toast({ title: "Éxito", description: result.message });
-        router.push(orderId ? `/orders/${orderId}` : `/orders/${result.order?.id || ''}`);
-        router.refresh();
+        if (orderId) { // This was an update
+            router.push(`/orders/${orderId}`);
+        } else if (result.order && result.order.id) { // This was a new order creation
+            router.push(`/orders/${result.order.id}`);
+        } else {
+             // Should not happen if success is true and it's a new order, but as a fallback:
+            toast({ variant: "destructive", title: "Error de Redirección", description: "No se pudo obtener el ID de la nueva orden para redirigir." });
+            router.push("/orders"); // Fallback to orders list
+        }
       } else {
         toast({ variant: "destructive", title: "Error", description: result.message });
       }
