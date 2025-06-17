@@ -12,11 +12,11 @@ import { createSupplier, updateSupplier, getSupplierById } from "@/lib/actions/s
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
-import { Truck, User, Phone, Mail, Home, FileText, Edit3 } from "lucide-react";
+import { Truck, User, Phone, Mail, Home, FileText, Edit3, Info } from "lucide-react";
 
 interface SupplierFormProps {
   supplierId?: string;
@@ -38,6 +38,7 @@ export function SupplierForm({ supplierId, initialData }: SupplierFormProps) {
       email: "",
       address: "",
       cuit: "",
+      sellsDescription: "",
       notes: "",
     },
   });
@@ -120,6 +121,15 @@ export function SupplierForm({ supplierId, initialData }: SupplierFormProps) {
             <FormField control={form.control} name="address" render={({ field }) => ( <FormItem><FormLabel className="flex items-center gap-1"><Home className="h-4 w-4"/>Dirección</FormLabel><FormControl><Textarea placeholder="Dirección del proveedor (Opcional)" {...field} /></FormControl><FormMessage /></FormItem> )} />
             
             <FormField control={form.control} name="cuit" render={({ field }) => ( <FormItem><FormLabel className="flex items-center gap-1"><FileText className="h-4 w-4"/>CUIT/Identificación Fiscal</FormLabel><FormControl><Input placeholder="Número de CUIT (Opcional)" {...field} /></FormControl><FormMessage /></FormItem> )} />
+
+            <FormField control={form.control} name="sellsDescription" render={({ field }) => ( 
+                <FormItem>
+                    <FormLabel className="flex items-center gap-1"><Info className="h-4 w-4"/>Descripción de lo que Vende</FormLabel>
+                    <FormControl><Textarea placeholder="Ej: Pantallas, baterías, componentes de móviles, etc." {...field} /></FormControl>
+                    <FormDescription>Una breve descripción de los principales productos o servicios que ofrece el proveedor.</FormDescription>
+                    <FormMessage />
+                </FormItem> 
+            )} />
 
             <FormField control={form.control} name="notes" render={({ field }) => ( <FormItem><FormLabel className="flex items-center gap-1"><Edit3 className="h-4 w-4"/>Notas Internas</FormLabel><FormControl><Textarea placeholder="Cualquier información adicional relevante sobre el proveedor (Opcional)" {...field} /></FormControl><FormMessage /></FormItem> )} />
 

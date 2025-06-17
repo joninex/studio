@@ -289,6 +289,7 @@ export const SupplierSchema = z.object({
   email: z.string().email("Email inválido.").optional().or(z.literal('')),
   address: z.string().optional().or(z.literal('')),
   cuit: z.string().optional().or(z.literal('')),
+  sellsDescription: z.string().optional().or(z.literal('')), // New field
   notes: z.string().optional().or(z.literal('')),
 });
 export type SupplierFormData = z.infer<typeof SupplierSchema>;

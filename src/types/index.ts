@@ -240,6 +240,7 @@ export interface Supplier {
   email?: string;
   address?: string;
   cuit?: string;
+  sellsDescription?: string; // New field
   notes?: string;
   createdAt: Timestamp | Date | string;
   updatedAt: Timestamp | Date | string;

@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Edit, Trash2, Search, FilterX, MessageSquare, UserPlus } from "lucide-react";
+import { Edit, Trash2, Search, FilterX, MessageSquare, UserPlus, Info, Home } from "lucide-react";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import { useToast } from "@/hooks/use-toast";
 
@@ -156,6 +156,8 @@ export function SupplierListClient({ initialSuppliers, initialFilters }: Supplie
                     <TableHead>Contacto</TableHead>
                     <TableHead>Teléfono</TableHead>
                     <TableHead>Email</TableHead>
+                    <TableHead><Info className="inline-block mr-1 h-4 w-4"/>Qué Vende</TableHead>
+                    <TableHead><Home className="inline-block mr-1 h-4 w-4"/>Dirección</TableHead>
                     <TableHead>Registrado</TableHead>
                     <TableHead className="text-right">Acciones</TableHead>
                   </TableRow>
@@ -174,6 +176,8 @@ export function SupplierListClient({ initialSuppliers, initialFilters }: Supplie
                         )}
                       </TableCell>
                       <TableCell>{supplier.email || "N/A"}</TableCell>
+                      <TableCell className="max-w-xs truncate">{supplier.sellsDescription || "N/A"}</TableCell>
+                      <TableCell className="max-w-xs truncate">{supplier.address || "N/A"}</TableCell>
                       <TableCell>
                         {supplier.createdAt ? format(new Date(supplier.createdAt as string), "dd MMM yyyy", { locale: es }) : 'N/A'}
                       </TableCell>

@@ -13,9 +13,10 @@ let mockSuppliers: Supplier[] = [
     contactName: "Juan Ventas",
     phone: "5491112345678", // Example Argentina WhatsApp number
     email: "ventas@electrocomponentes.com",
-    address: "Online Store",
+    address: "Tienda Online - Envíos a todo el país",
     cuit: "30-12345678-9",
-    notes: "Principal proveedor de pantallas y baterías.",
+    sellsDescription: "Pantallas, baterías, flex, ICs para móviles y tablets.",
+    notes: "Principal proveedor de pantallas y baterías. Buena calidad en originales.",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
@@ -25,20 +26,22 @@ let mockSuppliers: Supplier[] = [
     contactName: "Ana Logística",
     phone: "541187654321", // Another example
     email: "info@techglobal.com.ar",
-    address: "Calle Falsa 456, Ciudad",
+    address: "Calle Falsa 456, Depósito Central, Ciudad Autónoma de Buenos Aires",
     cuit: "33-87654321-0",
-    notes: "Buenos precios en flex y componentes menores.",
+    sellsDescription: "Componentes menores, flex, herramientas básicas, genéricos.",
+    notes: "Buenos precios en flex y componentes menores. Consultar por lotes.",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
   {
     id: "SUP003",
     name: "FixParts Argentina",
-    contactName: "",
+    contactName: "Soporte Ventas",
     phone: "1122334455", // Local number without country code
     email: "pedidos@fixparts.com.ar",
-    address: "Av. Siempreviva 742",
-    notes: "Herramientas y algunos insumos.",
+    address: "Av. Siempreviva 742, Local 3, Springfield",
+    sellsDescription: "Herramientas especializadas, insumos de soldadura, microscopios.",
+    notes: "Herramientas y algunos insumos. Tienen local físico para retiros.",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   }
@@ -68,6 +71,7 @@ export async function createSupplier(
   const newSupplier: Supplier = {
     id: newId,
     ...validatedFields.data,
+    sellsDescription: validatedFields.data.sellsDescription || "",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
@@ -93,6 +97,7 @@ export async function updateSupplier(
   const updatedSupplier: Supplier = {
     ...mockSuppliers[supplierIndex],
     ...validatedFields.data,
+    sellsDescription: validatedFields.data.sellsDescription || "",
     updatedAt: new Date().toISOString(),
   };
   mockSuppliers[supplierIndex] = updatedSupplier;
