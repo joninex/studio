@@ -11,10 +11,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { LoadingSpinner } from "../shared/LoadingSpinner";
 import { getStoreSettingsForUser, updateStoreSettingsForUser } from "@/lib/actions/settings.actions";
-import { Separator } from "@/components/ui/separator";
 import { DEFAULT_STORE_SETTINGS } from "@/lib/constants";
 
 
@@ -111,35 +111,39 @@ export function SettingsForm({ userId }: SettingsFormProps) {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-        <div>
-          <h3 className="text-lg font-medium mb-2">Datos de la Tienda y Sucursal</h3>
-          <div className="space-y-4">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <Card className="shadow-lg">
+          <CardHeader>
+            <CardTitle>Datos de la Tienda y Sucursal</CardTitle>
+            <CardDescription>Información básica de su negocio que aparecerá en comprobantes y comunicaciones.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
             <FormField control={form.control} name="companyName" render={({ field }) => ( <FormItem><FormLabel>Nombre de la Tienda/Empresa</FormLabel><FormControl><Input placeholder="Nombre de su Taller" {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
             <FormField control={form.control} name="companyLogoUrl" render={({ field }) => ( <FormItem><FormLabel>URL del Logo</FormLabel><FormControl><Input type="url" placeholder="https://ejemplo.com/logo.png" {...field} value={field.value ?? ""} /></FormControl><FormDescription>Ingrese la URL completa de una imagen para el logo.</FormDescription><FormMessage /></FormItem> )} />
             <FormField control={form.control} name="companyCuit" render={({ field }) => ( <FormItem><FormLabel>CUIT/CUIL (Opcional)</FormLabel><FormControl><Input placeholder="Ej: 20-12345678-9" {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
             <FormField control={form.control} name="companyAddress" render={({ field }) => ( <FormItem><FormLabel>Dirección</FormLabel><FormControl><Textarea rows={2} placeholder="Dirección completa del taller" {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
             <FormField control={form.control} name="companyContactDetails" render={({ field }) => ( <FormItem><FormLabel>Información de Contacto (para impresiones)</FormLabel><FormControl><Textarea rows={3} placeholder="Teléfono, Email, WhatsApp, etc." {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
             <FormField control={form.control} name="branchInfo" render={({ field }) => ( <FormItem><FormLabel>Información de Sucursal/Taller (para órdenes)</FormLabel><FormControl><Input placeholder="Ej: Taller Central, Sucursal Norte" {...field} value={field.value ?? ""} /></FormControl><FormDescription>Este nombre se usará en las órdenes de servicio.</FormDescription><FormMessage /></FormItem> )} />
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
-        <Separator />
-
-        <div>
-          <h3 className="text-lg font-medium mb-2">Condiciones Generales (Textos Breves)</h3>
-          <div className="space-y-4">
+        <Card className="shadow-lg">
+          <CardHeader>
+            <CardTitle>Condiciones Generales (Textos Breves)</CardTitle>
+            <CardDescription>Textos resumidos para ciertas secciones de los comprobantes.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
             <FormField control={form.control} name="warrantyConditions" render={({ field }) => ( <FormItem><FormLabel>Condiciones Generales de Garantía (Texto breve para resumen)</FormLabel><FormControl><Textarea rows={3} placeholder="Texto general de garantía..." {...field} value={field.value ?? DEFAULT_STORE_SETTINGS.warrantyConditions} /></FormControl><FormMessage /></FormItem> )} />
             <FormField control={form.control} name="pickupConditions" render={({ field }) => ( <FormItem><FormLabel>Condiciones Generales de Retiro (Texto breve)</FormLabel><FormControl><Textarea rows={3} placeholder="Texto general de condiciones de retiro..." {...field} value={field.value ?? DEFAULT_STORE_SETTINGS.pickupConditions} /></FormControl><FormMessage /></FormItem> )} />
-          </div>
-        </div>
+          </CardContent>
+        </Card>
         
-        <Separator />
-
-        <div>
-          <h3 className="text-lg font-medium mb-2">Textos Legales Detallados (Para Impresiones y Aceptaciones)</h3>
-           <FormDescription className="mb-4">Estos textos se mostrarán en los comprobantes impresos y el cliente deberá aceptarlos (si aplica) al crear la orden de ingreso. Serán "congelados" (snapshotted) en cada orden al momento de su creación.</FormDescription>
-          <div className="space-y-4">
+        <Card className="shadow-lg">
+          <CardHeader>
+            <CardTitle>Textos Legales Detallados y Políticas</CardTitle>
+            <CardDescription>Estos textos se mostrarán en los comprobantes impresos y el cliente deberá aceptarlos (si aplica) al crear la orden de ingreso. Serán "congelados" (snapshotted) en cada orden al momento de su creación.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
             <FormField control={form.control} name="unlockDisclaimerText" render={({ field }) => ( <FormItem><FormLabel>Advertencia Importante (Desbloqueo)</FormLabel><FormControl><Textarea rows={4} placeholder="IMPORTANTE: Si no se informa el patrón/clave..." {...field} value={field.value ?? DEFAULT_STORE_SETTINGS.unlockDisclaimerText} /></FormControl><FormMessage /></FormItem> )} />
             <FormField control={form.control} name="abandonmentPolicyText" render={({ field }) => ( <FormItem><FormLabel>Política Detallada de Abandono de Equipo</FormLabel><FormControl><Textarea rows={5} placeholder="ABANDONO DEL EQUIPO: Pasados los X días..." {...field} value={field.value ?? DEFAULT_STORE_SETTINGS.abandonmentPolicyText} /></FormControl><FormMessage /></FormItem> )} />
              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -153,8 +157,8 @@ export function SettingsForm({ userId }: SettingsFormProps) {
             <FormField control={form.control} name="highRiskDeviceText" render={({ field }) => ( <FormItem><FormLabel>Política para Teléfonos con Riesgos Especiales</FormLabel><FormControl><Textarea rows={4} placeholder="TELÉFONOS CON RIESGOS: Equipos mojados, sulfatados..." {...field} value={field.value ?? DEFAULT_STORE_SETTINGS.highRiskDeviceText} /></FormControl><FormMessage /></FormItem> )} />
             <FormField control={form.control} name="partialDamageDisplayText" render={({ field }) => ( <FormItem><FormLabel>Política para Pantallas con Daño Parcial</FormLabel><FormControl><Textarea rows={4} placeholder="PANTALLAS CON DAÑO PARCIAL: En equipos con pantallas parcialmente..." {...field} value={field.value ?? DEFAULT_STORE_SETTINGS.partialDamageDisplayText} /></FormControl><FormMessage /></FormItem> )} />
             <FormField control={form.control} name="warrantyVoidConditionsText" render={({ field }) => ( <FormItem><FormLabel>Condiciones Detalladas de Anulación de Garantía</FormLabel><FormControl><Textarea rows={6} placeholder="ANULACIÓN DE GARANTÍA: La garantía quedará anulada por..." {...field} value={field.value ?? DEFAULT_STORE_SETTINGS.warrantyVoidConditionsText} /></FormControl><FormMessage /></FormItem> )} />
-          </div>
-        </div>
+          </CardContent>
+        </Card>
         
         <Button type="submit" className="w-full sm:w-auto" disabled={isPending || isLoading}>
           {isPending && <LoadingSpinner size={16} className="mr-2"/>}

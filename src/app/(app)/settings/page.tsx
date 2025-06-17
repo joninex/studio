@@ -5,11 +5,11 @@ import { PageHeader } from "@/components/shared/PageHeader";
 import { useAuth } from "@/providers/AuthProvider";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { SettingsForm } from "@/components/settings/SettingsForm";
-import { AlertTriangle, QrCode } from "lucide-react"; // Added QrCode
+import { AlertTriangle, QrCode } from "lucide-react"; 
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
-import Image from "next/image"; // Added Image
-import { Button } from "@/components/ui/button"; // Added Button
-import { Separator } from "@/components/ui/separator"; // Added Separator
+import Image from "next/image"; 
+import { Button } from "@/components/ui/button"; 
+import { Separator } from "@/components/ui/separator"; 
 
 export default function SettingsPage() {
   const { user, loading } = useAuth();
@@ -42,17 +42,11 @@ export default function SettingsPage() {
         title="Configuración"
         description="Ajuste los datos de su tienda, textos legales, políticas e integraciones."
       />
-       <Card className="shadow-xl">
-        <CardHeader>
-            <CardTitle>Parámetros de la Tienda</CardTitle>
-            <CardDescription>Configure la información de su tienda, textos legales, condiciones y políticas de abandono.</CardDescription>
-        </CardHeader>
-        <CardContent>
-            {user && <SettingsForm userId={user.uid} />}
-        </CardContent>
-       </Card>
-
-       <Separator />
+      
+      {/* SettingsForm ahora renderiza sus propias tarjetas internas */}
+      {user && <SettingsForm userId={user.uid} />}
+       
+      <Separator />
 
        <Card className="shadow-xl">
         <CardHeader>
