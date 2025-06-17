@@ -8,15 +8,7 @@ import type { Order, OrderStatus } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer
-} from 'recharts';
+import { OrderStatusChart } from "@/components/dashboard/OrderStatusChart"; // Import the new client component
 
 // Helper to get badge variant for status, defined locally
 const getStatusBadgeVariant = (status: OrderStatus): "default" | "secondary" | "destructive" | "outline" => {
@@ -160,23 +152,7 @@ export default async function DashboardPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="pt-0 h-[300px]">
-             {ordersByStatusData.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={ordersByStatusData} margin={{ top: 20, right: 10, left: -20, bottom: 5 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                        <XAxis dataKey="name" fontSize={11} tickLine={false} axisLine={false} interval={0} angle={-30} textAnchor="end" height={50}/>
-                        <YAxis fontSize={12} tickLine={false} axisLine={false} allowDecimals={false} />
-                        <Tooltip
-                            cursor={{ fill: 'hsl(var(--muted))' }}
-                            contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))', borderRadius: 'var(--radius)'}}
-                            labelStyle={{ color: 'hsl(var(--foreground))' }}
-                        />
-                        <Bar dataKey="count" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="Cantidad" />
-                    </BarChart>
-                </ResponsiveContainer>
-             ) : (
-                <p className="text-muted-foreground text-center py-8">No hay datos suficientes para mostrar el rendimiento.</p>
-             )}
+            <OrderStatusChart data={ordersByStatusData} />
           </CardContent>
         </Card>
       </div>
