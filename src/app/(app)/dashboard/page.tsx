@@ -1,16 +1,15 @@
 
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { BarChartIcon, ListChecks, Users, AlertTriangle, Activity, TrendingUp, PackageCheck, Clock, Edit3, CheckCircle2 } from "lucide-react";
+import { BarChartIcon, ListChecks, Users, AlertTriangle, Activity, TrendingUp, PackageCheck, Clock, Edit3, CheckCircle2, DollarSign, CalendarPlus } from "lucide-react";
 import Link from "next/link";
 import { getOrders } from "@/lib/actions/order.actions";
 import type { Order, OrderStatus } from "@/types";
 import { Badge } from "@/components/ui/badge";
-import { format } from "date-fns";
+import { format, isThisMonth, isToday, differenceInDays, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
-import { OrderStatusChart } from "@/components/dashboard/OrderStatusChart"; // Import the new client component
+import { OrderStatusChart } from "@/components/dashboard/OrderStatusChart";
 
-// Helper to get badge variant for status, defined locally
 const getStatusBadgeVariant = (status: OrderStatus): "default" | "secondary" | "destructive" | "outline" => {
     switch (status) {
       case "Presupuesto Aprobado":
@@ -36,16 +35,43 @@ const getStatusBadgeVariant = (status: OrderStatus): "default" | "secondary" | "
 
 export default async function DashboardPage() {
   const userName = "Admin"; // Placeholder, replace with actual user data logic
+  const allOrders: Order[] = await getOrders(); // Fetch all orders for calculations
+
+  // Calculate dynamic stats
+  const activeStatuses: OrderStatus[] = [
+    "Recibido", "En Diagnóstico", "Presupuestado", "Presupuesto Aprobado", 
+    "En Espera de Repuestos", "En Reparación", "Reparado", 
+    "En Control de Calidad", "Listo para Entrega"
+  ];
+  const activeOrdersCount = allOrders.filter(order => activeStatuses.includes(order.status)).length;
+
+  const ordersCreatedToday = allOrders.filter(order => order.entryDate && isToday(parseISO(order.entryDate as string))).length;
+
+  const incomeGeneratingStatuses: OrderStatus[] = [
+    "Presupuesto Aprobado", "En Espera de Repuestos", "En Reparación", 
+    "Reparado", "En Control de Calidad", "Listo para Entrega", "Entregado"
+  ];
+  const monthlyIncome = allOrders
+    .filter(order => 
+      order.entryDate && 
+      isThisMonth(parseISO(order.entryDate as string)) && 
+      incomeGeneratingStatuses.includes(order.status)
+    )
+    .reduce((sum, order) => sum + (order.costSparePart || 0) + (order.costLabor || 0), 0);
+
+  const alertStatuses: OrderStatus[] = ["En Espera de Repuestos", "Listo para Entrega"];
+  // More advanced: filter by age, e.g., ready for pickup > 7 days
+  const ordersInAlert = allOrders.filter(order => alertStatuses.includes(order.status)).length;
+
 
   const dashboardStats = [
-    { title: "Órdenes Activas", value: "12", icon: ListChecks, description: "Órdenes actualmente en proceso.", color: "text-primary", bgColor: "bg-primary/10" },
-    { title: "Clientes Atendidos Hoy", value: "5", icon: Users, description: "Clientes que recibieron servicio.", color: "text-green-600", bgColor: "bg-green-600/10" },
-    { title: "Ingresos Estimados (Mes)", value: "$2,500", icon: BarChartIcon, description: "Proyección de ingresos del mes.", color: "text-purple-600", bgColor: "bg-purple-600/10" },
-    { title: "Alertas Pendientes", value: "2", icon: AlertTriangle, description: "Notificaciones que requieren atención.", color: "text-destructive", bgColor: "bg-destructive/10" },
+    { title: "Órdenes Activas", value: activeOrdersCount.toString(), icon: ListChecks, description: "Órdenes actualmente en proceso.", color: "text-primary", bgColor: "bg-primary/10" },
+    { title: "Órdenes Creadas Hoy", value: ordersCreatedToday.toString(), icon: CalendarPlus, description: "Nuevas órdenes registradas hoy.", color: "text-green-600", bgColor: "bg-green-600/10" },
+    { title: "Ingresos del Mes", value: `$${monthlyIncome.toFixed(2)}`, icon: DollarSign, description: "Suma de costos (rep.+MO) de órdenes facturables del mes.", color: "text-purple-600", bgColor: "bg-purple-600/10" },
+    { title: "Órdenes en Alerta", value: ordersInAlert.toString(), icon: AlertTriangle, description: "Órdenes esperando repuestos o listas para retirar.", color: "text-destructive", bgColor: "bg-destructive/10" },
   ];
 
   const recentOrders: Order[] = await getOrders({ limit: 5, sortBy: 'entryDate' });
-  const allOrders: Order[] = await getOrders();
 
   const ordersByStatusData: { name: string, count: number }[] = allOrders.reduce((acc, order) => {
     const statusName = order.status;
@@ -71,7 +97,7 @@ export default async function DashboardPage() {
     Entregado: CheckCircle2,
     "Presupuesto Rechazado": AlertTriangle,
     "Sin Reparación": AlertTriangle,
-    default: Activity // Fallback icon
+    default: Activity 
   };
 
 
@@ -132,7 +158,7 @@ export default async function DashboardPage() {
                       <div className="flex items-center justify-between mt-1">
                         <Badge variant={getStatusBadgeVariant(order.status)}>{order.status}</Badge>
                         <span className="text-xs text-muted-foreground">
-                          {format(new Date(order.entryDate as string), "dd MMM, HH:mm", { locale: es })}
+                          {format(parseISO(order.entryDate as string), "dd MMM, HH:mm", { locale: es })}
                         </span>
                       </div>
                     </div>
@@ -152,10 +178,15 @@ export default async function DashboardPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="pt-0 h-[300px]">
-            <OrderStatusChart data={ordersByStatusData} />
+            {ordersByStatusData.length > 0 ? (
+              <OrderStatusChart data={ordersByStatusData} />
+            ) : (
+              <p className="text-muted-foreground text-center flex items-center justify-center h-full">No hay datos de órdenes para mostrar el gráfico.</p>
+            )}
           </CardContent>
         </Card>
       </div>
     </div>
   );
 }
+
