@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import Image from "next/image"; // Import next/image
+import Image from "next/image";
 import {
   Sidebar,
   SidebarProvider,
@@ -16,7 +16,6 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
-  SidebarMenuBadge,
 } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -36,13 +35,16 @@ import {
   Settings,
   LogOut,
   ChevronDown,
-  Menu,
-  Briefcase,
-  Smartphone, 
-  Wrench,
-  UserCircle,
-  Building, 
-  Contact,
+  Contact, // Updated icon for Clientes
+  Archive, // Icon for Inventario
+  List, // Icon for Ver Repuestos/Items
+  Truck, // Icon for Proveedores
+  Landmark, // Icon for Finanzas
+  ArrowRightLeft, // Icon for Movimientos de Caja
+  TrendingUp, // Icon for Reporte de Ingresos (reused)
+  BarChartBig, // Icon for Reportes General
+  Lightbulb, // Icon for Guías IA
+  Smartphone,
 } from "lucide-react";
 import { useAuth } from "@/providers/AuthProvider";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -68,9 +70,30 @@ const navItems: NavItem[] = [
       { href: "/orders/new", label: "Nueva Orden", icon: PlusCircle },
     ],
   },
-  { href: "/clients", label: "Clientes", icon: Contact }, 
+  { href: "/clients", label: "Clientes", icon: Contact },
+  {
+    href: "/inventory",
+    label: "Inventario",
+    icon: Archive,
+    subItems: [
+      { href: "/inventory/parts", label: "Ver Repuestos", icon: List },
+      { href: "/inventory/parts/new", label: "Añadir Repuesto", icon: PlusCircle },
+      { href: "/inventory/suppliers", label: "Proveedores", icon: Truck },
+    ],
+  },
+  {
+    href: "/finance",
+    label: "Finanzas",
+    icon: Landmark,
+    subItems: [
+      { href: "/finance/cashflow", label: "Movimientos de Caja", icon: ArrowRightLeft },
+      { href: "/finance/income-report", label: "Reporte de Ingresos", icon: TrendingUp },
+    ],
+  },
+  { href: "/reports", label: "Reportes", icon: BarChartBig },
+  { href: "/ai-guides", label: "Guías IA", icon: Lightbulb },
   { href: "/users", label: "Usuarios", icon: Users, adminOnly: true },
-  { href: "/settings", label: "Configuración", icon: Settings, adminOnly: false },
+  { href: "/settings", label: "Configuración", icon: Settings },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -82,9 +105,28 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [activeSubMenu, setActiveSubMenu] = useState<string | null>(null);
 
   useEffect(() => {
-    const parentPath = navItems.find(item => item.subItems?.some(sub => pathname.startsWith(sub.href)))?.href;
+    // Find the parent item of the current path, even if it's a sub-sub-item
+    const findParentPath = (items: NavItem[], currentPath: string): string | null => {
+      for (const item of items) {
+        if (item.subItems) {
+          if (item.subItems.some(sub => currentPath.startsWith(sub.href))) {
+            return item.href;
+          }
+          const nestedParentPath = findParentPath(item.subItems, currentPath);
+          if (nestedParentPath) {
+            // If a sub-item is a parent, we still want the top-level parent of that sub-item for activeSubMenu
+            const topLevelParent = items.find(topItem => topItem.subItems?.some(sub => sub.href === nestedParentPath));
+            return topLevelParent?.href || item.href;
+          }
+        }
+      }
+      return null;
+    };
+    const parentPath = findParentPath(navItems, pathname);
     if (parentPath) {
       setActiveSubMenu(parentPath);
+    } else {
+       setActiveSubMenu(null); // Collapse all if no parent matches
     }
   }, [pathname]);
 
@@ -94,7 +136,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   
   const filteredNavItems = navItems.filter(item => !item.adminOnly || (user?.role === 'admin'));
 
-  const renderNavItems = (items: NavItem[], isSubMenu = false, level = 0) => {
+  const renderNavItems = (items: NavItem[], level = 0): React.ReactNodeArray => {
     return items.map((item) => {
       const isLinkActive = pathname === item.href;
       const isParentOfActivePath = item.subItems?.some(sub => pathname.startsWith(sub.href)) || false;
@@ -121,8 +163,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               />
             </SidebarMenuButton>
             {isSubMenuOpen && (
-              <SidebarMenu className={`pl-${(level + 1) * 4} pt-1`}>
-                {renderNavItems(item.subItems.filter(subItem => !subItem.adminOnly || (user?.role === 'admin')), true, level + 1)}
+              // Apply pl based on level for indentation
+              <SidebarMenu className={`pl-${(level + 1) * 2} pt-1`}> 
+                {renderNavItems(item.subItems.filter(subItem => !subItem.adminOnly || (user?.role === 'admin')), level + 1)}
               </SidebarMenu>
             )}
           </SidebarMenuItem>
@@ -131,11 +174,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       return (
         <SidebarMenuItem key={item.href}>
-          <Link href={item.href}>
+          <Link href={item.href} legacyBehavior={false} passHref={false}>
             <SidebarMenuButton 
               asChild={false} 
               isActive={isLinkActive} 
-              className={isSubMenu ? `text-sm pl-${level * 2}` : ''}
+              // Apply pl based on level for indentation if it's a sub-item directly rendered
+              className={level > 0 ? `pl-${level * 2}` : ''} 
             >
               <div className="flex items-center gap-2 w-full">
                 <Icon />
@@ -147,7 +191,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       );
     });
   };
-
+  
   const companyLogoUrl = user?.storeSettings?.companyLogoUrl || DEFAULT_STORE_SETTINGS.companyLogoUrl;
   const companyName = user?.storeSettings?.companyName || DEFAULT_STORE_SETTINGS.companyName;
 
