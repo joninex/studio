@@ -5,7 +5,8 @@ import { PageHeader } from "@/components/shared/PageHeader";
 import { useAuth } from "@/providers/AuthProvider";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { SettingsForm } from "@/components/settings/SettingsForm";
-import { AlertTriangle, QrCode } from "lucide-react"; 
+import { ProfileSettingsCard } from "@/components/settings/ProfileSettingsCard"; // Import new component
+import { AlertTriangle, QrCode, UserCircle } from "lucide-react"; 
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import Image from "next/image"; 
 import { Button } from "@/components/ui/button"; 
@@ -39,9 +40,13 @@ export default function SettingsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Configuración"
-        description="Ajuste los datos de su tienda, textos legales, políticas e integraciones."
+        title="Configuración y Perfil"
+        description="Ajuste los datos de su perfil, tienda, textos legales, políticas e integraciones."
       />
+      
+      {user && <ProfileSettingsCard user={user} />}
+
+      <Separator />
       
       {/* SettingsForm ahora renderiza sus propias tarjetas internas */}
       {user && <SettingsForm userId={user.uid} />}

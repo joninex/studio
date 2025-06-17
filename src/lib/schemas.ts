@@ -204,9 +204,16 @@ export const ResetPasswordSchema = z.object({
 export const UserSchema = z.object({
   name: z.string().min(1, "Nombre es requerido."),
   email: z.string().email("Email inválido."),
+  avatarUrl: z.string().url({ message: "Debe ser una URL válida." }).optional().or(z.literal('')),
   role: z.enum(USER_ROLES_VALUES as [UserRole, ...UserRole[]]),
   password: z.string().min(6, "Contraseña debe tener al menos 6 caracteres.").optional().or(z.literal('')),
 });
+
+export const ProfileUpdateSchema = z.object({
+  name: z.string().min(1, "Nombre es requerido."),
+  avatarUrl: z.string().url({ message: "Debe ser una URL válida para el avatar." }).optional().or(z.literal('')),
+});
+
 
 export const StoreSettingsSchema = z.object({
   companyName: z.string().min(1, "Nombre de la empresa es requerido.").optional().or(z.literal('')),

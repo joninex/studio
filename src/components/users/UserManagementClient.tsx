@@ -14,18 +14,19 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger
 } from "@/components/ui/alert-dialog";
-import { PlusCircle, Edit, Trash2, Search, UserPlus, CheckCircle, XCircle, Clock, Truck, Briefcase } from "lucide-react";
+import { PlusCircle, Edit, Trash2, Search, UserPlus, CheckCircle, XCircle, Clock, Truck, Briefcase, Image as ImageIcon } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { UserSchema } from "@/lib/schemas";
 import type { z } from "zod";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { LoadingSpinner } from "../shared/LoadingSpinner";
 import { getUsers, createUser, updateUser, deleteUser, updateUserStatus } from "@/lib/actions/user.actions";
 import { Badge } from "@/components/ui/badge";
 import { USER_ROLES_VALUES } from "@/lib/constants";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 
 export function UserManagementClient() {
@@ -41,7 +42,7 @@ export function UserManagementClient() {
 
   const form = useForm<z.infer<typeof UserSchema>>({
     resolver: zodResolver(UserSchema),
-    defaultValues: { name: "", email: "", role: "tecnico", password: "" },
+    defaultValues: { name: "", email: "", role: "tecnico", password: "", avatarUrl: "" },
   });
 
   async function loadUsers() {
@@ -77,7 +78,7 @@ export function UserManagementClient() {
         toast({ title: "Éxito", description: result.message });
         setIsFormOpen(false);
         setEditingUser(null);
-        form.reset({ name: "", email: "", role: "tecnico", password: "" });
+        form.reset({ name: "", email: "", role: "tecnico", password: "", avatarUrl: "" });
         await loadUsers();
       } else {
         toast({ variant: "destructive", title: "Error", description: result.message });
@@ -87,7 +88,7 @@ export function UserManagementClient() {
 
   const handleEditUser = (user: User) => {
     setEditingUser(user);
-    form.reset({ name: user.name, email: user.email, role: user.role, password: "" });
+    form.reset({ name: user.name, email: user.email, role: user.role, password: "", avatarUrl: user.avatarUrl || "" });
     setIsFormOpen(true);
   };
 
@@ -113,7 +114,7 @@ export function UserManagementClient() {
 
   const openNewUserForm = () => {
     setEditingUser(null);
-    form.reset({ name: "", email: "", role: "tecnico", password: "" });
+    form.reset({ name: "", email: "", role: "tecnico", password: "", avatarUrl: "" });
     setIsFormOpen(true);
   };
 
@@ -216,6 +217,7 @@ export function UserManagementClient() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Avatar</TableHead>
                 <TableHead>Nombre</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Rol</TableHead>
@@ -226,6 +228,16 @@ export function UserManagementClient() {
             <TableBody>
               {filteredUsers.map((user) => (
                 <TableRow key={user.uid}>
+                  <TableCell>
+                    <Avatar className="h-9 w-9">
+                       <AvatarImage 
+                          src={user.avatarUrl || (user.uid ? `https://i.pravatar.cc/150?u=${user.uid}` : "https://placehold.co/40x40.png")} 
+                          alt={user.name} 
+                          data-ai-hint="user avatar"
+                       />
+                       <AvatarFallback>{user.name?.[0]?.toUpperCase() || 'U'}</AvatarFallback>
+                    </Avatar>
+                  </TableCell>
                   <TableCell className="font-medium">{user.name}</TableCell>
                   <TableCell>{user.email}</TableCell>
                   <TableCell>
@@ -267,7 +279,7 @@ export function UserManagementClient() {
         setIsFormOpen(isOpen);
         if (!isOpen) {
             setEditingUser(null);
-            form.reset({ name: "", email: "", role: "tecnico", password: "" });
+            form.reset({ name: "", email: "", role: "tecnico", password: "", avatarUrl: "" });
         }
     }}>
         <DialogContent className="sm:max-w-[425px]">
@@ -281,6 +293,22 @@ export function UserManagementClient() {
             <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 py-4">
               <FormField control={form.control} name="name" render={({ field }) => ( <FormItem><FormLabel>Nombre Completo</FormLabel><FormControl><Input placeholder="Nombre Apellido" {...field} /></FormControl><FormMessage /></FormItem> )} />
               <FormField control={form.control} name="email" render={({ field }) => ( <FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" placeholder="usuario@ejemplo.com" {...field} /></FormControl><FormMessage /></FormItem> )} />
+              <FormField
+                control={form.control}
+                name="avatarUrl"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-1"><ImageIcon className="h-4 w-4"/> URL de Avatar (Opcional)</FormLabel>
+                    <FormControl>
+                      <Input type="url" placeholder="https://ejemplo.com/avatar.png" {...field} value={field.value ?? ""} />
+                    </FormControl>
+                    <FormDescription>
+                      Ingrese la URL completa de una imagen para el avatar.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <FormField control={form.control} name="role" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Rol</FormLabel>

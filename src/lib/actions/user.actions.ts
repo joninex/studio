@@ -27,7 +27,7 @@ export async function createUser(data: z.infer<typeof UserSchema>): Promise<{ su
     return { success: false, message: "Datos de usuario inválidos." };
   }
 
-  const { email, password, name, role } = validatedFields.data;
+  const { email, password, name, role, avatarUrl } = validatedFields.data;
   const currentUsers = await getAllMockUsers();
 
   if (currentUsers.find(u => u.email === email)) {
@@ -43,6 +43,7 @@ export async function createUser(data: z.infer<typeof UserSchema>): Promise<{ su
     uid: `newUser-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`, 
     email,
     name,
+    avatarUrl: avatarUrl || `https://i.pravatar.cc/150?u=${email}`,
     role: email === SUPER_ADMIN_EMAIL ? 'admin' : role, // Ensure super admin is admin
     status: email === SUPER_ADMIN_EMAIL ? 'active' : "active", // Super admin and admin-created users are active
     createdAt: new Date().toISOString(), 
@@ -57,8 +58,10 @@ export async function createUser(data: z.infer<typeof UserSchema>): Promise<{ su
 }
 
 export async function updateUser(uid: string, data: Partial<z.infer<typeof UserSchema>>): Promise<{ success: boolean; message: string; user?: User }> {
+  // Use UserSchema.partial() for update to allow only specific fields
   const validatedFields = UserSchema.partial().safeParse(data);
   if (!validatedFields.success) {
+    console.error("Update User Validation Error:", validatedFields.error.flatten().fieldErrors);
     return { success: false, message: "Datos de actualización inválidos." };
   }
 
@@ -70,7 +73,7 @@ export async function updateUser(uid: string, data: Partial<z.infer<typeof UserS
   
   await new Promise(resolve => setTimeout(resolve, 300));
 
-  const { password, email, role, ...restData } = validatedFields.data;
+  const { password, email, role, avatarUrl, ...restData } = validatedFields.data;
   const existingUser = currentUsers[userIndex];
 
   // Super admin protection
@@ -87,11 +90,13 @@ export async function updateUser(uid: string, data: Partial<z.infer<typeof UserS
     return { success: false, message: "El nuevo email ya está en uso por otro usuario." };
   }
   
-  const updatedUser = { 
+  const updatedUser: User = { 
     ...existingUser, 
     ...restData,
-    role: (existingUser.email === SUPER_ADMIN_EMAIL) ? 'admin' : (role || existingUser.role), // Keep superadmin role, else update
-    email: (existingUser.email === SUPER_ADMIN_EMAIL) ? SUPER_ADMIN_EMAIL : (email || existingUser.email), // Keep superadmin email
+    name: validatedFields.data.name ?? existingUser.name, // Ensure name updates if provided
+    avatarUrl: avatarUrl === undefined ? existingUser.avatarUrl : (avatarUrl || undefined), // Handle empty string as undefined
+    role: (existingUser.email === SUPER_ADMIN_EMAIL) ? 'admin' : (role || existingUser.role), 
+    email: (existingUser.email === SUPER_ADMIN_EMAIL) ? SUPER_ADMIN_EMAIL : (email || existingUser.email), 
     updatedAt: new Date().toISOString() 
   };
   
@@ -105,7 +110,6 @@ export async function updateUser(uid: string, data: Partial<z.infer<typeof UserS
     }
     updatedUser.email = email;
   }
-
 
   if (password && password.trim() !== "") { 
     await setMockPassword(updatedUser.email, password); 

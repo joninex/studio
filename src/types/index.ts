@@ -35,6 +35,7 @@ export interface User {
   uid: string;
   name: string;
   email: string;
+  avatarUrl?: string; // Added avatarUrl
   role: UserRole;
   status: UserStatus;
   storeSettings?: StoreSettings;

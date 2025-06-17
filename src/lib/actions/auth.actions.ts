@@ -12,6 +12,7 @@ let mockUsers: User[] = [
     uid: "admin123",
     name: "Jesús Admin",
     email: "jesus@mobyland.com.ar",
+    avatarUrl: "https://i.pravatar.cc/150?u=admin123", // Example avatar
     role: "admin",
     status: "active",
     storeSettings: { ...DEFAULT_STORE_SETTINGS, companyName: "JO-SERVICE Admin Store" },
@@ -22,6 +23,7 @@ let mockUsers: User[] = [
     uid: "tech123",
     name: "Carlos Técnico",
     email: "carlos@mobyland.com.ar",
+    avatarUrl: "https://i.pravatar.cc/150?u=tech123", // Example avatar
     role: "tecnico",
     status: "active",
     storeSettings: { ...DEFAULT_STORE_SETTINGS, companyName: "Carlos Tech Shop" },
@@ -85,6 +87,7 @@ export async function registerUser(
     uid: `user-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
     name,
     email,
+    avatarUrl: `https://i.pravatar.cc/150?u=${email}`, // Default avatar based on email
     role: "tecnico", // Default role for new registrations
     status: "pending", // New users start as pending
     storeSettings: { ...DEFAULT_STORE_SETTINGS, companyName: `${name}'s Store (Default)` },

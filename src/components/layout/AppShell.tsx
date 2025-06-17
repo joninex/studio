@@ -206,7 +206,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                   <Avatar className="h-9 w-9">
-                    <AvatarImage src={user?.uid ? `https://i.pravatar.cc/150?u=${user.uid}` : "https://placehold.co/40x40.png"} alt={user?.name || undefined} data-ai-hint="user avatar" />
+                    <AvatarImage 
+                      src={user?.avatarUrl || (user?.uid ? `https://i.pravatar.cc/150?u=${user.uid}` : "https://placehold.co/40x40.png")} 
+                      alt={user?.name || "Avatar de usuario"} 
+                      data-ai-hint="user avatar" 
+                    />
                     <AvatarFallback>{user?.name?.[0]?.toUpperCase() || 'U'}</AvatarFallback>
                   </Avatar>
                 </Button>
