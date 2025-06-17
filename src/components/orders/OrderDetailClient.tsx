@@ -838,6 +838,3 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
     </div>
   );
 }
-
-    
-```
