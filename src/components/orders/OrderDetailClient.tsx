@@ -1,7 +1,8 @@
+
 // src/components/orders/OrderDetailClient.tsx
 "use client";
 
-import type { Order, User, Comment as OrderComment, OrderStatus, StoreSettings, Client, Checklist } from "@/types";
+import type { Order, User, Comment as OrderComment, OrderStatus, StoreSettings, Client, Checklist, OrderPartItem, PaymentItem, PaymentMethod } from "@/types";
 import { useState, useTransition, ChangeEvent, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
@@ -18,9 +19,11 @@ import { useAuth } from "@/providers/AuthProvider";
 import { addOrderComment, updateOrderStatus, updateOrderCosts } from "@/lib/actions/order.actions";
 import { getClientById } from "@/lib/actions/client.actions"; 
 import { CHECKLIST_ITEMS, ORDER_STATUSES, SALE_CON_HUELLA_OPTIONS, DEFAULT_STORE_SETTINGS } from "@/lib/constants";
-import { AlertCircle, Bot, CalendarDays, DollarSign, Edit, FileText, Info, ListChecks, MessageSquare, Printer, User as UserIcon, Wrench, PackageCheck, Smartphone, LinkIcon, QrCode, GripVertical, FileLock2, LockKeyhole, ClockIcon } from "lucide-react";
+import { AlertCircle, Bot, CalendarDays, DollarSign, Edit, FileText, Info, ListChecks, MessageSquare, Printer, User as UserIcon, Wrench, PackageCheck, Smartphone, LinkIcon, QrCode, GripVertical, FileLock2, LockKeyhole, ClockIcon, Cog, CreditCard, PlusCircle } from "lucide-react";
 import { Input } from "../ui/input";
 import { LoadingSpinner } from "../shared/LoadingSpinner";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+
 
 const validOrderStatusOptions = ORDER_STATUSES.filter(status => status !== "") as OrderStatus[];
 
@@ -111,6 +114,25 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
       } else {
         toast({ variant: "destructive", title: "Error", description: result.message });
       }
+    });
+  };
+
+  const handleAddComment = async () => {
+    if (!user || !newComment.trim()) return;
+    startTransition(async () => {
+        const result = await addOrderComment(order.id!, newComment, { uid: user.uid, name: user.name });
+        if (result.success && result.comment) {
+            setOrder(prevOrder => ({
+                ...prevOrder,
+                commentsHistory: [...prevOrder.commentsHistory, result.comment!],
+                updatedAt: new Date().toISOString(),
+                lastUpdatedBy: user.uid,
+            }));
+            setNewComment("");
+            toast({ title: "Éxito", description: "Comentario agregado."});
+        } else {
+            toast({ variant: "destructive", title: "Error", description: result.message });
+        }
     });
   };
 
@@ -620,7 +642,46 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
             </>
           )}
 
-          {(order.costSparePart > 0 || order.costLabor > 0) && (
+          {/* Parts Used Section */}
+            <Separator/>
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                    <CardTitle className="text-lg flex items-center gap-2"><Cog className="h-5 w-5 text-primary"/>Piezas Utilizadas</CardTitle>
+                    <Button variant="outline" size="sm" onClick={() => toast({title: "Info", description: "Funcionalidad para agregar pieza en desarrollo."})}>
+                        <PlusCircle className="mr-2 h-4 w-4"/> Agregar Pieza
+                    </Button>
+                </CardHeader>
+                <CardContent>
+                    {(order.partsUsed && order.partsUsed.length > 0) ? (
+                        <div className="overflow-x-auto">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Nombre Pieza</TableHead>
+                                        <TableHead className="text-center">Cantidad</TableHead>
+                                        <TableHead className="text-right">Precio Unit.</TableHead>
+                                        <TableHead className="text-right">Precio Total</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {order.partsUsed.map((part, index) => (
+                                        <TableRow key={index}>
+                                            <TableCell>{part.partName}</TableCell>
+                                            <TableCell className="text-center">{part.quantity}</TableCell>
+                                            <TableCell className="text-right">${part.unitPrice.toFixed(2)}</TableCell>
+                                            <TableCell className="text-right font-semibold">${part.totalPrice.toFixed(2)}</TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    ) : (
+                        <p className="text-sm text-muted-foreground text-center py-4">No se han registrado piezas utilizadas para esta orden.</p>
+                    )}
+                </CardContent>
+            </Card>
+
+          {(order.costSparePart > 0 || order.costLabor > 0 || order.costPending !== 0) && (
             <>
               <Separator/>
                <div>
@@ -655,13 +716,52 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
                     <div className="grid sm:grid-cols-3 gap-4 text-sm">
                         <p><strong>Repuesto:</strong> ${order.costSparePart.toFixed(2)}</p>
                         <p><strong>Mano de Obra:</strong> ${order.costLabor.toFixed(2)}</p>
-                        <p><strong>Pendiente:</strong> ${order.costPending.toFixed(2)}</p>
+                        <p className={order.costPending > 0 ? "text-destructive font-semibold" : ""}><strong>Pendiente:</strong> ${order.costPending.toFixed(2)}</p>
                         <p className="sm:col-span-3 font-bold text-base"><strong>Total Estimado:</strong> ${(order.costSparePart + order.costLabor).toFixed(2)}</p>
                     </div>
                 )}
                </div>
             </>
           )}
+
+            {/* Payment History Section */}
+            <Separator/>
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                    <CardTitle className="text-lg flex items-center gap-2"><CreditCard className="h-5 w-5 text-primary"/>Historial de Pagos</CardTitle>
+                     <Button variant="outline" size="sm" onClick={() => toast({title: "Info", description: "Funcionalidad para registrar pago en desarrollo."})}>
+                        <PlusCircle className="mr-2 h-4 w-4"/> Registrar Pago
+                    </Button>
+                </CardHeader>
+                <CardContent>
+                    {(order.paymentHistory && order.paymentHistory.length > 0) ? (
+                        <div className="overflow-x-auto">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Fecha</TableHead>
+                                        <TableHead>Método</TableHead>
+                                        <TableHead className="text-right">Monto</TableHead>
+                                        <TableHead>Notas</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {order.paymentHistory.map((payment) => (
+                                        <TableRow key={payment.id}>
+                                            <TableCell>{format(parseISO(payment.date as string), "dd MMM yyyy, HH:mm", { locale: es })}</TableCell>
+                                            <TableCell>{payment.method}</TableCell>
+                                            <TableCell className="text-right font-semibold">${payment.amount.toFixed(2)}</TableCell>
+                                            <TableCell>{payment.notes || "N/A"}</TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    ) : (
+                        <p className="text-sm text-muted-foreground text-center py-4">No se han registrado pagos para esta orden.</p>
+                    )}
+                </CardContent>
+            </Card>
           
           {order.hasWarranty && (
              <>
@@ -740,3 +840,4 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
 }
 
     
+```

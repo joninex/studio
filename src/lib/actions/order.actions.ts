@@ -1,7 +1,8 @@
+
 // src/lib/actions/order.actions.ts
 "use server";
 
-import type { Order, User, Comment as OrderCommentType, StoreSettings, Client, WarrantyType, OrderStatus, Checklist } from "@/types";
+import type { Order, User, Comment as OrderCommentType, StoreSettings, Client, WarrantyType, OrderStatus, Checklist, OrderPartItem, PaymentItem, PaymentMethod } from "@/types";
 import { OrderSchema } from "@/lib/schemas";
 import type { z } from "zod";
 import { suggestRepairSolutions } from "@/ai/flows/suggest-repair-solutions";
@@ -48,6 +49,13 @@ let mockOrders: Order[] = [
     commentsHistory: [
       { id: 'cmt-1', userId: 'tech123', userName: 'Carlos Técnico', description: 'Se confirma pantalla rota, posible daño en flex de display.', timestamp: new Date(Date.now() - 1.5 * 24 * 60 * 60 * 1000).toISOString()}
     ],
+    partsUsed: [
+      { partId: "PART001", partName: "Pantalla Samsung S21 OEM", quantity: 1, unitPrice: 12000, totalPrice: 12000 },
+      { partId: "ADH001", partName: "Adhesivo B7000", quantity: 1, unitPrice: 500, totalPrice: 500 }
+    ],
+    paymentHistory: [
+      { id: "PAY001A", amount: 17500, date: new Date(Date.now() - 0.5 * 24 * 60 * 60 * 1000).toISOString(), method: "Efectivo", notes: "Pago total."}
+    ],
     orderCompanyName: DEFAULT_STORE_SETTINGS.companyName,
     orderCompanyLogoUrl: DEFAULT_STORE_SETTINGS.companyLogoUrl,
     orderCompanyCuit: DEFAULT_STORE_SETTINGS.companyCuit,
@@ -88,7 +96,7 @@ let mockOrders: Order[] = [
       return acc;
     }, {} as Checklist),
     damageRisk: "", pantalla_parcial: false, equipo_sin_acceso: false, perdida_informacion: false,
-    costSparePart: 8000, costLabor: 4000, costPending: 0,
+    costSparePart: 8000, costLabor: 4000, costPending: 2000, // Cliente dejó una seña
     classification: "verde", observations: "Probable falla en pin de carga o batería.",
     customerAccepted: true, customerSignatureName: "Maria Lopez",
     dataLossDisclaimerAccepted: true, privacyPolicyAccepted: true,    
@@ -101,6 +109,12 @@ let mockOrders: Order[] = [
       { id: 'cmt-2a', userId: 'tech123', userName: 'Carlos Técnico', description: 'Diagnóstico: pin de carga defectuoso. Cliente aprueba presupuesto.', timestamp: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString()},
       { id: 'cmt-2b', userId: 'tech123', userName: 'Carlos Técnico', description: 'Repuesto solicitado. En espera.', timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()},
       { id: 'cmt-2c', userId: 'tech123', userName: 'Carlos Técnico', description: 'Repuesto recibido. Reparación completada.', timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString()}
+    ],
+    partsUsed: [
+      { partId: "FLX-IP12-CHG", partName: "Flex Carga iPhone 12", quantity: 1, unitPrice: 7000, totalPrice: 7000 }
+    ],
+    paymentHistory: [
+      { id: "PAY002A", amount: 10000, date: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(), method: "Mercado Pago", notes: "Seña para repuestos."}
     ],
     orderCompanyName: "JO-SERVICE (Ejemplo)",
     orderCompanyLogoUrl: DEFAULT_STORE_SETTINGS.companyLogoUrl,
@@ -149,6 +163,8 @@ let mockOrders: Order[] = [
     commentsHistory: [
       { id: 'cmt-3', userId: 'tech123', userName: 'Carlos Técnico', description: 'Falla de placa, no se pudo reparar. Equipo devuelto sin costo.', timestamp: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString()}
     ],
+    partsUsed: [],
+    paymentHistory: [],
     orderCompanyName: DEFAULT_STORE_SETTINGS.companyName,
     orderCompanyLogoUrl: DEFAULT_STORE_SETTINGS.companyLogoUrl,
     orderCompanyCuit: DEFAULT_STORE_SETTINGS.companyCuit,
@@ -206,6 +222,8 @@ export async function createOrder(
     entryDate: new Date().toISOString(),
     promisedDeliveryDate: data.promisedDeliveryDate ? new Date(data.promisedDeliveryDate).toISOString() : null,
     commentsHistory: [],
+    partsUsed: [], // Initialize as empty array
+    paymentHistory: [], // Initialize as empty array
     status: data.status || "Recibido", 
     
     orderCompanyName: settingsToSnapshot.companyName,
@@ -457,4 +475,52 @@ export async function updateOrder(
   }
 
   return { success: true, message: "Orden actualizada exitosamente.", order: JSON.parse(JSON.stringify(mockOrders[orderIndex])) };
+}
+
+// Placeholder server actions for parts and payments on an order
+export async function addPartToOrder(
+  orderId: string,
+  partItem: OrderPartItem,
+  userId: string
+): Promise<{ success: boolean; message: string; order?: Order }> {
+  const orderIndex = mockOrders.findIndex(o => o.id === orderId);
+  if (orderIndex === -1) return { success: false, message: "Orden no encontrada." };
+
+  if (!mockOrders[orderIndex].partsUsed) {
+    mockOrders[orderIndex].partsUsed = [];
+  }
+  mockOrders[orderIndex].partsUsed!.push(partItem);
+  mockOrders[orderIndex].lastUpdatedBy = userId;
+  mockOrders[orderIndex].updatedAt = new Date().toISOString();
+  // Potentially update costSparePart here as well
+  mockOrders[orderIndex].costSparePart += partItem.totalPrice;
+
+
+  return { success: true, message: "Pieza agregada a la orden.", order: JSON.parse(JSON.stringify(mockOrders[orderIndex])) };
+}
+
+export async function recordPaymentForOrder(
+  orderId: string,
+  paymentDetails: Omit<PaymentItem, 'id'>, // id will be generated
+  userId: string
+): Promise<{ success: boolean; message: string; order?: Order }> {
+  const orderIndex = mockOrders.findIndex(o => o.id === orderId);
+  if (orderIndex === -1) return { success: false, message: "Orden no encontrada." };
+
+  if (!mockOrders[orderIndex].paymentHistory) {
+    mockOrders[orderIndex].paymentHistory = [];
+  }
+  const newPayment: PaymentItem = {
+    id: `PAY${Date.now()}`,
+    ...paymentDetails,
+    date: new Date(paymentDetails.date).toISOString()
+  };
+  mockOrders[orderIndex].paymentHistory!.push(newPayment);
+  mockOrders[orderIndex].lastUpdatedBy = userId;
+  mockOrders[orderIndex].updatedAt = new Date().toISOString();
+  // Potentially update costPending here
+  mockOrders[orderIndex].costPending -= newPayment.amount;
+  if (mockOrders[orderIndex].costPending < 0) mockOrders[orderIndex].costPending = 0;
+
+  return { success: true, message: "Pago registrado.", order: JSON.parse(JSON.stringify(mockOrders[orderIndex])) };
 }

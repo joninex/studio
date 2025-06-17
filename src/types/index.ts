@@ -1,3 +1,4 @@
+
 import type { Timestamp } from 'firebase/firestore'; // Using type for Firebase Timestamp
 
 export type UserStatus = 'pending' | 'active' | 'denied';
@@ -110,6 +111,24 @@ export interface Comment {
 
 export type WarrantyType = '30d' | '60d' | '90d' | 'custom' | null;
 
+export interface OrderPartItem {
+  partId: string; // Could link to a Part['id'] in a real system
+  partName: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+}
+
+export type PaymentMethod = "Efectivo" | "Tarjeta de Crédito" | "Tarjeta de Débito" | "Transferencia" | "Mercado Pago" | "Otro";
+
+export interface PaymentItem {
+  id: string;
+  amount: number;
+  date: Timestamp | Date | string;
+  method: PaymentMethod;
+  notes?: string;
+}
+
 export interface Order {
   id?: string;
   orderNumber: string;
@@ -146,6 +165,8 @@ export interface Order {
   readyForPickupDate?: Timestamp | Date | string | null;
 
   commentsHistory: Comment[];
+  partsUsed?: OrderPartItem[];
+  paymentHistory?: PaymentItem[];
 
   checklist: Checklist;
 
@@ -247,3 +268,5 @@ export interface Supplier {
   createdAt: Timestamp | Date | string;
   updatedAt: Timestamp | Date | string;
 }
+
+```
