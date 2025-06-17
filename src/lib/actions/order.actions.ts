@@ -14,20 +14,20 @@ let mockOrders: Order[] = [
   {
     id: "ORD001", orderNumber: "ORD001",
     clientId: "CLI001", 
-    branchInfo: "Taller Central (Admin)",
+    branchInfo: "Taller Principal (Admin)",
     deviceBrand: "Samsung", deviceModel: "Galaxy S21", deviceIMEI: "123456789012345", declaredFault: "Pantalla rota", 
-    unlockPatternInfo: "1234", // Now a free text field
+    unlockPatternInfo: "1234", 
     checklist: CHECKLIST_ITEMS.reduce((acc, item) => { 
-        if (item.id === 'consumoV') { // @ts-ignore
-            acc[item.id] = "0.5A";
-        } else if (item.id === 'mah') { // @ts-ignore
-            acc[item.id] = "4000mAh";
-        } else if (item.id === 'saleConHuella') { // @ts-ignore
-            acc[item.id] = "si";
-        } else if (item.type === 'boolean') { // @ts-ignore
-            acc[item.id] = ['enciende', 'tactil', 'imagen', 'botones', 'cam_trasera', 'cam_delantera', 'vibrador', 'microfono', 'auricular', 'parlante', 'sensor_huella', 'senal', 'wifi_bluetooth', 'pin_carga', 'lente_camara', 'equipo_doblado'].includes(item.id) ? 'si' : 'no';
-        } else { // @ts-ignore
-             acc[item.id] = "";
+        if (item.id === 'consumoV') {
+            (acc as any)[item.id] = "0.5A";
+        } else if (item.id === 'mah') {
+            (acc as any)[item.id] = "4000mAh";
+        } else if (item.id === 'saleConHuella') {
+            (acc as any)[item.id] = "si";
+        } else if (item.type === 'boolean') {
+            (acc as any)[item.id] = ['enciende', 'tactil', 'imagen', 'botones', 'cam_trasera', 'cam_delantera', 'vibrador', 'microfono', 'auricular', 'parlante', 'sensor_huella', 'senal', 'wifi_bluetooth', 'pin_carga', 'lente_camara', 'equipo_doblado'].includes(item.id) ? 'si' : 'no';
+        } else { 
+             (acc as any)[item.id] = "";
         }
         return acc;
     }, {} as Checklist),
@@ -35,12 +35,14 @@ let mockOrders: Order[] = [
     costSparePart: 15000, costLabor: 5000, costPending: 0,
     classification: "rojo", observations: "Cliente indica que se cayó.",
     customerAccepted: true, customerSignatureName: "Juan Perez",
-    dataLossDisclaimerAccepted: true, // Corresponds to dataLossPolicyText
-    privacyPolicyAccepted: true,    // Corresponds to privacyPolicyText
+    dataLossDisclaimerAccepted: true, 
+    privacyPolicyAccepted: true,    
     status: "En Diagnóstico", previousOrderId: "",
     entryDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-    commentsHistory: [],
-    // Snapshotted store settings
+    commentsHistory: [
+      { id: 'cmt-1', userId: 'tech123', userName: 'Carlos Técnico', description: 'Se confirma pantalla rota, posible daño en flex de display.', timestamp: new Date(Date.now() - 1.5 * 24 * 60 * 60 * 1000).toISOString()}
+    ],
+    // Snapshotted store settings (will now reflect updated DEFAULT_STORE_SETTINGS with "JO-SERVICE")
     orderCompanyName: DEFAULT_STORE_SETTINGS.companyName,
     orderCompanyLogoUrl: DEFAULT_STORE_SETTINGS.companyLogoUrl,
     orderCompanyCuit: DEFAULT_STORE_SETTINGS.companyCuit,
@@ -59,14 +61,56 @@ let mockOrders: Order[] = [
     orderSnapshottedWarrantyVoidConditionsText: DEFAULT_STORE_SETTINGS.warrantyVoidConditionsText,
     orderSnapshottedPrivacyPolicy: DEFAULT_STORE_SETTINGS.privacyPolicyText,
 
-    createdByUserId: "admin123", lastUpdatedBy: "admin123",
-    updatedAt: new Date().toISOString(), createdAt: new Date().toISOString(),
+    createdByUserId: "admin123", lastUpdatedBy: "tech123",
+    updatedAt: new Date(Date.now() - 1.5 * 24 * 60 * 60 * 1000).toISOString(), createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
     hasWarranty: true,
     warrantyType: '90d',
     warrantyStartDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     warrantyEndDate: new Date(Date.now() + 88 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     warrantyCoveredItem: "Pantalla completa",
     warrantyNotes: "Garantía no cubre daños por líquidos o mal uso.",
+  },
+   {
+    id: "ORD002", orderNumber: "ORD002",
+    clientId: "CLI002", 
+    branchInfo: "Sucursal Norte",
+    deviceBrand: "Apple", deviceModel: "iPhone 12", deviceIMEI: "987654321098765", declaredFault: "No carga la batería", 
+    unlockPatternInfo: "No tiene", 
+    checklist: CHECKLIST_ITEMS.reduce((acc, item) => {
+      (acc as any)[item.id] = (item.type === 'boolean') ? 'si' : (item.type === 'enum_saleConHuella' ? 'no_tiene' : '');
+      if(item.id === 'pin_carga') (acc as any)[item.id] = 'no';
+      return acc;
+    }, {} as Checklist),
+    damageRisk: "", pantalla_parcial: false, equipo_sin_acceso: false, perdida_informacion: false,
+    costSparePart: 8000, costLabor: 4000, costPending: 0,
+    classification: "verde", observations: "Probable falla en pin de carga o batería.",
+    customerAccepted: true, customerSignatureName: "Maria Lopez",
+    dataLossDisclaimerAccepted: true, privacyPolicyAccepted: true,    
+    status: "En Reparación", previousOrderId: "",
+    entryDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+    commentsHistory: [
+      { id: 'cmt-2a', userId: 'tech123', userName: 'Carlos Técnico', description: 'Diagnóstico: pin de carga defectuoso. Cliente aprueba presupuesto.', timestamp: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString()},
+      { id: 'cmt-2b', userId: 'tech123', userName: 'Carlos Técnico', description: 'Repuesto solicitado. En espera.', timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()},
+      { id: 'cmt-2c', userId: 'tech123', userName: 'Carlos Técnico', description: 'Repuesto recibido. Iniciando reparación.', timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString()}
+    ],
+    orderCompanyName: "JO-SERVICE (Ejemplo)", // Example of a direct setting
+    orderCompanyLogoUrl: DEFAULT_STORE_SETTINGS.companyLogoUrl,
+    orderCompanyCuit: DEFAULT_STORE_SETTINGS.companyCuit,
+    orderCompanyAddress: "Av. Corrientes 123, CABA",
+    orderCompanyContactDetails: DEFAULT_STORE_SETTINGS.companyContactDetails,
+    orderWarrantyConditions: DEFAULT_STORE_SETTINGS.warrantyConditions,
+    orderSnapshottedUnlockDisclaimer: DEFAULT_STORE_SETTINGS.unlockDisclaimerText,
+    orderSnapshottedAbandonmentPolicyText: DEFAULT_STORE_SETTINGS.abandonmentPolicyText,
+    orderSnapshottedDataLossPolicyText: DEFAULT_STORE_SETTINGS.dataLossPolicyText,
+    orderSnapshottedUntestedDevicePolicyText: DEFAULT_STORE_SETTINGS.untestedDevicePolicyText,
+    orderSnapshottedBudgetVariationText: DEFAULT_STORE_SETTINGS.budgetVariationText,
+    orderSnapshottedHighRiskDeviceText: DEFAULT_STORE_SETTINGS.highRiskDeviceText,
+    orderSnapshottedPartialDamageDisplayText: DEFAULT_STORE_SETTINGS.partialDamageDisplayText,
+    orderSnapshottedWarrantyVoidConditionsText: DEFAULT_STORE_SETTINGS.warrantyVoidConditionsText,
+    orderSnapshottedPrivacyPolicy: DEFAULT_STORE_SETTINGS.privacyPolicyText,
+    createdByUserId: "recepcionista123", lastUpdatedBy: "tech123",
+    updatedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+    hasWarranty: false,
   },
 ];
 let orderCounter = mockOrders.length;
@@ -76,9 +120,6 @@ function generateOrderNumber(): string {
   return `ORD${String(orderCounter).padStart(3, '0')}`;
 }
 
-// TODO: Implement actual encryption/decryption for unlockPatternInfo
-// async function encryptUnlockPattern(pattern: string): Promise<string> { return `encrypted_${pattern}`; }
-// async function decryptUnlockPattern(encryptedPattern: string): Promise<string> { return encryptedPattern.replace('encrypted_', ''); }
 
 export async function createOrder(
   values: z.infer<typeof OrderSchema>,
@@ -97,14 +138,11 @@ export async function createOrder(
   const data = validatedFields.data;
   const newOrderNumber = generateOrderNumber();
   
-  // const encryptedUnlockPattern = await encryptUnlockPattern(data.unlockPatternInfo); // TODO: Encrypt
-
   const newOrder: Order = {
     id: newOrderNumber,
     orderNumber: newOrderNumber,
     ...data, 
-    // unlockPatternInfo: encryptedUnlockPattern, // Store encrypted
-    unlockPatternInfo: data.unlockPatternInfo, // Storing plain for mock
+    unlockPatternInfo: data.unlockPatternInfo, 
     previousOrderId: data.previousOrderId || "",
     entryDate: new Date().toISOString(),
     commentsHistory: [],
@@ -185,16 +223,14 @@ export async function getOrders(filters?: { client?: string, orderNumber?: strin
     };
   });
   
-  return JSON.parse(JSON.stringify(ordersWithClientNames.sort((a, b) => new Date(b.entryDate).getTime() - new Date(a.entryDate).getTime())));
+  return JSON.parse(JSON.stringify(ordersWithClientNames.sort((a, b) => new Date(b.updatedAt || b.createdAt || 0).getTime() - new Date(a.updatedAt || a.createdAt || 0).getTime())));
 }
 
 export async function getOrderById(id: string): Promise<Order | null> {
   await new Promise(resolve => setTimeout(resolve, 300));
   const order = mockOrders.find(o => o.id === id);
   if (order) {
-    // const decryptedOrder = { ...order, unlockPatternInfo: await decryptUnlockPattern(order.unlockPatternInfo) }; // TODO: Decrypt
-    // return JSON.parse(JSON.stringify(decryptedOrder));
-    return JSON.parse(JSON.stringify(order)); // Returning plain for mock
+    return JSON.parse(JSON.stringify(order)); 
   }
   return null;
 }
@@ -301,15 +337,10 @@ export async function updateOrder(
   
   const currentOrder = mockOrders[orderIndex];
   
-  // if (validatedFields.data.unlockPatternInfo && validatedFields.data.unlockPatternInfo !== currentOrder.unlockPatternInfo) {
-  //   validatedFields.data.unlockPatternInfo = await encryptUnlockPattern(validatedFields.data.unlockPatternInfo); // TODO: Encrypt if changed
-  // }
-
-
   const updatedOrderData: Order = {
     ...currentOrder,
     ...validatedFields.data, 
-    unlockPatternInfo: validatedFields.data.unlockPatternInfo || currentOrder.unlockPatternInfo, // Use new if provided, else keep old
+    unlockPatternInfo: validatedFields.data.unlockPatternInfo || currentOrder.unlockPatternInfo, 
     lastUpdatedBy: userId, 
     updatedAt: new Date().toISOString(),
   };
@@ -330,3 +361,5 @@ export async function updateOrder(
 
   return { success: true, message: "Orden actualizada exitosamente.", order: JSON.parse(JSON.stringify(mockOrders[orderIndex])) };
 }
+
+```

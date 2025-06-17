@@ -1,17 +1,21 @@
+
 // src/app/(app)/dashboard/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/providers/AuthProvider";
 import { getOrders } from "@/lib/actions/order.actions";
 import type { Order, OrderStatus } from "@/types"; 
-import { BarChart, FileText, Users, Wrench, PackageCheck, AlertTriangle, ListFilter, FileClock, Construction, Truck } from "lucide-react"; 
+import { BarChart, FileText, Users, Wrench, PackageCheck, AlertTriangle, FileClock, Construction, Truck, List, ArrowRight } from "lucide-react"; 
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner"; 
+import { Badge } from "@/components/ui/badge";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -56,13 +60,41 @@ export default function DashboardPage() {
     (order) => notCompletedOrRejectedStatuses.includes(order.status)
   ).length;
 
-
   const quickStats = [
     { title: "Órdenes Pendientes", value: pendingOrdersCount, icon: FileClock, color: "text-blue-500", bgColor: "bg-blue-100", description: "Requieren atención inicial o aprobación." },
     { title: "En Reparación / Proceso", value: inRepairOrdersCount, icon: Wrench, color: "text-yellow-500", bgColor: "bg-yellow-100", description: "En taller, espera de repuestos o QC." },
     { title: "Listos para Retirar", value: readyForPickupCount, icon: PackageCheck, color: "text-green-500", bgColor: "bg-green-100", description: "Finalizados, esperando al cliente." },
     { title: "Rechazados / Sin Solución", value: rejectedOrNoSolutionCount, icon: AlertTriangle, color: "text-red-500", bgColor: "bg-red-100", description: "Presupuestos no aprobados o sin reparación." },
   ];
+
+  const recentActivityOrders = useMemo(() => {
+    return [...ordersData]
+      .sort((a, b) => new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime())
+      .slice(0, 5);
+  }, [ordersData]);
+
+  const getStatusBadgeVariant = (status: OrderStatus): "default" | "secondary" | "destructive" | "outline" => {
+    switch (status) {
+      case "Presupuesto Aprobado":
+      case "En Espera de Repuestos":
+      case "En Reparación":
+      case "Reparado":
+      case "En Control de Calidad":
+      case "Listo para Entrega":
+        return "default"; 
+      case "Entregado":
+        return "secondary";
+      case "Recibido":
+      case "En Diagnóstico":
+      case "Presupuestado":
+        return "outline"; 
+      case "Presupuesto Rechazado":
+      case "Sin Reparación":
+        return "destructive";
+      default:
+        return "outline";
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -124,13 +156,57 @@ export default function DashboardPage() {
         </Card>
         <Card className="shadow-lg">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><BarChart className="h-5 w-5 text-primary" />Actividad Reciente</CardTitle>
+            <CardTitle className="flex items-center gap-2"><List className="h-5 w-5 text-primary" />Actividad Reciente</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col items-center justify-center h-48 border-2 border-dashed rounded-md">
-                <Image src="https://placehold.co/300x150.png" alt="Gráfico de Actividad" width={300} height={150} data-ai-hint="activity chart" className="opacity-50"/>
-                <p className="text-muted-foreground mt-2">Próximamente: Gráficos de actividad.</p>
-            </div>
+            {isLoadingStats ? (
+              <div className="space-y-4">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="flex items-center gap-4 p-3 rounded-lg border bg-muted/30">
+                    <Skeleton className="h-10 w-10 rounded-md" />
+                    <div className="flex-grow space-y-1.5">
+                      <Skeleton className="h-4 w-3/4" />
+                      <Skeleton className="h-3 w-1/2" />
+                    </div>
+                    <Skeleton className="h-6 w-20 rounded-md" />
+                  </div>
+                ))}
+              </div>
+            ) : recentActivityOrders.length > 0 ? (
+              <div className="space-y-3">
+                {recentActivityOrders.map((order) => (
+                  <Link key={order.id} href={`/orders/${order.id}`} className="block hover:bg-muted/50 p-3 rounded-lg border transition-colors group">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex-grow">
+                        <p className="text-sm font-medium text-primary">
+                          Orden: {order.orderNumber}
+                          {order.clientName && order.clientName !== 'N/D' && ` - ${order.clientName} ${order.clientLastName || ''}`}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Actualizado: {format(new Date(order.updatedAt), "dd MMM yyyy, HH:mm", { locale: es })}
+                        </p>
+                      </div>
+                      <div className="flex flex-col items-end gap-1">
+                         <Badge variant={getStatusBadgeVariant(order.status)} className="text-xs whitespace-nowrap">{order.status}</Badge>
+                         <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary"/>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+                 {ordersData.length > 5 && (
+                    <div className="mt-4 text-center">
+                        <Link href="/orders">
+                            <Button variant="link" className="text-sm">Ver todas las órdenes</Button>
+                        </Link>
+                    </div>
+                 )}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-40 border-2 border-dashed rounded-md">
+                <List className="h-12 w-12 text-muted-foreground opacity-50" />
+                <p className="text-muted-foreground mt-2">No hay actividad reciente.</p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
