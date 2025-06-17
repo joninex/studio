@@ -2,7 +2,7 @@
 "use server";
 
 import type { Client } from "@/types";
-import { ClientSchema } from "@/lib/schemas";
+import { ClientSchema, type ClientFormData } from "@/lib/schemas";
 import type { z } from "zod";
 
 // Mock database for clients
@@ -80,6 +80,30 @@ export async function createClient(
   mockClients.push(newClient);
   return { success: true, message: "Cliente creado exitosamente.", client: newClient };
 }
+
+export async function updateClient(
+  clientId: string,
+  values: z.infer<typeof ClientSchema>
+): Promise<{ success: boolean; message: string; client?: Client }> {
+  const validatedFields = ClientSchema.safeParse(values);
+  if (!validatedFields.success) {
+    return { success: false, message: "Datos de cliente inválidos para actualizar." };
+  }
+
+  const clientIndex = mockClients.findIndex(c => c.id === clientId);
+  if (clientIndex === -1) {
+    return { success: false, message: "Cliente no encontrado." };
+  }
+
+  const updatedClient: Client = {
+    ...mockClients[clientIndex],
+    ...validatedFields.data,
+    updatedAt: new Date().toISOString(),
+  };
+  mockClients[clientIndex] = updatedClient;
+  return { success: true, message: "Cliente actualizado exitosamente.", client: updatedClient };
+}
+
 
 export async function getClients(filters?: {
   name?: string;

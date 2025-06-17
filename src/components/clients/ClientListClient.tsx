@@ -87,6 +87,25 @@ export function ClientListClient({ initialClients, initialFilters }: ClientListC
     fetchClientsInternal(currentFilters);
   }, [searchParams, fetchClientsInternal]);
 
+  // Placeholder for delete functionality
+  const handleDeleteClient = async (clientId: string) => {
+    toast({ title: "Info", description: `Funcionalidad de eliminar cliente (ID: ${clientId}) no implementada.`});
+    // Implement actual deletion logic here
+    // Example:
+    // if (confirm("¿Está seguro de que desea eliminar este cliente?")) {
+    //   startTransition(async () => {
+    //     const result = await deleteClientAction(clientId); // Assuming deleteClientAction exists
+    //     if (result.success) {
+    //       toast({ title: "Éxito", description: "Cliente eliminado." });
+    //       fetchClientsInternal(filters); // Refresh list
+    //     } else {
+    //       toast({ variant: "destructive", title: "Error", description: result.message });
+    //     }
+    //   });
+    // }
+  };
+
+
   return (
     <Card className="shadow-xl">
       <CardHeader>
@@ -148,14 +167,12 @@ export function ClientListClient({ initialClients, initialFilters }: ClientListC
                       {client.createdAt ? format(new Date(client.createdAt as string), "dd MMM yyyy", { locale: es }) : 'N/A'}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button asChild variant="ghost" size="icon" title="Ver/Editar Cliente (Próximamente)">
-                        {/* <Link href={`/clients/${client.id}`}> */}
-                        <span className="cursor-not-allowed">
+                      <Button asChild variant="ghost" size="icon" title="Editar Cliente">
+                        <Link href={`/clients/${client.id}/edit`}>
                           <Edit className="h-4 w-4" />
-                        </span>
-                        {/* </Link> */}
+                        </Link>
                       </Button>
-                       <Button variant="ghost" size="icon" title="Eliminar Cliente (Próximamente)" className="cursor-not-allowed">
+                       <Button variant="ghost" size="icon" title="Eliminar Cliente (Próximamente)" onClick={() => handleDeleteClient(client.id)} className="cursor-not-allowed">
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
                     </TableCell>

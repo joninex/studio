@@ -4,34 +4,33 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import type { z } from "zod";
 
 import { ClientSchema, type ClientFormData } from "@/lib/schemas";
-import { createClient } // Potentially updateClient if editing later
-  from "@/lib/actions/client.actions";
+import { createClient, updateClient, getClientById } from "@/lib/actions/client.actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
-import { UserCircle, Phone, Mail, Home, Edit3, ShieldAlert, FileText } from "lucide-react";
+import { UserCircle, Phone, Mail, Home, Edit3, FileText } from "lucide-react";
 
+interface ClientFormProps {
+  clientId?: string;
+  initialData?: Partial<ClientFormData>;
+}
 
-// interface ClientFormProps {
-//   clientId?: string; // For editing existing clients
-//   initialData?: Partial<ClientFormData>;
-// }
-
-export function ClientForm(/* { clientId, initialData }: ClientFormProps */) {
+export function ClientForm({ clientId, initialData }: ClientFormProps) {
   const router = useRouter();
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
+  const [isLoadingData, setIsLoadingData] = useState(!!clientId && !initialData);
 
   const form = useForm<ClientFormData>({
     resolver: zodResolver(ClientSchema),
-    defaultValues: /*initialData ||*/ {
+    defaultValues: initialData || {
       name: "",
       lastName: "",
       dni: "",
@@ -42,29 +41,57 @@ export function ClientForm(/* { clientId, initialData }: ClientFormProps */) {
     },
   });
 
+  useEffect(() => {
+    if (clientId && !initialData) {
+      setIsLoadingData(true);
+      getClientById(clientId)
+        .then(data => {
+          if (data) {
+            form.reset(data);
+          } else {
+            toast({ variant: "destructive", title: "Error", description: "Cliente no encontrado." });
+            router.push("/clients");
+          }
+        })
+        .catch(() => {
+          toast({ variant: "destructive", title: "Error", description: "No se pudo cargar el cliente." });
+        })
+        .finally(() => setIsLoadingData(false));
+    }
+  }, [clientId, initialData, form, toast, router]);
+
   const onSubmit = (values: ClientFormData) => {
     startTransition(async () => {
-      // if (clientId) {
-      //   // Update logic
-      //   const result = await updateClient(clientId, values);
-      //   if (result.success) {
-      //     toast({ title: "Éxito", description: "Cliente actualizado correctamente." });
-      //     router.push(`/clients/${clientId}`); // or /clients
-      //   } else {
-      //     toast({ variant: "destructive", title: "Error", description: result.message });
-      //   }
-      // } else {
-        // Create logic
+      if (clientId) {
+        const result = await updateClient(clientId, values);
+        if (result.success) {
+          toast({ title: "Éxito", description: "Cliente actualizado correctamente." });
+          router.push("/clients"); // Or to /clients/${clientId} when detail page exists
+          router.refresh(); // Ensure the list is updated
+        } else {
+          toast({ variant: "destructive", title: "Error", description: result.message });
+        }
+      } else {
         const result = await createClient(values);
         if (result.success && result.client?.id) {
           toast({ title: "Éxito", description: "Cliente creado correctamente." });
-          router.push("/clients"); // Navigate to client list after creation
+          router.push("/clients");
+          router.refresh(); 
         } else {
           toast({ variant: "destructive", title: "Error", description: result.message || "No se pudo crear el cliente." });
         }
-      // }
+      }
     });
   };
+
+  if (isLoadingData) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <LoadingSpinner size={32} />
+        <p className="ml-2">Cargando datos del cliente...</p>
+      </div>
+    );
+  }
 
   return (
     <Form {...form}>
@@ -168,10 +195,9 @@ export function ClientForm(/* { clientId, initialData }: ClientFormProps */) {
         />
 
         <div className="flex justify-end pt-4">
-          <Button type="submit" disabled={isPending} className="w-full sm:w-auto">
-            {isPending && <LoadingSpinner size={16} className="mr-2" />}
-            {/* {clientId ? "Guardar Cambios" : "Crear Cliente"} */}
-            Crear Cliente
+          <Button type="submit" disabled={isPending || isLoadingData} className="w-full sm:w-auto">
+            {(isPending || isLoadingData) && <LoadingSpinner size={16} className="mr-2" />}
+            {clientId ? "Guardar Cambios" : "Crear Cliente"}
           </Button>
         </div>
       </form>
