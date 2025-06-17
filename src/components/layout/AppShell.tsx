@@ -123,7 +123,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       return (
         <SidebarMenuItem key={item.href}>
-          <Link href={item.href} passHref legacyBehavior>
+          <Link href={item.href}>
             <SidebarMenuButton isActive={isActive} asChild={!isSubMenu} className={isSubMenu ? 'text-sm' : ''}>
               <Icon />
               <span>{item.label}</span>

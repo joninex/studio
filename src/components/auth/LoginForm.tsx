@@ -124,10 +124,8 @@ export function LoginForm() {
         </Form>
       </CardContent>
       <CardFooter className="flex-col items-center">
-         <Link href="/reset-password" passHref legacyBehavior>
-            <a className="text-sm text-primary hover:underline">
-              ¿Olvidó su contraseña?
-            </a>
+         <Link href="/reset-password" className="text-sm text-primary hover:underline">
+            ¿Olvidó su contraseña?
           </Link>
       </CardFooter>
     </Card>

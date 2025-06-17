@@ -83,10 +83,8 @@ export function ResetPasswordForm() {
         </Form>
       </CardContent>
       <CardFooter className="flex-col items-center">
-        <Link href="/login" passHref legacyBehavior>
-          <a className="text-sm text-primary hover:underline">
-            Volver a Iniciar Sesión
-          </a>
+        <Link href="/login" className="text-sm text-primary hover:underline">
+          Volver a Iniciar Sesión
         </Link>
       </CardFooter>
     </Card>
