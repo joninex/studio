@@ -1,5 +1,12 @@
 import { z } from 'zod';
-import { UNLOCK_PATTERN_OPTIONS, CLASSIFICATION_OPTIONS, ORDER_STATUSES, SPECIFIC_SECTORS_OPTIONS, USER_ROLES_VALUES } from './constants'; // Added USER_ROLES_VALUES
+import { 
+  UNLOCK_PATTERN_OPTIONS, 
+  CLASSIFICATION_OPTIONS, 
+  ORDER_STATUSES, 
+  SPECIFIC_SECTORS_OPTIONS, // This might need review if it's still used directly or becomes part of Order booleans
+  USER_ROLES_VALUES,
+  CHECKLIST_ITEMS // Import the updated checklist items for keys
+} from './constants';
 
 export const LoginSchema = z.object({
   email: z.string().email({ message: "Por favor ingrese un email válido." }),
@@ -13,34 +20,31 @@ export const RegisterSchema = z.object({
   confirmPassword: z.string().min(6, { message: "La confirmación de contraseña debe tener al menos 6 caracteres." }),
 }).refine(data => data.password === data.confirmPassword, {
   message: "Las contraseñas no coinciden.",
-  path: ["confirmPassword"], // path of error
+  path: ["confirmPassword"],
 });
 
-
-const checklistShape = z.object({
-  carcasaMarks: z.enum(['si', 'no'], { required_error: "Requerido" }),
-  screenCrystal: z.enum(['si', 'no'], { required_error: "Requerido" }),
-  frame: z.enum(['si', 'no'], { required_error: "Requerido" }),
-  backCover: z.enum(['si', 'no'], { required_error: "Requerido" }),
-  camera: z.enum(['si', 'no'], { required_error: "Requerido" }),
-  microphone: z.enum(['si', 'no'], { required_error: "Requerido" }),
-  speaker: z.enum(['si', 'no'], { required_error: "Requerido" }),
-  powersOn: z.enum(['si', 'no'], { required_error: "Requerido" }),
-  touchScreen: z.enum(['si', 'no'], { required_error: "Requerido" }),
-  deviceCamera: z.enum(['si', 'no'], { required_error: "Requerido" }),
-  fingerprintSensor: z.enum(['si', 'no'], { required_error: "Requerido" }),
-  signal: z.enum(['si', 'no'], { required_error: "Requerido" }),
-  wifi: z.enum(['si', 'no'], { required_error: "Requerido" }),
+export const ClientSchema = z.object({
+  name: z.string().min(1, "Nombre del cliente es requerido."),
+  dni: z.string().min(7, "DNI debe tener al menos 7 caracteres.").max(10, "DNI no puede exceder 10 caracteres."),
+  phone: z.string().min(7, "Teléfono debe tener al menos 7 caracteres."),
+  email: z.string().email("Email inválido.").optional().or(z.literal('')),
+  address: z.string().optional().or(z.literal('')),
+  notes: z.string().optional().or(z.literal('')),
 });
+export type ClientFormData = z.infer<typeof ClientSchema>;
+
+
+const checklistShapeObject: Record<string, z.ZodEnum<['si', 'no']>> = {};
+CHECKLIST_ITEMS.forEach(item => {
+  checklistShapeObject[item.id] = z.enum(['si', 'no'], { required_error: `${item.label} es requerido.` });
+});
+export const ChecklistSchema = z.object(checklistShapeObject);
 
 
 export const OrderSchema = z.object({
-  clientName: z.string().min(1, "Nombre del cliente es requerido."),
-  clientLastName: z.string().min(1, "Apellido del cliente es requerido."),
-  clientDni: z.string().min(7, "DNI debe tener al menos 7 caracteres.").max(10, "DNI no puede exceder 10 caracteres."),
-  clientPhone: z.string().min(7, "Teléfono debe tener al menos 7 caracteres."),
-  clientEmail: z.string().email("Email inválido.").optional().or(z.literal('')),
-
+  // Client fields will be handled by selecting/creating a Client, then linking clientId
+  clientId: z.string().min(1, "Cliente es requerido."), 
+  
   branchInfo: z.string().min(1, "Información de sucursal es requerida."),
 
   deviceBrand: z.string().min(1, "Marca del equipo es requerida."),
@@ -49,10 +53,14 @@ export const OrderSchema = z.object({
   declaredFault: z.string().min(1, "Falla declarada es requerida."),
   unlockPatternInfo: z.enum(UNLOCK_PATTERN_OPTIONS, { required_error: "Información de desbloqueo es requerida."}),
 
-  checklist: checklistShape,
+  checklist: ChecklistSchema,
 
-  damageRisk: z.string().optional(),
-  specificSectors: z.array(z.string(SPECIFIC_SECTORS_OPTIONS)).optional(),
+  damageRisk: z.string().optional().or(z.literal('')),
+  // specificSectors is replaced by individual boolean fields for simplicity in the form
+  pantalla_parcial: z.boolean().optional().default(false),
+  equipo_sin_acceso: z.boolean().optional().default(false),
+  perdida_informacion: z.boolean().optional().default(false),
+  
   previousOrderId: z.string().optional().or(z.literal('')),
 
   costSparePart: z.preprocess(
@@ -68,13 +76,14 @@ export const OrderSchema = z.object({
     z.number({ invalid_type_error: "Debe ser un número" }).nonnegative("Costo debe ser no negativo.").optional()
   ).default(0),
 
-  classification: z.enum([...CLASSIFICATION_OPTIONS, ""], { required_error: "Clasificación es requerida."}).optional(),
-  observations: z.string().optional(),
+  classification: z.enum(CLASSIFICATION_OPTIONS, { required_error: "Clasificación es requerida."}).optional(),
+  observations: z.string().optional().or(z.literal('')),
 
-  customerAccepted: z.boolean().refine(val => val === true, { message: "El cliente debe aceptar los términos." }),
-  customerSignatureName: z.string().min(1, "Nombre del cliente que acepta es requerido."),
+  customerAccepted: z.boolean().optional().refine(val => val === true, { message: "El cliente debe aceptar los términos." }),
+  customerSignatureName: z.string().optional().or(z.literal('')),
+  // If customerAccepted is true, customerSignatureName should be required. This can be a .superRefine() if needed.
 
-  status: z.enum([...ORDER_STATUSES, ""], { required_error: "Estado es requerido."}).default("En diagnóstico"),
+  status: z.enum(ORDER_STATUSES, { required_error: "Estado es requerido."}).default("ingreso"),
 });
 
 export type OrderFormData = z.infer<typeof OrderSchema>;
@@ -86,11 +95,10 @@ export const ResetPasswordSchema = z.object({
 export const UserSchema = z.object({
   name: z.string().min(1, "Nombre es requerido."),
   email: z.string().email("Email inválido."),
-  role: z.enum(USER_ROLES_VALUES, { required_error: "Rol es requerido."}), // Use USER_ROLES_VALUES
+  role: z.enum(USER_ROLES_VALUES, { required_error: "Rol es requerido."}), 
   password: z.string().min(6, "Contraseña debe tener al menos 6 caracteres.").optional().or(z.literal('')),
 });
 
-// Now for StoreSettings, similar to Configurations
 export const StoreSettingsSchema = z.object({
   companyName: z.string().min(1, "Nombre de la empresa es requerido.").optional().or(z.literal('')),
   companyLogoUrl: z.string().url({ message: "Debe ser una URL válida para el logo." }).optional().or(z.literal('')),
@@ -110,5 +118,4 @@ export const StoreSettingsSchema = z.object({
   ).default(60),
 });
 
-// For compatibility, if SettingsSchema is still used elsewhere, it can be an alias or extension
-export const SettingsSchema = StoreSettingsSchema;
+export const SettingsSchema = StoreSettingsSchema; // Alias for compatibility
