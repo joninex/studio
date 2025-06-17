@@ -1,30 +1,43 @@
 // src/app/(app)/clients/page.tsx
 import { PageHeader } from "@/components/shared/PageHeader";
-// Potentially Button and Link for "New Client" in the future
-// import { Button } from "@/components/ui/button";
-// import Link from "next/link";
-// import { PlusCircle } from "lucide-react";
+import { ClientListClient } from "@/components/clients/ClientListClient";
+import { getClients } from "@/lib/actions/client.actions";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import { PlusCircle } from "lucide-react";
+import { Suspense } from "react";
+import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 
-export default function ClientsPage() {
+export const revalidate = 0; // Revalidate on every request for dynamic data
+
+export default async function ClientsPage({
+  searchParams,
+}: {
+  searchParams?: { [key: string]: string | string[] | undefined };
+}) {
+  const name = typeof searchParams?.name === 'string' ? searchParams.name : undefined;
+  const dni = typeof searchParams?.dni === 'string' ? searchParams.dni : undefined;
+  
+  const initialFilters = { name, dni };
+  const initialClients = await getClients(initialFilters);
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Gestión de Clientes"
         description="Administre la información de sus clientes."
-        // actions={
-        //   <Link href="/clients/new" passHref>
-        //     <Button>
-        //       <PlusCircle className="mr-2 h-4 w-4" />
-        //       Nuevo Cliente
-        //     </Button>
-        //   </Link>
-        // }
+        actions={
+          <Link href="/clients/new" passHref>
+            <Button>
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Nuevo Cliente
+            </Button>
+          </Link>
+        }
       />
-      {/* Client list or management components will go here in the future */}
-      <div className="text-center py-10 text-muted-foreground">
-        <p>Funcionalidad de gestión de clientes en desarrollo.</p>
-        <p>Aquí podrá ver, crear y editar la información de sus clientes.</p>
-      </div>
+      <Suspense fallback={<div className="flex justify-center items-center h-64"><LoadingSpinner size={48} /> <p className="ml-4">Cargando clientes...</p></div>}>
+        <ClientListClient initialClients={initialClients} initialFilters={initialFilters} />
+      </Suspense>
     </div>
   );
 }
