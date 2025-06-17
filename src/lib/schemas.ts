@@ -6,10 +6,10 @@ import {
   CHECKLIST_ITEMS,
   WARRANTY_TYPE_OPTIONS, 
   SALE_CON_HUELLA_OPTIONS,
-  PART_CATEGORIES, // New
-  PART_UNITS // New
+  PART_CATEGORIES,
+  PART_UNITS
 } from './constants';
-import type { UserRole, WarrantyType, OrderStatus, Classification, Checklist, PartCategory, PartUnit } from '@/types'; // New PartCategory, PartUnit
+import type { UserRole, WarrantyType, OrderStatus, Classification, Checklist, PartCategory, PartUnit } from '@/types';
 
 export const LoginSchema = z.object({
   email: z.string().email({ message: "Por favor ingrese un email válido." }),
@@ -280,3 +280,15 @@ export const PartSchema = z.object({
 });
 
 export type PartFormData = z.infer<typeof PartSchema>;
+
+// Supplier Schemas
+export const SupplierSchema = z.object({
+  name: z.string().min(1, "Nombre del proveedor es requerido."),
+  contactName: z.string().optional().or(z.literal('')),
+  phone: z.string().optional().or(z.literal('')),
+  email: z.string().email("Email inválido.").optional().or(z.literal('')),
+  address: z.string().optional().or(z.literal('')),
+  cuit: z.string().optional().or(z.literal('')),
+  notes: z.string().optional().or(z.literal('')),
+});
+export type SupplierFormData = z.infer<typeof SupplierSchema>;
