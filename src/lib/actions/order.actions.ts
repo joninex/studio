@@ -1,28 +1,27 @@
 // src/lib/actions/order.actions.ts
 "use server";
 
-import type { Order, User, Comment as OrderCommentType, StoreSettings, Client } from "@/types";
+import type { Order, User, Comment as OrderCommentType, StoreSettings, Client, WarrantyType } from "@/types";
 import { OrderSchema } from "@/lib/schemas";
 import type { z } from "zod";
 import { suggestRepairSolutions } from "@/ai/flows/suggest-repair-solutions";
 import { getStoreSettingsForUser } from "./settings.actions"; 
 import { DEFAULT_STORE_SETTINGS } from "@/lib/constants";
-import { getMockClients } from "./client.actions"; // To get client names for getOrders
+import { getMockClients } from "./client.actions"; 
 
 
-// Mock database for orders
 let mockOrders: Order[] = [
   {
     id: "ORD001", orderNumber: "ORD001",
-    clientId: "CLI001", // Linked client
+    clientId: "CLI001", 
     branchInfo: "Taller Central (Admin)",
-    deviceBrand: "Samsung", deviceModel: "Galaxy S21", deviceIMEI: "123456789012345", declaredFault: "Pantalla rota", unlockPatternInfo: "No tiene",
-    checklist: { marca_golpes: "si", cristal_astillado: "si", marco_roto: "no", tapa_astillada: "no", lente_camara: "si", enciende: "si", tactil_funciona: "no", imagen_pantalla: "si", botones_funcionales: "si", camara_trasera: "si", camara_delantera: "si", vibrador: "si", microfono: "si", auricular: "si", parlante: "si", sensor_huella: "si", senal: "si", wifi_bluetooth: "si", pin_carga: "si", humedad: "no"},
+    deviceBrand: "Samsung", deviceModel: "Galaxy S21", deviceIMEI: "123456789012345", declaredFault: "Pantalla rota", unlockPatternInfo: "no tiene",
+    checklist: { golpe: "si", cristal: "si", marco: "no", tapa: "no", lente_camara: "si", enciende: "si", tactil: "no", imagen: "si", botones: "si", cam_trasera: "si", cam_delantera: "si", vibrador: "si", microfono: "si", auricular: "si", parlante: "si", sensor_huella: "si", senal: "si", wifi_bluetooth: "si", pin_carga: "si", humedad: "no"},
     damageRisk: "Cristal trizado en esquina superior.", pantalla_parcial: true, equipo_sin_acceso: false, perdida_informacion: false,
     costSparePart: 15000, costLabor: 5000, costPending: 0,
     classification: "", observations: "Cliente indica que se cayó.",
     customerAccepted: true, customerSignatureName: "Juan Perez",
-    status: "En diagnóstico", previousOrderId: "",
+    status: "en diagnóstico", previousOrderId: "",
     entryDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
     commentsHistory: [],
     orderCompanyName: "JO-SERVICE Admin Store",
@@ -35,20 +34,26 @@ let mockOrders: Order[] = [
     orderAbandonmentPolicyDays60: 60,
     createdByUserId: "admin123", lastUpdatedBy: "admin123",
     updatedAt: new Date().toISOString(), createdAt: new Date().toISOString(),
+    hasWarranty: true,
+    warrantyType: '90d',
+    warrantyStartDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    warrantyEndDate: new Date(Date.now() + 88 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    warrantyCoveredItem: "Pantalla completa",
+    warrantyNotes: "Garantía no cubre daños por líquidos o mal uso.",
   },
   {
     id: "ORD002", orderNumber: "ORD002",
-    clientId: "CLI002", // Linked client
+    clientId: "CLI002", 
     branchInfo: "Taller Norte (Carlos)",
-    deviceBrand: "Apple", deviceModel: "iPhone 12", deviceIMEI: "543210987654321", declaredFault: "No enciende, batería agotada.", unlockPatternInfo: "No recuerda",
-    checklist: { marca_golpes: "no", cristal_astillado: "no", marco_roto: "no", tapa_astillada: "no", lente_camara: "si", enciende: "no", tactil_funciona: "si", imagen_pantalla: "si", botones_funcionales: "si", camara_trasera: "si", camara_delantera: "si", vibrador: "si", microfono: "si", auricular: "si", parlante: "si", sensor_huella: "si", senal: "si", wifi_bluetooth: "si", pin_carga: "si", humedad: "no"},
+    deviceBrand: "Apple", deviceModel: "iPhone 12", deviceIMEI: "543210987654321", declaredFault: "No enciende, batería agotada.", unlockPatternInfo: "no recuerda",
+    checklist: { golpe: "no", cristal: "no", marco: "no", tapa: "no", lente_camara: "si", enciende: "no", tactil: "si", imagen: "si", botones: "si", cam_trasera: "si", cam_delantera: "si", vibrador: "si", microfono: "si", auricular: "si", parlante: "si", sensor_huella: "si", senal: "si", wifi_bluetooth: "si", pin_carga: "si", humedad: "no"},
     damageRisk: "", pantalla_parcial: false, equipo_sin_acceso: true, perdida_informacion: false,
     costSparePart: 0, costLabor: 0, costPending: 8000,
     classification: "rojo", observations: "Revisar pin de carga también.",
     customerAccepted: true, customerSignatureName: "Maria Lopez",
-    status: "Esperando pieza", previousOrderId: "ORD001",
+    status: "esperando pieza", previousOrderId: "ORD001",
     entryDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-    commentsHistory: [{ description: "Batería solicitada", timestamp: new Date().toISOString(), userId: "tech123", userName: "Carlos Técnico" }],
+    commentsHistory: [{ id: "cmt1", description: "Batería solicitada", timestamp: new Date().toISOString(), userId: "tech123", userName: "Carlos Técnico" }],
     orderCompanyName: "Carlos Tech Shop",
     orderCompanyLogoUrl: "https://placehold.co/150x50.png?text=Carlos+Shop",
     orderCompanyCuit: "20-87654321-5",
@@ -59,6 +64,7 @@ let mockOrders: Order[] = [
     orderAbandonmentPolicyDays60: 60,
     createdByUserId: "tech123", lastUpdatedBy: "tech123",
     updatedAt: new Date().toISOString(), createdAt: new Date().toISOString(),
+    hasWarranty: false,
   }
 ];
 let orderCounter = mockOrders.length;
@@ -107,6 +113,14 @@ export async function createOrder(
     lastUpdatedBy: creatingUserId, 
     updatedAt: new Date().toISOString(),
     createdAt: new Date().toISOString(),
+
+    // Warranty fields from schema
+    hasWarranty: data.hasWarranty,
+    warrantyType: data.warrantyType,
+    warrantyStartDate: data.warrantyStartDate,
+    warrantyEndDate: data.warrantyEndDate,
+    warrantyCoveredItem: data.warrantyCoveredItem,
+    warrantyNotes: data.warrantyNotes,
   };
 
   mockOrders.push(newOrder);
@@ -115,14 +129,13 @@ export async function createOrder(
 
 export async function getOrders(filters?: { client?: string, orderNumber?: string, imei?: string, status?: string }): Promise<Order[]> {
   await new Promise(resolve => setTimeout(resolve, 500)); 
-  const clients = await getMockClients(); // Get all clients for name lookup
+  const clients = await getMockClients(); 
 
   let filteredOrders = [...mockOrders];
 
   if (filters) {
     if (filters.client) {
       const clientLower = filters.client.toLowerCase();
-      // Filter by looking up client name from clients array
       filteredOrders = filteredOrders.filter(o => {
         const client = clients.find(c => c.id === o.clientId);
         return client && (client.name.toLowerCase().includes(clientLower) || client.lastName.toLowerCase().includes(clientLower));
@@ -139,7 +152,6 @@ export async function getOrders(filters?: { client?: string, orderNumber?: strin
     }
   }
   
-  // Augment orders with client names for display
   const ordersWithClientNames = filteredOrders.map(order => {
     const client = clients.find(c => c.id === order.clientId);
     return {
@@ -149,7 +161,7 @@ export async function getOrders(filters?: { client?: string, orderNumber?: strin
     };
   });
   
-  return ordersWithClientNames.sort((a, b) => new Date(b.entryDate).getTime() - new Date(a.entryDate).getTime());
+  return JSON.parse(JSON.stringify(ordersWithClientNames.sort((a, b) => new Date(b.entryDate).getTime() - new Date(a.entryDate).getTime())));
 }
 
 export async function getOrderById(id: string): Promise<Order | null> {
@@ -161,7 +173,7 @@ export async function getOrderById(id: string): Promise<Order | null> {
 export async function updateOrderStatus(
   orderId: string,
   status: Order["status"],
-  userId: string // Should be UID of the user making the change
+  userId: string 
 ): Promise<{ success: boolean; message: string; order?: Order }> {
   const orderIndex = mockOrders.findIndex(o => o.id === orderId);
   if (orderIndex === -1) {
@@ -169,7 +181,7 @@ export async function updateOrderStatus(
   }
 
   mockOrders[orderIndex].status = status;
-  mockOrders[orderIndex].lastUpdatedBy = userId; // Use UID
+  mockOrders[orderIndex].lastUpdatedBy = userId; 
   mockOrders[orderIndex].updatedAt = new Date().toISOString();
 
   if (status === "listo para retirar" && !mockOrders[orderIndex].readyForPickupDate) {
@@ -177,7 +189,6 @@ export async function updateOrderStatus(
   } else if (status === "entregado" && !mockOrders[orderIndex].deliveryDate) {
     mockOrders[orderIndex].deliveryDate = new Date().toISOString();
   }
-
 
   return { success: true, message: "Estado de la orden actualizado.", order: JSON.parse(JSON.stringify(mockOrders[orderIndex])) };
 }
@@ -191,8 +202,9 @@ export async function addOrderComment(
   if (orderIndex === -1) {
     return { success: false, message: "Orden no encontrada." };
   }
-
+  const commentId = `cmt-${Date.now()}`;
   const newComment: OrderCommentType = {
+    id: commentId,
     description: commentText,
     timestamp: new Date().toISOString(),
     userId: user.uid, 
@@ -209,7 +221,7 @@ export async function addOrderComment(
 export async function updateOrderCosts(
   orderId: string,
   costs: { costSparePart?: number, costLabor?: number, costPending?: number },
-  userId: string // UID of user making change
+  userId: string 
 ): Promise<{ success: boolean; message: string; order?: Order }> {
   const orderIndex = mockOrders.findIndex(o => o.id === orderId);
   if (orderIndex === -1) {
@@ -220,7 +232,7 @@ export async function updateOrderCosts(
   if (costs.costLabor !== undefined) mockOrders[orderIndex].costLabor = costs.costLabor;
   if (costs.costPending !== undefined) mockOrders[orderIndex].costPending = costs.costPending;
 
-  mockOrders[orderIndex].lastUpdatedBy = userId; // Use UID
+  mockOrders[orderIndex].lastUpdatedBy = userId; 
   mockOrders[orderIndex].updatedAt = new Date().toISOString();
 
   return { success: true, message: "Costos actualizados.", order: JSON.parse(JSON.stringify(mockOrders[orderIndex])) };
@@ -243,7 +255,7 @@ export async function getRepairSuggestions(
 export async function updateOrder(
   orderId: string,
   values: Partial<Omit<Order, 'id' | 'orderNumber' | 'entryDate' | 'createdAt' | 'createdByUserId' | 'orderCompanyName' | 'orderCompanyLogoUrl' | 'orderCompanyCuit' | 'orderCompanyAddress' | 'orderCompanyContactDetails' | 'orderWarrantyConditions' | 'orderPickupConditions' | 'orderAbandonmentPolicyDays60' | 'clientName' | 'clientLastName' >>,
-  userId: string // UID of user making change
+  userId: string 
 ): Promise<{ success: boolean; message: string; order?: Order }> {
   const validatedFields = OrderSchema.partial().safeParse(values); 
 
@@ -260,17 +272,15 @@ export async function updateOrder(
   const updatedOrderData = {
     ...mockOrders[orderIndex],
     ...validatedFields.data, 
-    lastUpdatedBy: userId, // Use UID
+    lastUpdatedBy: userId, 
     updatedAt: new Date().toISOString(),
   };
 
-  // Ensure clientId is handled correctly if it's part of validatedFields.data
   if (validatedFields.data.clientId) {
     updatedOrderData.clientId = validatedFields.data.clientId;
   }
   
   mockOrders[orderIndex] = updatedOrderData;
-
 
   if (validatedFields.data.status) {
     if (validatedFields.data.status === "listo para retirar" && !mockOrders[orderIndex].readyForPickupDate) {

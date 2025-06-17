@@ -4,9 +4,10 @@ import {
   CLASSIFICATION_OPTIONS,
   ORDER_STATUSES,
   USER_ROLES_VALUES,
-  CHECKLIST_ITEMS
+  CHECKLIST_ITEMS,
+  WARRANTY_TYPES
 } from './constants';
-import type { UserRole } from '@/types'; // Import UserRole type
+import type { UserRole, WarrantyType } from '@/types'; 
 
 export const LoginSchema = z.object({
   email: z.string().email({ message: "Por favor ingrese un email válido." }),
@@ -51,7 +52,7 @@ export const OrderSchema = z.object({
   deviceModel: z.string().min(1, "Modelo del equipo es requerida."),
   deviceIMEI: z.string().min(14, "IMEI debe tener al menos 14 caracteres.").max(16, "IMEI no puede exceder 16 caracteres."),
   declaredFault: z.string().min(1, "Falla declarada es requerida."),
-  unlockPatternInfo: z.enum(UNLOCK_PATTERN_OPTIONS as [string, ...string[]], { required_error: "Información de desbloqueo es requerida."}),
+  unlockPatternInfo: z.enum(UNLOCK_PATTERN_OPTIONS as [string, ...string[]]),
 
   checklist: ChecklistSchema,
 
@@ -75,20 +76,66 @@ export const OrderSchema = z.object({
     z.number({ invalid_type_error: "Debe ser un número" }).nonnegative("Costo debe ser no negativo.")
   ).default(0),
 
-  classification: z.enum(CLASSIFICATION_OPTIONS as [string, ...string[]], { errorMap: () => ({ message: "Clasificación es requerida."}) }).optional().or(z.literal("")),
+  classification: z.enum(CLASSIFICATION_OPTIONS as [string, ...string[]]).optional().or(z.literal("")),
   observations: z.string().optional().or(z.literal('')),
 
   customerAccepted: z.boolean().optional().refine(val => val === true, { message: "El cliente debe aceptar los términos." }),
   customerSignatureName: z.string().min(1, "El nombre para la firma es requerido si se aceptan los términos.").optional().or(z.literal('')),
 
-  status: z.enum(ORDER_STATUSES as [string, ...string[]], { required_error: "Estado es requerido."}).default("ingreso"),
+  status: z.enum(ORDER_STATUSES as [string, ...string[]]).default("ingreso"),
+
+  // Warranty Fields
+  hasWarranty: z.boolean().optional().default(false),
+  warrantyType: z.enum(WARRANTY_TYPES as [WarrantyType, ...WarrantyType[]]).optional().nullable(),
+  warrantyStartDate: z.string().optional().nullable(), // Validate as date string if needed: .refine(val => !val || !isNaN(Date.parse(val)), { message: "Fecha inválida"})
+  warrantyEndDate: z.string().optional().nullable(),   // Validate as date string if needed
+  warrantyCoveredItem: z.string().optional().nullable(),
+  warrantyNotes: z.string().optional().nullable(),
+
 }).superRefine((data, ctx) => {
-  if (data.customerAccepted && !data.customerSignatureName) {
+  if (data.customerAccepted && (!data.customerSignatureName || data.customerSignatureName.trim() === "")) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       message: "El nombre para la firma es requerido si el cliente acepta los términos.",
       path: ["customerSignatureName"],
     });
+  }
+  if (data.hasWarranty) {
+    if (!data.warrantyType || data.warrantyType === "") {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "El tipo de garantía es requerido.", path: ["warrantyType"] });
+    }
+    if (!data.warrantyStartDate) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "La fecha de inicio de garantía es requerida.", path: ["warrantyStartDate"] });
+    } else {
+        // Validate date format if it's a string. Can also use z.coerce.date()
+        if (isNaN(Date.parse(data.warrantyStartDate))) {
+             ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Fecha de inicio inválida.", path: ["warrantyStartDate"] });
+        }
+    }
+    if (!data.warrantyCoveredItem || data.warrantyCoveredItem.trim() === "") {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "El ítem/procedimiento cubierto es requerido.", path: ["warrantyCoveredItem"] });
+    }
+    if (data.warrantyType !== 'custom' && !data.warrantyEndDate) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "La fecha de fin de garantía es requerida o será auto-calculada.", path: ["warrantyEndDate"] });
+    }
+    if (data.warrantyType === 'custom' && !data.warrantyEndDate) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "La fecha de fin de garantía es requerida para tipo personalizado.", path: ["warrantyEndDate"] });
+    }
+
+
+    if (data.warrantyStartDate && data.warrantyEndDate) {
+      const startDate = new Date(data.warrantyStartDate);
+      const endDate = new Date(data.warrantyEndDate);
+      if (isNaN(startDate.getTime())) {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Fecha de inicio inválida.", path: ["warrantyStartDate"] });
+      }
+      if (isNaN(endDate.getTime())) {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Fecha de fin inválida.", path: ["warrantyEndDate"] });
+      }
+      if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime()) && endDate < startDate) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "La fecha de fin debe ser posterior o igual a la fecha de inicio.", path: ["warrantyEndDate"] });
+      }
+    }
   }
 });
 
@@ -101,7 +148,7 @@ export const ResetPasswordSchema = z.object({
 export const UserSchema = z.object({
   name: z.string().min(1, "Nombre es requerido."),
   email: z.string().email("Email inválido."),
-  role: z.enum(USER_ROLES_VALUES as [UserRole, ...UserRole[]], { required_error: "Rol es requerido."}),
+  role: z.enum(USER_ROLES_VALUES as [UserRole, ...UserRole[]]),
   password: z.string().min(6, "Contraseña debe tener al menos 6 caracteres.").optional().or(z.literal('')),
 });
 
@@ -124,4 +171,4 @@ export const StoreSettingsSchema = z.object({
   ).default(60),
 });
 
-export const SettingsSchema = StoreSettingsSchema; // Alias for compatibility
+export const SettingsSchema = StoreSettingsSchema;

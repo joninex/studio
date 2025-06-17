@@ -43,17 +43,17 @@ export interface Client {
 }
 
 export interface Checklist {
-  golpe: 'si' | 'no'; // Antes marca_golpes
-  cristal: 'si' | 'no'; // Antes cristal_astillado
-  marco: 'si' | 'no'; // Antes marco_roto
-  tapa: 'si' | 'no'; // Antes tapa_astillada
+  golpe: 'si' | 'no';
+  cristal: 'si' | 'no';
+  marco: 'si' | 'no';
+  tapa: 'si' | 'no';
   lente_camara: 'si' | 'no';
   enciende: 'si' | 'no';
-  tactil: 'si' | 'no'; // Antes tactil_funciona
-  imagen: 'si' | 'no'; // Antes imagen_pantalla
-  botones: 'si' | 'no'; // Antes botones_funcionales
-  cam_trasera: 'si' | 'no'; // Antes camara_trasera
-  cam_delantera: 'si' | 'no'; // Antes camara_delantera
+  tactil: 'si' | 'no';
+  imagen: 'si' | 'no';
+  botones: 'si' | 'no';
+  cam_trasera: 'si' | 'no';
+  cam_delantera: 'si' | 'no';
   vibrador: 'si' | 'no';
   microfono: 'si' | 'no';
   auricular: 'si' | 'no';
@@ -87,6 +87,8 @@ export interface Comment {
   timestamp: Timestamp | Date | string;
 }
 
+export type WarrantyType = '30d' | '60d' | '90d' | 'custom' | '';
+
 export interface Order {
   id?: string;
   orderNumber: string;
@@ -95,27 +97,29 @@ export interface Order {
   clientName?: string; // For display in lists
   clientLastName?: string; // For display in lists
 
-  createdByUserId: string; // FK to USUARIOS id_usuario
+  createdByUserId: string; 
 
-  deviceBrand: string; // Corresponds to marca
-  deviceModel: string; // Corresponds to modelo
-  deviceIMEI: string; // Corresponds to IMEI
-  declaredFault: string; // Corresponds to falla_reportada
-  unlockPatternInfo: UnlockPatternInfo; // Corresponds to patron_desbloqueo
+  deviceBrand: string;
+  deviceModel: string;
+  deviceIMEI: string;
+  declaredFault: string;
+  unlockPatternInfo: UnlockPatternInfo; 
 
-  damageRisk?: string; // Corresponds to riesgo_rotura
+  damageRisk?: string; 
   pantalla_parcial?: boolean;
   equipo_sin_acceso?: boolean;
   perdida_informacion?: boolean;
 
-  classification: Classification; // Corresponds to para_stock
+  classification: Classification; 
   observations?: string;
 
   status: OrderStatus;
   previousOrderId?: string;
 
-  entryDate: Timestamp | Date | string; // Corresponds to fecha_ingreso
-  deliveryDate?: Timestamp | Date | string | null; // Corresponds to fecha_salida
+  entryDate: Timestamp | Date | string;
+  deliveryDate?: Timestamp | Date | string | null;
+  readyForPickupDate?: Timestamp | Date | string | null;
+
 
   commentsHistory: Comment[];
 
@@ -130,18 +134,26 @@ export interface Order {
   orderWarrantyConditions?: string;
   orderPickupConditions?: string;
   orderAbandonmentPolicyDays60?: number;
-  branchInfo?: string; // Snapshot of branch info from user's store settings
+  branchInfo?: string; 
 
-  costSparePart: number; // Will be part of DIAGNOSTICOS later
-  costLabor: number; // Will be part of DIAGNOSTICOS later
-  costPending: number; // Will be part of DIAGNOSTICOS later
+  costSparePart: number;
+  costLabor: number;
+  costPending: number;
 
-  lastUpdatedBy: string; // FK to USUARIOS id_usuario
+  lastUpdatedBy: string; 
   updatedAt: Timestamp | Date | string;
   createdAt?: Timestamp | Date | string;
 
   customerAccepted?: boolean;
   customerSignatureName?: string;
+
+  // Warranty Fields
+  hasWarranty?: boolean;
+  warrantyType?: WarrantyType;
+  warrantyStartDate?: string | null; // Store as ISO string (YYYY-MM-DD)
+  warrantyEndDate?: string | null;   // Store as ISO string (YYYY-MM-DD)
+  warrantyCoveredItem?: string;
+  warrantyNotes?: string;
 }
 
 export type AISuggestion = {
@@ -149,5 +161,4 @@ export type AISuggestion = {
   suggestedSolutions: string;
 };
 
-// Kept for settings page, represents User's Store Settings
 export interface Configurations extends StoreSettings {}

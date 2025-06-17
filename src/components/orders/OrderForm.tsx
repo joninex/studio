@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useState, useTransition, useEffect } from "react";
 import type { z } from "zod";
+import { format, addDays } from "date-fns";
 
 import { OrderSchema, type OrderFormData } from "@/lib/schemas";
 import { createOrder, getRepairSuggestions, updateOrder, getOrderById } from "@/lib/actions/order.actions";
@@ -18,19 +19,28 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/providers/AuthProvider";
-import { AISuggestion, type Order, type StoreSettings } from "@/types";
-import { CHECKLIST_ITEMS, CLASSIFICATION_OPTIONS, ORDER_STATUSES, SPECIFIC_SECTORS_OPTIONS, UNLOCK_PATTERN_OPTIONS, YES_NO_OPTIONS, DEFAULT_STORE_SETTINGS } from "@/lib/constants";
-import { AlertCircle, Bot, DollarSign, Info, ListChecks, LucideSparkles, User, Wrench, LinkIcon, Building, UserSquare } from "lucide-react";
+import { AISuggestion, type Order, type StoreSettings, WarrantyType } from "@/types";
+import { 
+  CHECKLIST_ITEMS, CLASSIFICATION_OPTIONS, ORDER_STATUSES, SPECIFIC_SECTORS_OPTIONS, 
+  UNLOCK_PATTERN_OPTIONS, YES_NO_OPTIONS, DEFAULT_STORE_SETTINGS, WARRANTY_TYPE_OPTIONS, WARRANTY_TYPES
+} from "@/lib/constants";
+import { AlertCircle, Bot, CalendarIcon, DollarSign, Info, ListChecks, LucideSparkles, User, Wrench, LinkIcon, Building, UserSquare, ShieldCheck } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
+import { cn } from "@/lib/utils";
 
 interface OrderFormProps {
   orderId?: string;
 }
 
 const NONE_CLASSIFICATION_VALUE = "__NONE_CLASSIFICATION_VALUE__";
+const NONE_WARRANTY_TYPE_VALUE = "";
+
 
 export function OrderForm({ orderId }: OrderFormProps) {
   const { user } = useAuth();
@@ -64,11 +74,22 @@ export function OrderForm({ orderId }: OrderFormProps) {
       classification: undefined, observations: "",
       customerAccepted: false, customerSignatureName: "",
       status: "ingreso",
+      // Warranty defaults
+      hasWarranty: false,
+      warrantyType: NONE_WARRANTY_TYPE_VALUE as WarrantyType,
+      warrantyStartDate: null,
+      warrantyEndDate: null,
+      warrantyCoveredItem: "",
+      warrantyNotes: "",
     },
   });
 
   const deviceModelWatch = useWatch({ control: form.control, name: "deviceModel" });
   const declaredFaultWatch = useWatch({ control: form.control, name: "declaredFault" });
+  const hasWarrantyWatch = useWatch({ control: form.control, name: "hasWarranty" });
+  const warrantyTypeWatch = useWatch({ control: form.control, name: "warrantyType" });
+  const warrantyStartDateWatch = useWatch({ control: form.control, name: "warrantyStartDate" });
+
 
   useEffect(() => {
     async function fetchInitialData() {
@@ -91,7 +112,6 @@ export function OrderForm({ orderId }: OrderFormProps) {
         try {
           const order = await getOrderById(orderId);
           if (order) {
-            // Ensure checklist defaults are applied correctly if some fields are missing from loaded order
             const defaultChecklist = CHECKLIST_ITEMS.reduce((acc, item) => {
                 // @ts-ignore
                 acc[item.id] = ['enciende', 'tactil', 'imagen', 'botones', 'cam_trasera', 'cam_delantera', 'vibrador', 'microfono', 'auricular', 'parlante', 'sensor_huella', 'senal', 'wifi_bluetooth', 'pin_carga', 'lente_camara'].includes(item.id) ? 'si' : 'no';
@@ -100,7 +120,7 @@ export function OrderForm({ orderId }: OrderFormProps) {
 
             form.reset({
               ...order,
-              checklist: { // Merge default with loaded, prioritizing loaded
+              checklist: { 
                 ...defaultChecklist,
                 ...(order.checklist || {}),
               },
@@ -113,6 +133,13 @@ export function OrderForm({ orderId }: OrderFormProps) {
               unlockPatternInfo: order.unlockPatternInfo || undefined,
               status: order.status || "ingreso",
               branchInfo: order.branchInfo,
+              // Warranty fields
+              hasWarranty: order.hasWarranty || false,
+              warrantyType: order.warrantyType || NONE_WARRANTY_TYPE_VALUE as WarrantyType,
+              warrantyStartDate: order.warrantyStartDate ? format(new Date(order.warrantyStartDate), "yyyy-MM-dd") : null,
+              warrantyEndDate: order.warrantyEndDate ? format(new Date(order.warrantyEndDate), "yyyy-MM-dd") : null,
+              warrantyCoveredItem: order.warrantyCoveredItem || "",
+              warrantyNotes: order.warrantyNotes || "",
             });
           } else {
             toast({ variant: "destructive", title: "Error", description: "Orden no encontrada." });
@@ -130,6 +157,38 @@ export function OrderForm({ orderId }: OrderFormProps) {
     }
   }, [orderId, user, form, router, toast]);
 
+  // Auto-calculate warrantyEndDate
+  useEffect(() => {
+    if (hasWarrantyWatch && warrantyStartDateWatch && warrantyTypeWatch && warrantyTypeWatch !== 'custom' && warrantyTypeWatch !== NONE_WARRANTY_TYPE_VALUE) {
+      try {
+        const startDate = new Date(warrantyStartDateWatch);
+        if (isNaN(startDate.getTime())) return; // Invalid start date
+
+        let daysToAdd = 0;
+        if (warrantyTypeWatch === '30d') daysToAdd = 30;
+        else if (warrantyTypeWatch === '60d') daysToAdd = 60;
+        else if (warrantyTypeWatch === '90d') daysToAdd = 90;
+        
+        if (daysToAdd > 0) {
+          const endDate = addDays(startDate, daysToAdd);
+          form.setValue('warrantyEndDate', format(endDate, "yyyy-MM-dd"));
+        }
+      } catch (error) {
+        // Could be an invalid date string from the picker initially
+        console.error("Error calculating warranty end date:", error);
+      }
+    } else if (hasWarrantyWatch && warrantyTypeWatch === 'custom') {
+      // If type is custom, don't auto-calculate, allow manual input.
+      // If it was previously auto-calculated, user might want to adjust it.
+    } else if (!hasWarrantyWatch) {
+        form.setValue('warrantyEndDate', null);
+        form.setValue('warrantyStartDate', null);
+        form.setValue('warrantyType', NONE_WARRANTY_TYPE_VALUE as WarrantyType);
+        form.setValue('warrantyCoveredItem', "");
+        form.setValue('warrantyNotes', "");
+    }
+  }, [hasWarrantyWatch, warrantyTypeWatch, warrantyStartDateWatch, form]);
+
 
   const onSubmit = (values: OrderFormData) => {
     if (!user) {
@@ -140,7 +199,13 @@ export function OrderForm({ orderId }: OrderFormProps) {
       let result;
       const submissionValues = {
         ...values,
-        previousOrderId: values.previousOrderId?.trim() === "" ? undefined : values.previousOrderId?.trim()
+        previousOrderId: values.previousOrderId?.trim() === "" ? undefined : values.previousOrderId?.trim(),
+        warrantyType: values.hasWarranty ? values.warrantyType : NONE_WARRANTY_TYPE_VALUE as WarrantyType,
+        warrantyStartDate: values.hasWarranty && values.warrantyStartDate ? values.warrantyStartDate : null,
+        warrantyEndDate: values.hasWarranty && values.warrantyEndDate ? values.warrantyEndDate : null,
+        warrantyCoveredItem: values.hasWarranty ? values.warrantyCoveredItem : "",
+        warrantyNotes: values.hasWarranty ? values.warrantyNotes : "",
+
       };
 
       if (orderId) {
@@ -222,7 +287,6 @@ export function OrderForm({ orderId }: OrderFormProps) {
                     <Select onValueChange={field.onChange} value={field.value || ""} defaultValue="">
                       <FormControl><SelectTrigger><SelectValue placeholder="Seleccione una opción" /></SelectTrigger></FormControl>
                       <SelectContent>
-                        {/* Removed problematic SelectItem with value="" */}
                         {UNLOCK_PATTERN_OPTIONS.filter(opt => opt !== "").map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
                       </SelectContent>
                     </Select>
@@ -357,10 +421,9 @@ export function OrderForm({ orderId }: OrderFormProps) {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Estado de la Orden</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value || ""} defaultValue="">
+                        <Select onValueChange={field.onChange} value={field.value || ""}>
                           <FormControl><SelectTrigger><SelectValue placeholder="Seleccione estado" /></SelectTrigger></FormControl>
                           <SelectContent>
-                            {/* Removed problematic SelectItem with value="" */}
                             {ORDER_STATUSES.filter(opt => opt !== "").map(status => <SelectItem key={status} value={status}>{status}</SelectItem>)}
                           </SelectContent>
                         </Select>
@@ -373,6 +436,162 @@ export function OrderForm({ orderId }: OrderFormProps) {
             </Card>
           </div>
         </div>
+        
+        <Separator />
+        
+        <Card>
+          <CardHeader><CardTitle className="flex items-center gap-2"><ShieldCheck className="text-primary"/> Detalles de Garantía</CardTitle></CardHeader>
+          <CardContent className="space-y-6">
+            <FormField
+              control={form.control}
+              name="hasWarranty"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm">
+                  <div className="space-y-0.5">
+                    <FormLabel className="text-base">¿Aplicar Garantía Extendida?</FormLabel>
+                    <FormDescription>
+                      Marque si esta reparación incluye una garantía extendida.
+                    </FormDescription>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+
+            {hasWarrantyWatch && (
+              <div className="space-y-4 p-4 border rounded-md bg-muted/30">
+                 <FormField
+                  control={form.control}
+                  name="warrantyType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Tipo de Garantía</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value || NONE_WARRANTY_TYPE_VALUE}>
+                        <FormControl><SelectTrigger><SelectValue placeholder="Seleccione tipo..." /></SelectTrigger></FormControl>
+                        <SelectContent>
+                          {WARRANTY_TYPE_OPTIONS.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="warrantyStartDate"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Fecha Inicio Garantía</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant={"outline"}
+                              className={cn(
+                                "w-full pl-3 text-left font-normal",
+                                !field.value && "text-muted-foreground"
+                              )}
+                            >
+                              {field.value ? (
+                                format(new Date(field.value), "PPP", { weekStartsOn: 1 }) 
+                              ) : (
+                                <span>Seleccione fecha</span>
+                              )}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={field.value ? new Date(field.value) : undefined}
+                            onSelect={(date) => field.onChange(date ? format(date, "yyyy-MM-dd") : null)}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="warrantyEndDate"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Fecha Fin Garantía</FormLabel>
+                       <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant={"outline"}
+                              className={cn(
+                                "w-full pl-3 text-left font-normal",
+                                !field.value && "text-muted-foreground"
+                              )}
+                              disabled={warrantyTypeWatch !== 'custom' && warrantyTypeWatch !== NONE_WARRANTY_TYPE_VALUE}
+                            >
+                              {field.value ? (
+                                format(new Date(field.value), "PPP", { weekStartsOn: 1 })
+                              ) : (
+                                <span>Seleccione fecha</span>
+                              )}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={field.value ? new Date(field.value) : undefined}
+                            onSelect={(date) => field.onChange(date ? format(date, "yyyy-MM-dd") : null)}
+                            disabled={(date) =>
+                              warrantyStartDateWatch ? date < new Date(warrantyStartDateWatch) : false
+                            }
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormDescription>
+                        {warrantyTypeWatch !== 'custom' && warrantyTypeWatch !== NONE_WARRANTY_TYPE_VALUE ? "Calculada automáticamente. " : ""}
+                        {warrantyTypeWatch === 'custom' ? "Ingrese manualmente." : ""}
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="warrantyCoveredItem"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Pieza/Procedimiento Cubierto por Garantía</FormLabel>
+                      <FormControl><Input placeholder="Ej: Pantalla completa, Cambio de batería" {...field} value={field.value || ""} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="warrantyNotes"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Notas Adicionales de Garantía</FormLabel>
+                      <FormControl><Textarea placeholder="Condiciones específicas, exclusiones, etc." {...field} value={field.value || ""} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
 
         <Separator />
 

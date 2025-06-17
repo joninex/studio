@@ -1,4 +1,4 @@
-import type { OrderStatus, UnlockPatternInfo, Classification, Checklist, UserRole } from '@/types';
+import type { OrderStatus, UnlockPatternInfo, Classification, Checklist, UserRole, WarrantyType } from '@/types';
 
 export const USER_ROLES = {
   ADMIN: 'admin',
@@ -9,7 +9,6 @@ export const USER_ROLES = {
 export const USER_ROLES_VALUES = Object.values(USER_ROLES) as [UserRole, ...UserRole[]];
 
 
-// Updated based on ORDENES.estado
 export const ORDER_STATUSES: OrderStatus[] = [
   "ingreso",
   "en diagnóstico",
@@ -18,35 +17,30 @@ export const ORDER_STATUSES: OrderStatus[] = [
   "listo para retirar",
   "entregado",
   "abandonado",
-  "", // Represents no specific status or a clearable state
+  "", 
 ];
 
-// Updated based on ORDENES.patron_desbloqueo
 export const UNLOCK_PATTERN_OPTIONS: UnlockPatternInfo[] = [
   "tiene",
   "no tiene",
   "no recuerda",
   "no proporciona",
-  "", // Represents no selection or clearable state
+  "", 
 ];
 
-// Updated based on ORDENES.para_stock
 export const CLASSIFICATION_OPTIONS: Classification[] = [
   "rojo",
   "verde",
   "sin stock",
-  "", // Represents no classification or clearable state
+  "", 
 ];
 
-// This constant might be deprecated if specificSectors are now individual booleans on the Order type.
-// For now, keeping it in case it's used elsewhere, but its direct use in OrderSchema might change.
 export const SPECIFIC_SECTORS_OPTIONS: string[] = [
   "Pantallas con daño parcial",
   "Equipos sin clave o que no encienden",
   "Pérdida de información",
 ];
 
-// Updated based on new CHECKLIST schema field names from user
 export const CHECKLIST_ITEMS: Array<{ id: keyof Checklist; label: string }> = [
   { id: "golpe", label: "Marcas/golpes en carcasa" },
   { id: "cristal", label: "Cristal de pantalla astillado/roto" },
@@ -74,6 +68,17 @@ export const YES_NO_OPTIONS = [
   { label: "Sí", value: "si" },
   { label: "No", value: "no" },
 ];
+
+export const WARRANTY_TYPES: WarrantyType[] = ['30d', '60d', '90d', 'custom', ''];
+
+export const WARRANTY_TYPE_OPTIONS: Array<{ value: WarrantyType; label: string }> = [
+  { value: "30d", label: "30 Días" },
+  { value: "60d", label: "60 Días" },
+  { value: "90d", label: "90 Días" },
+  { value: "custom", label: "Personalizado" },
+  { value: "", label: "Ninguna" },
+];
+
 
 export const DEFAULT_STORE_SETTINGS = {
   companyName: "Mi Taller (Default)",
