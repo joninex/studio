@@ -48,7 +48,6 @@ export function SettingsForm({ userId }: SettingsFormProps) {
           ...fetchedSettings,
           abandonmentPolicyDays30: Number(fetchedSettings.abandonmentPolicyDays30 ?? DEFAULT_STORE_SETTINGS.abandonmentPolicyDays30),
           abandonmentPolicyDays60: Number(fetchedSettings.abandonmentPolicyDays60 ?? DEFAULT_STORE_SETTINGS.abandonmentPolicyDays60),
-          // Ensure all new legal text fields are reset with fetched or default values
           unlockDisclaimerText: fetchedSettings.unlockDisclaimerText ?? DEFAULT_STORE_SETTINGS.unlockDisclaimerText,
           abandonmentPolicyText: fetchedSettings.abandonmentPolicyText ?? DEFAULT_STORE_SETTINGS.abandonmentPolicyText,
           dataLossPolicyText: fetchedSettings.dataLossPolicyText ?? DEFAULT_STORE_SETTINGS.dataLossPolicyText,
@@ -58,6 +57,8 @@ export function SettingsForm({ userId }: SettingsFormProps) {
           partialDamageDisplayText: fetchedSettings.partialDamageDisplayText ?? DEFAULT_STORE_SETTINGS.partialDamageDisplayText,
           warrantyVoidConditionsText: fetchedSettings.warrantyVoidConditionsText ?? DEFAULT_STORE_SETTINGS.warrantyVoidConditionsText,
           privacyPolicyText: fetchedSettings.privacyPolicyText ?? DEFAULT_STORE_SETTINGS.privacyPolicyText,
+          warrantyConditions: fetchedSettings.warrantyConditions ?? DEFAULT_STORE_SETTINGS.warrantyConditions,
+          pickupConditions: fetchedSettings.pickupConditions ?? DEFAULT_STORE_SETTINGS.pickupConditions,
         });
       } catch (error) {
         toast({ variant: "destructive", title: "Error", description: "No se pudo cargar la configuración de su tienda."});
@@ -94,6 +95,8 @@ export function SettingsForm({ userId }: SettingsFormProps) {
                 partialDamageDisplayText: result.settings.partialDamageDisplayText,
                 warrantyVoidConditionsText: result.settings.warrantyVoidConditionsText,
                 privacyPolicyText: result.settings.privacyPolicyText,
+                warrantyConditions: result.settings.warrantyConditions,
+                pickupConditions: result.settings.pickupConditions,
             });
         }
       } else {
@@ -126,8 +129,8 @@ export function SettingsForm({ userId }: SettingsFormProps) {
         <div>
           <h3 className="text-lg font-medium mb-2">Condiciones Generales (Textos Breves)</h3>
           <div className="space-y-4">
-            <FormField control={form.control} name="warrantyConditions" render={({ field }) => ( <FormItem><FormLabel>Condiciones Generales de Garantía (Texto breve para resumen)</FormLabel><FormControl><Textarea rows={3} placeholder="Texto general de garantía..." {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
-            <FormField control={form.control} name="pickupConditions" render={({ field }) => ( <FormItem><FormLabel>Condiciones Generales de Retiro (Texto breve)</FormLabel><FormControl><Textarea rows={3} placeholder="Texto general de condiciones de retiro..." {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
+            <FormField control={form.control} name="warrantyConditions" render={({ field }) => ( <FormItem><FormLabel>Condiciones Generales de Garantía (Texto breve para resumen)</FormLabel><FormControl><Textarea rows={3} placeholder="Texto general de garantía..." {...field} value={field.value ?? DEFAULT_STORE_SETTINGS.warrantyConditions} /></FormControl><FormMessage /></FormItem> )} />
+            <FormField control={form.control} name="pickupConditions" render={({ field }) => ( <FormItem><FormLabel>Condiciones Generales de Retiro (Texto breve)</FormLabel><FormControl><Textarea rows={3} placeholder="Texto general de condiciones de retiro..." {...field} value={field.value ?? DEFAULT_STORE_SETTINGS.pickupConditions} /></FormControl><FormMessage /></FormItem> )} />
           </div>
         </div>
         
@@ -135,7 +138,7 @@ export function SettingsForm({ userId }: SettingsFormProps) {
 
         <div>
           <h3 className="text-lg font-medium mb-2">Textos Legales Detallados (Para Impresiones y Aceptaciones)</h3>
-           <FormDescription className="mb-4">Estos textos se mostrarán en los comprobantes impresos y el cliente deberá aceptarlos (si aplica) al crear la orden de ingreso.</FormDescription>
+           <FormDescription className="mb-4">Estos textos se mostrarán en los comprobantes impresos y el cliente deberá aceptarlos (si aplica) al crear la orden de ingreso. Serán "congelados" (snapshotted) en cada orden al momento de su creación.</FormDescription>
           <div className="space-y-4">
             <FormField control={form.control} name="unlockDisclaimerText" render={({ field }) => ( <FormItem><FormLabel>Advertencia Importante (Desbloqueo)</FormLabel><FormControl><Textarea rows={4} placeholder="IMPORTANTE: Si no se informa el patrón/clave..." {...field} value={field.value ?? DEFAULT_STORE_SETTINGS.unlockDisclaimerText} /></FormControl><FormMessage /></FormItem> )} />
             <FormField control={form.control} name="abandonmentPolicyText" render={({ field }) => ( <FormItem><FormLabel>Política Detallada de Abandono de Equipo</FormLabel><FormControl><Textarea rows={5} placeholder="ABANDONO DEL EQUIPO: Pasados los X días..." {...field} value={field.value ?? DEFAULT_STORE_SETTINGS.abandonmentPolicyText} /></FormControl><FormMessage /></FormItem> )} />
@@ -143,7 +146,7 @@ export function SettingsForm({ userId }: SettingsFormProps) {
                 <FormField control={form.control} name="abandonmentPolicyDays30" render={({ field }) => ( <FormItem><FormLabel>Días para actualización de costo (Abandono)</FormLabel><FormControl><Input type="number" placeholder="30" {...field} onChange={e => field.onChange(parseInt(e.target.value, 10) || null)} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
                 <FormField control={form.control} name="abandonmentPolicyDays60" render={({ field }) => ( <FormItem><FormLabel>Días para disposición final (Abandono)</FormLabel><FormControl><Input type="number" placeholder="60" {...field} onChange={e => field.onChange(parseInt(e.target.value, 10) || null)} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
             </div>
-            <FormField control={form.control} name="dataLossPolicyText" render={({ field }) => ( <FormItem><FormLabel>Política de Pérdida/Recuperación de Información y Privacidad</FormLabel><FormControl><Textarea rows={4} placeholder="PÉRDIDA DE INFORMACIÓN: TecnoLand NO se responsabiliza... El cliente autoriza el acceso al dispositivo..." {...field} value={field.value ?? DEFAULT_STORE_SETTINGS.dataLossPolicyText} /></FormControl><FormMessage /></FormItem> )} />
+            <FormField control={form.control} name="dataLossPolicyText" render={({ field }) => ( <FormItem><FormLabel>Política de Pérdida/Recuperación de Información y Privacidad</FormLabel><FormControl><Textarea rows={4} placeholder="PÉRDIDA DE INFORMACIÓN: JO-SERVICE NO se responsabiliza... El cliente autoriza el acceso al dispositivo..." {...field} value={field.value ?? DEFAULT_STORE_SETTINGS.dataLossPolicyText} /></FormControl><FormMessage /></FormItem> )} />
             <FormField control={form.control} name="privacyPolicyText" render={({ field }) => ( <FormItem><FormLabel>Texto Adicional de Política de Privacidad (Opcional)</FormLabel><FormControl><Textarea rows={3} placeholder="Texto adicional sobre privacidad si es necesario..." {...field} value={field.value ?? DEFAULT_STORE_SETTINGS.privacyPolicyText} /></FormControl><FormDescription>Complementa la política de pérdida de datos si necesita detallar más aspectos de privacidad.</FormDescription><FormMessage /></FormItem> )} />
             <FormField control={form.control} name="untestedDevicePolicyText" render={({ field }) => ( <FormItem><FormLabel>Política para Equipos Sin Encender o Sin Clave</FormLabel><FormControl><Textarea rows={4} placeholder="EQUIPOS SIN ENCENDER O CON CLAVE/PATRÓN NO INFORMADO..." {...field} value={field.value ?? DEFAULT_STORE_SETTINGS.untestedDevicePolicyText} /></FormControl><FormMessage /></FormItem> )} />
             <FormField control={form.control} name="budgetVariationText" render={({ field }) => ( <FormItem><FormLabel>Política sobre Variaciones de Presupuesto</FormLabel><FormControl><Textarea rows={4} placeholder="PRESUPUESTO: El presupuesto informado se basa..." {...field} value={field.value ?? DEFAULT_STORE_SETTINGS.budgetVariationText} /></FormControl><FormMessage /></FormItem> )} />

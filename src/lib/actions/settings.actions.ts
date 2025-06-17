@@ -17,6 +17,18 @@ export async function getStoreSettingsForUser(userId: string): Promise<StoreSett
       ...user.storeSettings,
       abandonmentPolicyDays30: Number(user.storeSettings.abandonmentPolicyDays30 ?? DEFAULT_STORE_SETTINGS.abandonmentPolicyDays30),
       abandonmentPolicyDays60: Number(user.storeSettings.abandonmentPolicyDays60 ?? DEFAULT_STORE_SETTINGS.abandonmentPolicyDays60),
+      // Ensure all new legal text fields are merged
+      unlockDisclaimerText: user.storeSettings.unlockDisclaimerText ?? DEFAULT_STORE_SETTINGS.unlockDisclaimerText,
+      abandonmentPolicyText: user.storeSettings.abandonmentPolicyText ?? DEFAULT_STORE_SETTINGS.abandonmentPolicyText,
+      dataLossPolicyText: user.storeSettings.dataLossPolicyText ?? DEFAULT_STORE_SETTINGS.dataLossPolicyText,
+      untestedDevicePolicyText: user.storeSettings.untestedDevicePolicyText ?? DEFAULT_STORE_SETTINGS.untestedDevicePolicyText,
+      budgetVariationText: user.storeSettings.budgetVariationText ?? DEFAULT_STORE_SETTINGS.budgetVariationText,
+      highRiskDeviceText: user.storeSettings.highRiskDeviceText ?? DEFAULT_STORE_SETTINGS.highRiskDeviceText,
+      partialDamageDisplayText: user.storeSettings.partialDamageDisplayText ?? DEFAULT_STORE_SETTINGS.partialDamageDisplayText,
+      warrantyVoidConditionsText: user.storeSettings.warrantyVoidConditionsText ?? DEFAULT_STORE_SETTINGS.warrantyVoidConditionsText,
+      privacyPolicyText: user.storeSettings.privacyPolicyText ?? DEFAULT_STORE_SETTINGS.privacyPolicyText,
+      warrantyConditions: user.storeSettings.warrantyConditions ?? DEFAULT_STORE_SETTINGS.warrantyConditions,
+      pickupConditions: user.storeSettings.pickupConditions ?? DEFAULT_STORE_SETTINGS.pickupConditions,
     };
     return mergedSettings;
   }
@@ -50,12 +62,23 @@ export async function updateStoreSettingsForUser(
     id: `store_config_${userId}`,
     abandonmentPolicyDays30: Number(validatedFields.data.abandonmentPolicyDays30 ?? DEFAULT_STORE_SETTINGS.abandonmentPolicyDays30),
     abandonmentPolicyDays60: Number(validatedFields.data.abandonmentPolicyDays60 ?? DEFAULT_STORE_SETTINGS.abandonmentPolicyDays60),
+    // Ensure all new legal text fields are part of the new settings
+    unlockDisclaimerText: validatedFields.data.unlockDisclaimerText ?? DEFAULT_STORE_SETTINGS.unlockDisclaimerText,
+    abandonmentPolicyText: validatedFields.data.abandonmentPolicyText ?? DEFAULT_STORE_SETTINGS.abandonmentPolicyText,
+    dataLossPolicyText: validatedFields.data.dataLossPolicyText ?? DEFAULT_STORE_SETTINGS.dataLossPolicyText,
+    untestedDevicePolicyText: validatedFields.data.untestedDevicePolicyText ?? DEFAULT_STORE_SETTINGS.untestedDevicePolicyText,
+    budgetVariationText: validatedFields.data.budgetVariationText ?? DEFAULT_STORE_SETTINGS.budgetVariationText,
+    highRiskDeviceText: validatedFields.data.highRiskDeviceText ?? DEFAULT_STORE_SETTINGS.highRiskDeviceText,
+    partialDamageDisplayText: validatedFields.data.partialDamageDisplayText ?? DEFAULT_STORE_SETTINGS.partialDamageDisplayText,
+    warrantyVoidConditionsText: validatedFields.data.warrantyVoidConditionsText ?? DEFAULT_STORE_SETTINGS.warrantyVoidConditionsText,
+    privacyPolicyText: validatedFields.data.privacyPolicyText ?? DEFAULT_STORE_SETTINGS.privacyPolicyText,
+    warrantyConditions: validatedFields.data.warrantyConditions ?? DEFAULT_STORE_SETTINGS.warrantyConditions,
+    pickupConditions: validatedFields.data.pickupConditions ?? DEFAULT_STORE_SETTINGS.pickupConditions,
   };
   currentUsers[userIndex].storeSettings = newSettings;
   currentUsers[userIndex].updatedAt = new Date().toISOString();
   await updateAllMockUsers(currentUsers);
   
-  console.log(`Updating store settings for user ${userId} (mock):`, newSettings);
   return { 
     success: true, 
     message: "Configuración de la tienda guardada exitosamente.", 

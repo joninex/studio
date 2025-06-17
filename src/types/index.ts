@@ -11,7 +11,7 @@ export interface StoreSettings {
   companyContactDetails?: string; 
   branchInfo?: string;
 
-  warrantyConditions?: string; 
+  warrantyConditions?: string; // General warranty text
   pickupConditions?: string; 
   
   // Detailed legal texts
@@ -22,8 +22,8 @@ export interface StoreSettings {
   budgetVariationText?: string; 
   highRiskDeviceText?: string; 
   partialDamageDisplayText?: string; 
-  warrantyVoidConditionsText?: string; 
-  privacyPolicyText?: string;
+  warrantyVoidConditionsText?: string; // Specific to what voids warranty
+  privacyPolicyText?: string; // Additional privacy policy text
 
   abandonmentPolicyDays30?: number; 
   abandonmentPolicyDays60?: number;
@@ -180,8 +180,8 @@ export interface Order {
 
   hasWarranty?: boolean; 
   warrantyType?: WarrantyType;
-  warrantyStartDate?: string | null; 
-  warrantyEndDate?: string | null;   
+  warrantyStartDate?: string | null; // Stored as YYYY-MM-DD
+  warrantyEndDate?: string | null;   // Stored as YYYY-MM-DD
   warrantyCoveredItem?: string;
   warrantyNotes?: string;
 }

@@ -5,6 +5,7 @@ import {
   USER_ROLES_VALUES,
   CHECKLIST_ITEMS,
   WARRANTY_TYPES,
+  WARRANTY_TYPE_OPTIONS,
   SALE_CON_HUELLA_OPTIONS
 } from './constants';
 import type { UserRole, WarrantyType, OrderStatus, Classification, Checklist } from '@/types';
@@ -67,7 +68,8 @@ export const ChecklistSchema = z.object(checklistShapeObject);
 
 const validOrderStatuses = ORDER_STATUSES.filter(status => status !== "") as [OrderStatus, ...OrderStatus[]];
 const validClassificationOptions = CLASSIFICATION_OPTIONS.filter(opt => opt !== null) as [Classification, ...Classification[]];
-const validWarrantyTypes = WARRANTY_TYPES.filter(type => type !== null && type !== "") as [WarrantyType, ...WarrantyType[]];
+// For warrantyType schema, include null explicitly as it's a valid type for the DB/state.
+const validWarrantyTypeEnumValues = WARRANTY_TYPE_OPTIONS.map(opt => opt.value) as [Exclude<WarrantyType, null | ''>, ...Exclude<WarrantyType, null | ''>[]];
 
 
 export const OrderSchema = z.object({
@@ -102,7 +104,6 @@ export const OrderSchema = z.object({
   customerAccepted: z.boolean().optional().default(false).refine(val => val === true, { message: "El cliente debe aceptar los términos generales." }),
   customerSignatureName: z.string().min(1, "El nombre para la firma es requerido si se aceptan los términos.").optional().or(z.literal('')),
   
-  // Snapshotted texts - these are for storage, validation happens on the StoreSettings or based on presence
   orderSnapshottedUnlockDisclaimer: z.string().optional().or(z.literal('')),
   orderSnapshottedAbandonmentPolicyText: z.string().optional().or(z.literal('')),
   orderSnapshottedDataLossPolicyText: z.string().optional().or(z.literal('')),
@@ -114,15 +115,14 @@ export const OrderSchema = z.object({
   orderSnapshottedPrivacyPolicy: z.string().optional().or(z.literal('')),
   orderWarrantyConditions: z.string().optional().or(z.literal('')),
   
-  // Acceptance flags for these snapshotted texts
   dataLossDisclaimerAccepted: z.boolean().optional().default(false), 
   privacyPolicyAccepted: z.boolean().optional().default(false), 
   
   status: z.enum(validOrderStatuses).default("Recibido"),
   hasWarranty: z.boolean().optional().default(false),
-  warrantyType: z.enum(validWarrantyTypes).optional().nullable(),
-  warrantyStartDate: z.string().optional().nullable(), 
-  warrantyEndDate: z.string().optional().nullable(),   
+  warrantyType: z.enum(validWarrantyTypeEnumValues).nullable().optional(),
+  warrantyStartDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Formato de fecha de inicio inválido (YYYY-MM-DD).").nullable().optional(), 
+  warrantyEndDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Formato de fecha de fin inválido (YYYY-MM-DD).").nullable().optional(),   
   warrantyCoveredItem: z.string().optional().nullable(),
   warrantyNotes: z.string().optional().nullable(),
 
@@ -135,6 +135,7 @@ export const OrderSchema = z.object({
     });
   }
   
+  // Refined logic: only require acceptance if the text is non-empty
   if (data.orderSnapshottedDataLossPolicyText && data.orderSnapshottedDataLossPolicyText.trim() !== "" && !data.dataLossDisclaimerAccepted) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
@@ -151,36 +152,33 @@ export const OrderSchema = z.object({
     });
   }
 
-
   if (data.hasWarranty) {
     if (!data.warrantyType) { 
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: "El tipo de garantía es requerido.", path: ["warrantyType"] });
     }
     if (!data.warrantyStartDate) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: "La fecha de inicio de garantía es requerida.", path: ["warrantyStartDate"] });
-    } else {
-        try {
-            if (isNaN(Date.parse(data.warrantyStartDate))) {
-                 ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Fecha de inicio inválida.", path: ["warrantyStartDate"] });
-            }
-        } catch (e) {
-            ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Formato de fecha de inicio inválido.", path: ["warrantyStartDate"] });
-        }
     }
     if (!data.warrantyCoveredItem || data.warrantyCoveredItem.trim() === "") {
         ctx.addIssue({ code: z.ZodIssueCode.custom, message: "El ítem/procedimiento cubierto es requerido.", path: ["warrantyCoveredItem"] });
     }
-    if (data.warrantyType && data.warrantyType !== 'custom' && !data.warrantyEndDate) { 
-        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "La fecha de fin de garantía es requerida o será auto-calculada.", path: ["warrantyEndDate"] });
-    }
+    
     if (data.warrantyType === 'custom' && !data.warrantyEndDate) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, message: "La fecha de fin de garantía es requerida para tipo personalizado.", path: ["warrantyEndDate"] });
+    } else if (data.warrantyType && data.warrantyType !== 'custom' && !data.warrantyEndDate) {
+      // For auto-calculated types, endDate might not be set by user but should exist after calculation
+      // This server-side validation might be less critical if form handles auto-calc, but good for direct API calls
     }
 
     if (data.warrantyStartDate && data.warrantyEndDate) {
       try {
         const startDate = new Date(data.warrantyStartDate);
         const endDate = new Date(data.warrantyEndDate);
+        // Add time to startDate and endDate to compare dates correctly
+        // by setting them to the start of the day.
+        startDate.setHours(0,0,0,0);
+        endDate.setHours(0,0,0,0);
+
         if (isNaN(startDate.getTime())) {
             ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Fecha de inicio inválida.", path: ["warrantyStartDate"] });
         }
@@ -191,7 +189,7 @@ export const OrderSchema = z.object({
           ctx.addIssue({ code: z.ZodIssueCode.custom, message: "La fecha de fin debe ser posterior o igual a la fecha de inicio.", path: ["warrantyEndDate"] });
         }
       } catch (e) {
-        // Issue with date parsing already handled or will be by individual field checks
+        // Errors during date parsing will be caught by individual field regex or type checks
       }
     }
   }
@@ -230,7 +228,6 @@ export const StoreSettingsSchema = z.object({
   partialDamageDisplayText: z.string().optional().or(z.literal('')),
   warrantyVoidConditionsText: z.string().optional().or(z.literal('')),
   privacyPolicyText: z.string().optional().or(z.literal('')),
-
 
   abandonmentPolicyDays30: z.preprocess(
     (val) => (typeof val === 'string' && val !== "" ? parseInt(val, 10) : (typeof val === 'number' ? val : undefined)),

@@ -25,8 +25,11 @@ let mockOrders: Order[] = [
             (acc as any)[item.id] = "4000mAh";
         } else if (item.id === 'saleConHuella') {
             (acc as any)[item.id] = "si";
-        } else if (item.type === 'boolean') {
-            (acc as any)[item.id] = ['enciende', 'tactil', 'imagen', 'botones', 'cam_trasera', 'cam_delantera', 'vibrador', 'microfono', 'auricular', 'parlante', 'sensor_huella', 'senal', 'wifi_bluetooth', 'pin_carga', 'lente_camara', 'equipo_doblado'].includes(item.id) ? 'si' : 'no';
+        } else if (item.id === 'equipo_doblado'){
+            (acc as any)[item.id] = "no";
+        }
+         else if (item.type === 'boolean') {
+            (acc as any)[item.id] = ['enciende', 'tactil', 'imagen', 'botones', 'cam_trasera', 'cam_delantera', 'vibrador', 'microfono', 'auricular', 'parlante', 'sensor_huella', 'senal', 'wifi_bluetooth', 'pin_carga', 'lente_camara'].includes(item.id) ? 'si' : 'no';
         } else { 
              (acc as any)[item.id] = "";
         }
@@ -79,6 +82,7 @@ let mockOrders: Order[] = [
     checklist: CHECKLIST_ITEMS.reduce((acc, item) => {
       (acc as any)[item.id] = (item.type === 'boolean') ? 'si' : (item.type === 'enum_saleConHuella' ? 'no_tiene' : '');
       if(item.id === 'pin_carga') (acc as any)[item.id] = 'no';
+      if(item.id === 'equipo_doblado') (acc as any)[item.id] = 'no';
       return acc;
     }, {} as Checklist),
     damageRisk: "", pantalla_parcial: false, equipo_sin_acceso: false, perdida_informacion: false,
@@ -122,6 +126,7 @@ let mockOrders: Order[] = [
     checklist: CHECKLIST_ITEMS.reduce((acc, item) => { 
         (acc as any)[item.id] = (item.type === 'boolean' && item.id !== 'enciende') ? 'no' : ((item.type === 'enum_saleConHuella') ? 'no_tiene' : '');
         if(item.id === 'enciende') (acc as any)[item.id] = 'no';
+        if(item.id === 'equipo_doblado') (acc as any)[item.id] = 'no';
         return acc;
     }, {} as Checklist),
     damageRisk: "Equipo sin signos de daño externo.", pantalla_parcial: false, equipo_sin_acceso: true, perdida_informacion: true,
@@ -196,8 +201,8 @@ export async function createOrder(
     orderCompanyAddress: settingsToSnapshot.companyAddress,
     orderCompanyContactDetails: settingsToSnapshot.companyContactDetails,
     
+    // Snapshot all legal texts
     orderWarrantyConditions: settingsToSnapshot.warrantyConditions,
-    
     orderSnapshottedUnlockDisclaimer: settingsToSnapshot.unlockDisclaimerText,
     orderSnapshottedAbandonmentPolicyText: settingsToSnapshot.abandonmentPolicyText,
     orderSnapshottedDataLossPolicyText: settingsToSnapshot.dataLossPolicyText,
@@ -214,11 +219,11 @@ export async function createOrder(
     createdAt: new Date().toISOString(),
 
     hasWarranty: data.hasWarranty,
-    warrantyType: data.warrantyType,
-    warrantyStartDate: data.warrantyStartDate,
-    warrantyEndDate: data.warrantyEndDate,
-    warrantyCoveredItem: data.warrantyCoveredItem,
-    warrantyNotes: data.warrantyNotes,
+    warrantyType: data.hasWarranty ? data.warrantyType : null,
+    warrantyStartDate: data.hasWarranty && data.warrantyStartDate ? data.warrantyStartDate : null,
+    warrantyEndDate: data.hasWarranty && data.warrantyEndDate ? data.warrantyEndDate : null,
+    warrantyCoveredItem: data.hasWarranty ? data.warrantyCoveredItem : "",
+    warrantyNotes: data.hasWarranty ? data.warrantyNotes : "",
     
     customerAccepted: data.customerAccepted,
     customerSignatureName: data.customerSignatureName,
@@ -381,12 +386,30 @@ export async function updateOrder(
   const updatedOrderData: Order = {
     ...currentOrder,
     ...validatedFields.data, 
-    // Ensure unlockPatternInfo is always a string, falling back to current if not provided in validatedFields.data
     unlockPatternInfo: validatedFields.data.unlockPatternInfo ?? currentOrder.unlockPatternInfo,
     promisedDeliveryDate: validatedFields.data.promisedDeliveryDate ? new Date(validatedFields.data.promisedDeliveryDate).toISOString() : currentOrder.promisedDeliveryDate,
     lastUpdatedBy: userId, 
     updatedAt: new Date().toISOString(),
+    // Ensure warranty fields are updated correctly
+    hasWarranty: validatedFields.data.hasWarranty ?? currentOrder.hasWarranty,
+    warrantyType: (validatedFields.data.hasWarranty ?? currentOrder.hasWarranty) ? (validatedFields.data.warrantyType ?? currentOrder.warrantyType) : null,
+    warrantyStartDate: (validatedFields.data.hasWarranty ?? currentOrder.hasWarranty) && validatedFields.data.warrantyStartDate ? validatedFields.data.warrantyStartDate : null,
+    warrantyEndDate: (validatedFields.data.hasWarranty ?? currentOrder.hasWarranty) && validatedFields.data.warrantyEndDate ? validatedFields.data.warrantyEndDate : null,
+    warrantyCoveredItem: (validatedFields.data.hasWarranty ?? currentOrder.hasWarranty) ? (validatedFields.data.warrantyCoveredItem ?? currentOrder.warrantyCoveredItem) : "",
+    warrantyNotes: (validatedFields.data.hasWarranty ?? currentOrder.hasWarranty) ? (validatedFields.data.warrantyNotes ?? currentOrder.warrantyNotes) : "",
   };
+
+  // If hasWarranty is being set to true and snapshotted legal texts are missing, snapshot them (idempotent if already set)
+  if (updatedOrderData.hasWarranty && !currentOrder.hasWarranty) { // Check if warranty was just enabled
+    const userStoreSettings = await getStoreSettingsForUser(userId); // Or use createdByUserId if preferred for original terms
+    const settingsToSnapshot: StoreSettings = { ...DEFAULT_STORE_SETTINGS, ...userStoreSettings };
+    updatedOrderData.orderWarrantyConditions = currentOrder.orderWarrantyConditions || settingsToSnapshot.warrantyConditions;
+    updatedOrderData.orderSnapshottedWarrantyVoidConditionsText = currentOrder.orderSnapshottedWarrantyVoidConditionsText || settingsToSnapshot.warrantyVoidConditionsText;
+    // Add other legal texts if they should be snapshotted at this point,
+    // though typically they are snapshotted at order creation.
+    // For this update, we only focus on warranty-specific texts if hasWarranty changes.
+  }
+
 
   if (validatedFields.data.clientId) {
     updatedOrderData.clientId = validatedFields.data.clientId;

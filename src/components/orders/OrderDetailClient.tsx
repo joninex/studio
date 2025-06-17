@@ -17,7 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/providers/AuthProvider";
 import { addOrderComment, updateOrderStatus, updateOrderCosts } from "@/lib/actions/order.actions";
 import { getClientById } from "@/lib/actions/client.actions"; 
-import { CHECKLIST_ITEMS, ORDER_STATUSES, SALE_CON_HUELLA_OPTIONS } from "@/lib/constants";
+import { CHECKLIST_ITEMS, ORDER_STATUSES, SALE_CON_HUELLA_OPTIONS, DEFAULT_STORE_SETTINGS } from "@/lib/constants";
 import { AlertCircle, Bot, CalendarDays, DollarSign, Edit, FileText, Info, ListChecks, MessageSquare, Printer, User as UserIcon, Wrench, PackageCheck, Smartphone, LinkIcon, QrCode, GripVertical, FileLock2, LockKeyhole, ClockIcon } from "lucide-react";
 import { Input } from "../ui/input";
 import { LoadingSpinner } from "../shared/LoadingSpinner";
@@ -143,6 +143,7 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
   
   let abandonmentWarning = "";
   if (daysSinceReady !== null && order.orderSnapshottedAbandonmentPolicyText) { 
+    // Attempt to parse days from the policy text or use default. More robust would be to store days in order snapshot.
     const abandonmentPolicyDays = order.orderCompanyContactDetails?.includes("60") ? 60 : (order.orderCompanyContactDetails?.includes("30") ? 30 : (DEFAULT_STORE_SETTINGS.abandonmentPolicyDays60 || 60)) ; 
     const firstWarningDays = abandonmentPolicyDays / 2;
     if (daysSinceReady >= abandonmentPolicyDays) abandonmentWarning = `Equipo considerado abandonado (${abandonmentPolicyDays}+ días).`;
@@ -180,11 +181,11 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
         return `Comprobante de Ingreso N°: ${order.orderNumber}`;
       case "Presupuestado":
       case "Presupuesto Rechazado":
+      case "Presupuesto Aprobado":
         return `Presupuesto N°: ${order.orderNumber}`;
       case "Listo para Entrega":
       case "Entregado":
         return `Comprobante de Entrega N°: ${order.orderNumber}`;
-      case "Presupuesto Aprobado":
       case "En Espera de Repuestos":
       case "En Reparación":
       case "Reparado":
@@ -198,12 +199,12 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
   const isIngresoContext = ["Recibido", "En Diagnóstico"].includes(order.status);
   const isPresupuestoContext = ["Presupuestado", "Presupuesto Rechazado", "Presupuesto Aprobado"].includes(order.status);
   const isEntregaContext = ["Listo para Entrega", "Entregado"].includes(order.status);
-  const isReparacionContext = ["En Reparación", "Reparado", "En Control de Calidad"].includes(order.status);
+  const isReparacionContext = ["En Reparación", "Reparado", "En Control de Calidad", "En Espera de Repuestos"].includes(order.status);
 
-  const showChecklistForPrint = isIngresoContext || order.status === "Presupuestado";
+  const showChecklistForPrint = isIngresoContext || order.status === "Presupuestado" || isReparacionContext;
   const showBudgetForPrint = (order.costSparePart > 0 || order.costLabor > 0) && (isPresupuestoContext || isReparacionContext || isEntregaContext || order.status === "Presupuestado");
   const showTechnicalCommentsForPrint = order.commentsHistory && order.commentsHistory.length > 0 && (isPresupuestoContext || isReparacionContext || isEntregaContext);
-  const showWarrantyDetailsForPrint = order.hasWarranty;
+  const showWarrantyDetailsForPrint = order.hasWarranty && order.warrantyStartDate && order.warrantyEndDate;
   
   const showClientReceptionSignature = isIngresoContext && order.customerAccepted;
   const showTechnicianReceptionSignature = isIngresoContext; 
@@ -279,7 +280,6 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
                     <div className="print-pattern-grid ml-2">
                         {Array(9).fill(0).map((_, i) => <div key={i}></div>)}
                     </div>
-                    {order.unlockPatternInfo && <span className="text-xs italic ml-1">(Información sensible para uso interno)</span>}
                 </div>
                 <p className="col-span-2"><strong>Falla Declarada:</strong> {order.declaredFault}</p>
                 <p className="col-span-2"><strong>Daños Preexistentes/Observaciones de Ingreso (Riesgo de Rotura):</strong> {order.damageRisk || "Sin observaciones específicas de daños."}</p>
@@ -360,8 +360,9 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
             {order.orderSnapshottedHighRiskDeviceText && <div className="print-legal-item"><strong>Equipos con Riesgos Especiales:</strong> <p>{order.orderSnapshottedHighRiskDeviceText}</p></div>}
             {order.orderSnapshottedPartialDamageDisplayText && <div className="print-legal-item"><strong>Pantallas con Daño Parcial:</strong> <p>{order.orderSnapshottedPartialDamageDisplayText}</p></div>}
             {order.orderSnapshottedAbandonmentPolicyText && <div className="print-legal-item"><strong>Política de Retiro y Abandono:</strong> <p>{order.orderSnapshottedAbandonmentPolicyText}</p></div>}
-             {/* General warranty conditions from store if not part of extended warranty text */}
-            {order.orderWarrantyConditions && !order.hasWarranty && <div className="print-legal-item"><strong>Condiciones Generales de Garantía (Taller):</strong><p>{order.orderWarrantyConditions}</p></div>}
+            {order.pickupConditions && <div className="print-legal-item"><strong>Condiciones Generales de Retiro:</strong><p>{order.pickupConditions}</p></div>}
+            {/* General warranty conditions from store if not part of extended warranty text and specific warranty void conditions not present */}
+            {order.orderWarrantyConditions && !order.hasWarranty && !order.orderSnapshottedWarrantyVoidConditionsText && <div className="print-legal-item"><strong>Condiciones Generales de Garantía (Taller):</strong><p>{order.orderWarrantyConditions}</p></div>}
         </div>
 
 
@@ -587,7 +588,7 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
                 <div>
                     <h3 className="text-lg font-semibold mb-2 flex items-center gap-2"><PackageCheck className="h-5 w-5 text-primary"/>Detalles de Garantía Extendida</h3>
                     <div className="text-sm space-y-1">
-                        <p><strong>Tipo:</strong> {order.warrantyType === '30d' ? '30 Días' : order.warrantyType === '60d' ? '60 Días' : order.warrantyType === '90d' ? '90 Días' : order.warrantyType === 'custom' ? 'Personalizada' : 'N/A'}</p>
+                        <p><strong>Tipo:</strong> {order.warrantyType === '30d' ? '30 Días' : order.warrantyType === '60d' ? '60 Días' : order.warrantyType === '90d' ? '90 Días' : order.warrantyType === 'custom' ? `Personalizada` : 'N/A'}</p>
                         {order.warrantyStartDate && <p><strong>Inicio:</strong> {format(parseISO(order.warrantyStartDate as string), "dd MMM yyyy", { locale: es })}</p>}
                         {order.warrantyEndDate && <p><strong>Fin:</strong> {format(parseISO(order.warrantyEndDate as string), "dd MMM yyyy", { locale: es })}</p>}
                         {order.warrantyCoveredItem && <p><strong>Pieza/Procedimiento Cubierto:</strong> {order.warrantyCoveredItem}</p>}
