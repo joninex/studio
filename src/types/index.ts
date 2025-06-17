@@ -15,9 +15,9 @@ export interface StoreSettings {
   pickupConditions?: string; 
   
   // Detailed legal texts
-  unlockDisclaimerText?: string; // Formerly importantUnlockDisclaimer
+  unlockDisclaimerText?: string;
   abandonmentPolicyText?: string; 
-  dataLossPolicyText?: string; // Formerly dataRetrievalPolicyText & dataLossDisclaimerText
+  dataLossPolicyText?: string; 
   untestedDevicePolicyText?: string;
   budgetVariationText?: string; 
   highRiskDeviceText?: string; 
@@ -25,12 +25,11 @@ export interface StoreSettings {
   warrantyVoidConditionsText?: string; 
   privacyPolicyText?: string;
 
-  // These might be derived or part of abandonmentPolicyText logic now
   abandonmentPolicyDays30?: number; 
   abandonmentPolicyDays60?: number;
 }
 
-export type UserRole = 'admin' | 'tecnico' | 'recepcionista';
+export type UserRole = 'admin' | 'tecnico' | 'recepcionista' | 'cadete' | 'proveedor_externo';
 
 export interface User {
   uid: string;
@@ -108,7 +107,7 @@ export interface Comment {
   timestamp: Timestamp | Date | string;
 }
 
-export type WarrantyType = '30d' | '60d' | '90d' | 'custom' | '';
+export type WarrantyType = '30d' | '60d' | '90d' | 'custom' | null;
 
 export interface Order {
   id?: string;
@@ -120,6 +119,7 @@ export interface Order {
 
   createdByUserId: string; 
 
+  branchInfo: string;
   deviceBrand: string;
   deviceModel: string;
   deviceIMEI: string;
@@ -131,7 +131,7 @@ export interface Order {
   equipo_sin_acceso?: boolean;
   perdida_informacion?: boolean;
 
-  classification: Classification; 
+  classification: Classification | null; 
   observations?: string;
 
   status: OrderStatus;
@@ -162,7 +162,7 @@ export interface Order {
   orderSnapshottedPartialDamageDisplayText?: string;
   orderSnapshottedWarrantyVoidConditionsText?: string;
   orderSnapshottedPrivacyPolicy?: string;
-  orderWarrantyConditions?: string; // General store warranty, can complement warrantyVoidConditions
+  orderWarrantyConditions?: string; 
 
   costSparePart: number;
   costLabor: number;

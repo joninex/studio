@@ -1,7 +1,7 @@
 // src/lib/actions/user.actions.ts
 "use server";
 
-import type { User, UserStatus } from "@/types";
+import type { User, UserStatus, UserRole } from "@/types";
 import { UserSchema } from "@/lib/schemas";
 import type { z } from "zod";
 import { 
@@ -12,6 +12,7 @@ import {
   deleteMockPassword,
   getUserById // Added getUserById
 } from "./auth.actions"; // Import helpers
+import { DEFAULT_STORE_SETTINGS } from "@/lib/constants";
 
 const SUPER_ADMIN_EMAIL = "jesus@mobyland.com.ar";
 
@@ -45,8 +46,8 @@ export async function createUser(data: z.infer<typeof UserSchema>): Promise<{ su
     role: email === SUPER_ADMIN_EMAIL ? 'admin' : role, // Ensure super admin is admin
     status: email === SUPER_ADMIN_EMAIL ? 'active' : "active", // Super admin and admin-created users are active
     createdAt: new Date().toISOString(), 
-    updatedAt: new Date().toISOString() 
-    // storeSettings will be default or initialized upon first save by user
+    updatedAt: new Date().toISOString(),
+    storeSettings: { ...DEFAULT_STORE_SETTINGS, companyName: `${name}'s Store (Default)` }
   };
   const updatedUsers = [...currentUsers, newUser];
   await updateAllMockUsers(updatedUsers);

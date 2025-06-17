@@ -4,6 +4,8 @@ export const USER_ROLES = {
   ADMIN: 'admin',
   TECNICO: 'tecnico',
   RECEPCIONISTA: 'recepcionista',
+  CADETE: 'cadete',
+  PROVEEDOR_EXTERNO: 'proveedor_externo',
 } as const;
 
 export const USER_ROLES_VALUES = Object.values(USER_ROLES) as [UserRole, ...UserRole[]];
@@ -32,15 +34,15 @@ export const UNLOCK_PATTERN_INFO_SUGGESTIONS: string[] = [
   "Cliente proveyó patrón/clave",
 ];
 
-export const CLASSIFICATION_OPTIONS: Classification[] = [
+export const CLASSIFICATION_OPTIONS: Array<Classification | null> = [
   "rojo",
   "verde",
   "sin stock",
-  "",
+  null,
 ];
 
 export const SPECIFIC_SECTORS_OPTIONS: string[] = [
-  "Pantallas con daño parcial",
+  "Pantalla con daño parcial",
   "Equipos sin clave o que no encienden",
   "Pérdida de información",
 ];
@@ -84,9 +86,9 @@ export const SALE_CON_HUELLA_OPTIONS = [
 ];
 
 
-export const WARRANTY_TYPES: WarrantyType[] = ['30d', '60d', '90d', 'custom']; // Removed ""
+export const WARRANTY_TYPES: Array<WarrantyType | null> = ['30d', '60d', '90d', 'custom', null];
 
-export const WARRANTY_TYPE_OPTIONS: Array<{ value: WarrantyType; label: string }> = [
+export const WARRANTY_TYPE_OPTIONS: Array<{ value: WarrantyType | ""; label: string }> = [
   { value: "30d", label: "30 Días" },
   { value: "60d", label: "60 Días" },
   { value: "90d", label: "90 Días" },
@@ -108,7 +110,6 @@ export const DEFAULT_STORE_SETTINGS: StoreSettings = {
   abandonmentPolicyDays30: 30,
   abandonmentPolicyDays60: 60,
   
-  // More specific legal texts
   unlockDisclaimerText: "IMPORTANTE (DESBLOQUEO): Si no se informa el patrón/clave de desbloqueo o si el informado es incorrecto, es imposible realizar un test de funcionalidad completo del equipo. TecnoLand NO será responsable de los componentes no testeados. La garantía será únicamente por el repuesto utilizado si no se pueden verificar las funciones del equipo.",
   abandonmentPolicyText: "POLÍTICA DE ABANDONO DE EQUIPO: Pasados los 30 (treinta) días de la notificación de equipo 'LISTO PARA RETIRAR' o 'PRESUPUESTADO', el valor de la reparación o presupuesto se actualizará según la inflación vigente. Pasados los 60 (sesenta) días corridos desde dicha notificación sin que el equipo sea retirado, se considerará en estado de abandono según Art. 2525 y 2526 CCCN, facultando a TecnoLand a disponer del mismo para cubrir gastos, sin derecho a reclamo por parte del cliente.",
   dataLossPolicyText: "PÉRDIDA DE INFORMACIÓN Y POLÍTICA DE PRIVACIDAD: TecnoLand NO se responsabiliza por la pérdida total o parcial de información (contactos, fotos, videos, etc.) alojada en el equipo. Es responsabilidad del cliente realizar un backup previo. El cliente puede solicitar un servicio de backup con costo adicional. El cliente autoriza al taller a acceder a la información del dispositivo necesaria para realizar el diagnóstico y/o reparación. Los datos personales y la información del dispositivo serán tratados con confidencialidad y solo para los fines del servicio.",
@@ -117,5 +118,5 @@ export const DEFAULT_STORE_SETTINGS: StoreSettings = {
   highRiskDeviceText: "TELÉFONOS CON RIESGOS ESPECIALES: Equipos mojados, sulfatados, con golpes fuertes, intervenidos previamente por terceros o con problemas de placa madre pueden presentar riesgos adicionales durante el desarme o reparación, pudiendo dejar de funcionar o agravar su estado. El cliente acepta estos riesgos. TecnoLand ofrecerá opciones si el equipo se ve afectado.",
   partialDamageDisplayText: "PANTALLAS CON DAÑO PARCIAL: En equipos con pantallas parcialmente funcionales (ej. imagen con manchas, líneas, táctil fallando en sectores), la falla puede incrementarse o dejar de funcionar por completo durante el desarme. TecnoLand no se responsabiliza por dicho agravamiento. Si el cliente decide retirar el equipo sin reparación, se devolverá con la pantalla original en el estado en que se encuentre tras el intento de reparación.",
   warrantyVoidConditionsText: "ANULACIÓN DE GARANTÍA: La garantía quedará anulada por: Excesos o picos de tensión eléctrica; ingreso de humedad o líquidos; intervención de terceros no autorizados; uso inadecuado o negligente; golpes, caídas o roturas posteriores a la reparación; uso de cargadores no originales o defectuosos; instalación de software no autorizado, virus o malware; deformaciones estéticas o daños no relacionados con la reparación original. EQUIPOS REPARADOS POR HUMEDAD, SOFTWARE O CORTOS ELÉCTRICOS cuentan con una garantía de 72 horas únicamente sobre la falla reparada.",
-  privacyPolicyText: "POLÍTICA DE PRIVACIDAD ADICIONAL: [El administrador puede agregar aquí texto adicional sobre privacidad si es necesario, complementando lo indicado en la política de pérdida de datos.]", // Kept separate for more flexibility if needed
+  privacyPolicyText: "POLÍTICA DE PRIVACIDAD ADICIONAL: [El administrador puede agregar aquí texto adicional sobre privacidad si es necesario, complementando lo indicado en la política de pérdida de datos.]",
 };

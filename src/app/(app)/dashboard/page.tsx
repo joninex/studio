@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/providers/AuthProvider";
 import { getOrders } from "@/lib/actions/order.actions";
 import type { Order, OrderStatus } from "@/types"; 
-import { BarChart, FileText, Users, Wrench, PackageCheck, AlertTriangle, ListFilter } from "lucide-react"; 
+import { BarChart, FileText, Users, Wrench, PackageCheck, AlertTriangle, ListFilter, FileClock, Construction, Truck } from "lucide-react"; 
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner"; 
 
 export default function DashboardPage() {
@@ -33,35 +33,35 @@ export default function DashboardPage() {
     fetchDashboardData();
   }, []);
 
-  const activeStatuses: OrderStatus[] = [
-    "Recibido", "En Diagnóstico", "Presupuestado", 
-    "Presupuesto Aprobado", "En Espera de Repuestos", 
-    "En Reparación", "Reparado", "En Control de Calidad"
+  const pendingStatuses: OrderStatus[] = [
+    "Recibido", "En Diagnóstico", "Presupuestado", "Presupuesto Aprobado"
   ];
-  const activeOrdersCount = ordersData.filter(
-    (order) => activeStatuses.includes(order.status)
+  const pendingOrdersCount = ordersData.filter(
+    (order) => pendingStatuses.includes(order.status)
   ).length;
 
-  const repairedStatuses: OrderStatus[] = ["Reparado", "En Control de Calidad", "Listo para Entrega", "Entregado"];
-  const repairedTotalCount = ordersData.filter(
-    (order) => repairedStatuses.includes(order.status)
+  const inRepairStatuses: OrderStatus[] = [
+    "En Espera de Repuestos", "En Reparación", "En Control de Calidad"
+  ];
+  const inRepairOrdersCount = ordersData.filter(
+    (order) => inRepairStatuses.includes(order.status)
   ).length;
 
-  const pendingPickupCount = ordersData.filter(
+  const readyForPickupCount = ordersData.filter(
     (order) => order.status === "Listo para Entrega"
   ).length;
   
-  const nonCompletedStatuses: OrderStatus[] = ["Presupuesto Rechazado", "Sin Reparación"];
-  const abandonedOrRejectedCount = ordersData.filter(
-    (order) => nonCompletedStatuses.includes(order.status)
+  const notCompletedOrRejectedStatuses: OrderStatus[] = ["Presupuesto Rechazado", "Sin Reparación"];
+  const rejectedOrNoSolutionCount = ordersData.filter(
+    (order) => notCompletedOrRejectedStatuses.includes(order.status)
   ).length;
 
 
   const quickStats = [
-    { title: "Órdenes Activas", value: activeOrdersCount, icon: ListFilter, color: "text-blue-500", bgColor: "bg-blue-100" },
-    { title: "Equipos Procesados (Total)", value: repairedTotalCount, icon: Wrench, color: "text-green-500", bgColor: "bg-green-100" },
-    { title: "Pendientes de Retiro", value: pendingPickupCount, icon: PackageCheck, color: "text-orange-500", bgColor: "bg-orange-100" },
-    { title: "Rechazados/Sin Reparación", value: abandonedOrRejectedCount, icon: AlertTriangle, color: "text-red-500", bgColor: "bg-red-100" },
+    { title: "Órdenes Pendientes", value: pendingOrdersCount, icon: FileClock, color: "text-blue-500", bgColor: "bg-blue-100", description: "Requieren atención inicial o aprobación." },
+    { title: "En Reparación / Proceso", value: inRepairOrdersCount, icon: Wrench, color: "text-yellow-500", bgColor: "bg-yellow-100", description: "En taller, espera de repuestos o QC." },
+    { title: "Listos para Retirar", value: readyForPickupCount, icon: PackageCheck, color: "text-green-500", bgColor: "bg-green-100", description: "Finalizados, esperando al cliente." },
+    { title: "Rechazados / Sin Solución", value: rejectedOrNoSolutionCount, icon: AlertTriangle, color: "text-red-500", bgColor: "bg-red-100", description: "Presupuestos no aprobados o sin reparación." },
   ];
 
   return (
@@ -96,7 +96,7 @@ export default function DashboardPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold">{stat.value}</div>
-                <p className="text-xs text-muted-foreground pt-1">Actualizado recientemente</p>
+                <p className="text-xs text-muted-foreground pt-1">{stat.description}</p>
               </CardContent>
             </Card>
           ))}

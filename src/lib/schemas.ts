@@ -66,8 +66,8 @@ const checklistShapeObject: Record<keyof Checklist, z.ZodTypeAny> = {
 export const ChecklistSchema = z.object(checklistShapeObject);
 
 const validOrderStatuses = ORDER_STATUSES.filter(status => status !== "") as [OrderStatus, ...OrderStatus[]];
-const validClassificationOptions = CLASSIFICATION_OPTIONS.filter(opt => opt !== "") as [Classification, ...Classification[]];
-const validWarrantyTypes = WARRANTY_TYPES.filter(type => type !== "") as [WarrantyType, ...WarrantyType[]];
+const validClassificationOptions = CLASSIFICATION_OPTIONS.filter(opt => opt !== null) as [Classification, ...Classification[]];
+const validWarrantyTypes = WARRANTY_TYPES.filter(type => type !== null) as [WarrantyType, ...WarrantyType[]];
 
 
 export const OrderSchema = z.object({
@@ -96,7 +96,7 @@ export const OrderSchema = z.object({
     (val) => (val === "" || val === null || val === undefined ? 0 : Number(val)),
     z.number({ invalid_type_error: "Debe ser un número" }).nonnegative("Costo debe ser no negativo.")
   ).default(0),
-  classification: z.enum(validClassificationOptions).optional().or(z.literal("")).nullable(),
+  classification: z.enum(validClassificationOptions).nullable(),
   observations: z.string().optional().or(z.literal('')),
   customerAccepted: z.boolean().optional().default(false).refine(val => val === true, { message: "El cliente debe aceptar los términos generales." }),
   customerSignatureName: z.string().min(1, "El nombre para la firma es requerido si se aceptan los términos.").optional().or(z.literal('')),
@@ -114,8 +114,8 @@ export const OrderSchema = z.object({
   orderWarrantyConditions: z.string().optional().or(z.literal('')),
   
   // Acceptance flags for these snapshotted texts
-  dataLossDisclaimerAccepted: z.boolean().optional().default(false), // Corresponds to dataLossPolicyText
-  privacyPolicyAccepted: z.boolean().optional().default(false), // Corresponds to privacyPolicyText (part of dataLossPolicyText or separate)
+  dataLossDisclaimerAccepted: z.boolean().optional().default(false), 
+  privacyPolicyAccepted: z.boolean().optional().default(false), 
   
   status: z.enum(validOrderStatuses).default("Recibido"),
   hasWarranty: z.boolean().optional().default(false),
@@ -141,7 +141,7 @@ export const OrderSchema = z.object({
       path: ["dataLossDisclaimerAccepted"],
     });
   }
-  // No separate privacyPolicyAccepted check if dataLossPolicyText already covers privacy, or adjust if privacy is fully separate
+
   if (data.orderSnapshottedPrivacyPolicy && data.orderSnapshottedPrivacyPolicy.trim() !== "" && data.orderSnapshottedDataLossPolicyText !== data.orderSnapshottedPrivacyPolicy && !data.privacyPolicyAccepted) {
      ctx.addIssue({
       code: z.ZodIssueCode.custom,
@@ -152,7 +152,7 @@ export const OrderSchema = z.object({
 
 
   if (data.hasWarranty) {
-    if (!data.warrantyType || data.warrantyType === "") { // Check against empty string too
+    if (!data.warrantyType) { 
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: "El tipo de garantía es requerido.", path: ["warrantyType"] });
     }
     if (!data.warrantyStartDate) {
@@ -217,8 +217,8 @@ export const StoreSettingsSchema = z.object({
   companyContactDetails: z.string().min(1, "Detalles de contacto de la empresa son requeridos.").optional().or(z.literal('')),
   branchInfo: z.string().min(1, "Información de sucursal/taller es requerida.").optional().or(z.literal('')),
   
-  warrantyConditions: z.string().optional().or(z.literal('')), // General warranty
-  pickupConditions: z.string().optional().or(z.literal('')), // General pickup (might be redundant if abandonment policy is comprehensive)
+  warrantyConditions: z.string().optional().or(z.literal('')), 
+  pickupConditions: z.string().optional().or(z.literal('')), 
 
   unlockDisclaimerText: z.string().optional().or(z.literal('')),
   abandonmentPolicyText: z.string().optional().or(z.literal('')),

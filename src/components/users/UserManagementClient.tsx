@@ -14,7 +14,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger
 } from "@/components/ui/alert-dialog";
-import { PlusCircle, Edit, Trash2, Search, UserPlus, CheckCircle, XCircle, Clock } from "lucide-react";
+import { PlusCircle, Edit, Trash2, Search, UserPlus, CheckCircle, XCircle, Clock, Truck, Briefcase } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { UserSchema } from "@/lib/schemas";
@@ -154,6 +154,29 @@ export function UserManagementClient() {
     }
   };
 
+  const getRoleDisplayName = (role: UserRole): string => {
+    switch (role) {
+      case 'admin': return 'Administrador';
+      case 'tecnico': return 'Técnico';
+      case 'recepcionista': return 'Recepcionista';
+      case 'cadete': return 'Cadete';
+      case 'proveedor_externo': return 'Proveedor Externo';
+      default: return role.charAt(0).toUpperCase() + role.slice(1);
+    }
+  };
+  
+  const getRoleBadgeVariant = (role: UserRole): "default" | "secondary" | "outline" | "destructive" => {
+    switch (role) {
+      case 'admin': return 'default'; // Primary color
+      case 'tecnico': return 'secondary'; // Secondary color
+      case 'recepcionista': return 'outline'; // Outline, can be styled further via CSS
+      case 'cadete': return 'default'; // Could use another color, e.g., bg-blue-500
+      case 'proveedor_externo': return 'outline'; // bg-purple-500 or similar
+      default: return 'outline';
+    }
+  };
+
+
   const filteredUsers = users.filter(user =>
     user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.email.toLowerCase().includes(searchTerm.toLowerCase())
@@ -205,7 +228,15 @@ export function UserManagementClient() {
                 <TableRow key={user.uid}>
                   <TableCell className="font-medium">{user.name}</TableCell>
                   <TableCell>{user.email}</TableCell>
-                  <TableCell><Badge variant={user.role === 'admin' ? 'default' : (user.role === 'tecnico' ? 'secondary' : 'outline') }>{user.role}</Badge></TableCell>
+                  <TableCell>
+                     <Badge variant={getRoleBadgeVariant(user.role)} 
+                           className={
+                            user.role === 'cadete' ? 'bg-sky-500 hover:bg-sky-600 text-white' : 
+                            user.role === 'proveedor_externo' ? 'bg-purple-500 hover:bg-purple-600 text-white' : ''
+                           }>
+                        {getRoleDisplayName(user.role)}
+                     </Badge>
+                  </TableCell>
                   <TableCell>{getStatusBadge(user.status)}</TableCell>
                   <TableCell className="text-right space-x-1">
                     {user.status === 'pending' && (
@@ -258,7 +289,7 @@ export function UserManagementClient() {
                     <SelectContent>
                       {USER_ROLES_VALUES.map(roleValue => (
                         <SelectItem key={roleValue} value={roleValue}>
-                          {roleValue.charAt(0).toUpperCase() + roleValue.slice(1)}
+                          {getRoleDisplayName(roleValue)}
                         </SelectItem>
                       ))}
                     </SelectContent>
