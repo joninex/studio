@@ -82,7 +82,7 @@ export function OrderListClient({ initialOrders, initialFilters }: OrderListClie
       if (filters.imei) params.set('imei', filters.imei);
       if (filters.status) params.set('status', filters.status);
       router.push(`${pathname}?${params.toString()}`);
-      fetchOrders(filters); 
+      // fetchOrders will be triggered by useEffect watching searchParams
     });
   };
 
@@ -90,9 +90,21 @@ export function OrderListClient({ initialOrders, initialFilters }: OrderListClie
     startTransition(() => {
       setFilters({ client: "", orderNumber: "", imei: "", status: "" });
       router.push(pathname);
-      fetchOrders({ client: "", orderNumber: "", imei: "", status: "" }); 
+      // fetchOrders will be triggered by useEffect watching searchParams
     });
   };
+
+  // Fetch orders when filters derived from searchParams change
+  useEffect(() => {
+    const currentFilters = {
+        client: searchParams.get('client') || '',
+        orderNumber: searchParams.get('orderNumber') || '',
+        imei: searchParams.get('imei') || '',
+        status: searchParams.get('status') || '',
+    };
+    fetchOrders(currentFilters);
+  }, [searchParams, fetchOrders]);
+
 
   const getStatusBadgeVariant = (status: OrderStatus): "default" | "secondary" | "destructive" | "outline" => {
     switch (status) {
@@ -196,7 +208,7 @@ export function OrderListClient({ initialOrders, initialFilters }: OrderListClie
                       <Badge variant={getStatusBadgeVariant(order.status)}>{order.status || "N/A"}</Badge>
                     </TableCell>
                     <TableCell>
-                      {format(new Date(order.entryDate), "dd MMM yyyy, HH:mm", { locale: es })}
+                      {order.entryDate ? format(new Date(order.entryDate as string), "dd MMM yyyy, HH:mm", { locale: es }) : 'N/A'}
                     </TableCell>
                     <TableCell className="text-right">
                       <Button asChild variant="ghost" size="icon">

@@ -20,8 +20,9 @@ export default async function OrdersPage({
   const imei = typeof searchParams?.imei === 'string' ? searchParams.imei : undefined;
   const status = typeof searchParams?.status === 'string' ? searchParams.status : undefined;
   
-  // Initial data fetch on the server
-  const initialOrders = await getOrders({ client, orderNumber, imei, status });
+  // Initial data fetch on the server, using the same filters as the client will use
+  const initialFilters = { client, orderNumber, imei, status };
+  const initialOrders = await getOrders(initialFilters);
 
   return (
     <div className="space-y-6">
@@ -38,7 +39,7 @@ export default async function OrdersPage({
         }
       />
       <Suspense fallback={<div className="flex justify-center items-center h-64"><LoadingSpinner size={48} /> <p className="ml-4">Cargando órdenes...</p></div>}>
-        <OrderListClient initialOrders={initialOrders} initialFilters={{client, orderNumber, imei, status}} />
+        <OrderListClient initialOrders={initialOrders} initialFilters={initialFilters} />
       </Suspense>
     </div>
   );
