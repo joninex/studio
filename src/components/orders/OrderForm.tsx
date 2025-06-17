@@ -24,12 +24,12 @@ import { Calendar } from "@/components/ui/calendar";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/providers/AuthProvider";
-import { AISuggestion, type Order, type StoreSettings, WarrantyType, OrderStatus } from "@/types";
+import { AISuggestion, type Order, type StoreSettings, WarrantyType, OrderStatus, Classification } from "@/types";
 import { 
   CHECKLIST_ITEMS, CLASSIFICATION_OPTIONS, ORDER_STATUSES, 
-  UNLOCK_PATTERN_OPTIONS, YES_NO_OPTIONS, DEFAULT_STORE_SETTINGS, WARRANTY_TYPE_OPTIONS, WARRANTY_TYPES
+  YES_NO_OPTIONS, DEFAULT_STORE_SETTINGS, WARRANTY_TYPE_OPTIONS, WARRANTY_TYPES, UNLOCK_PATTERN_INFO_SUGGESTIONS
 } from "@/lib/constants";
-import { AlertCircle, Bot, CalendarIcon, DollarSign, Info, ListChecks, LucideSparkles, User, Wrench, LinkIcon, Building, UserSquare, ShieldCheck } from "lucide-react";
+import { AlertCircle, Bot, CalendarIcon, DollarSign, Info, ListChecks, LucideSparkles, User, Wrench, LinkIcon, Building, UserSquare, ShieldCheck, FileLock2, FileTextIcon, LockKeyhole } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import { cn } from "@/lib/utils";
@@ -40,9 +40,9 @@ interface OrderFormProps {
 
 const NONE_CLASSIFICATION_VALUE = "__NONE_CLASSIFICATION_VALUE__";
 const NONE_WARRANTY_TYPE_VALUE = "";
-const NONE_UNLOCK_PATTERN_VALUE = ""; // For Select placeholder handling
 
 const validOrderStatusOptions = ORDER_STATUSES.filter(status => status !== "") as OrderStatus[];
+const validClassificationOptions = CLASSIFICATION_OPTIONS.filter(opt => opt !== "") as Classification[];
 
 
 export function OrderForm({ orderId }: OrderFormProps) {
@@ -54,6 +54,7 @@ export function OrderForm({ orderId }: OrderFormProps) {
   const [aiSuggestion, setAiSuggestion] = useState<AISuggestion | null>(null);
   const [isLoadingOrder, setIsLoadingOrder] = useState(!!orderId);
   const [isLoadingStoreSettings, setIsLoadingStoreSettings] = useState(!orderId);
+  const [currentStoreSettings, setCurrentStoreSettings] = useState<StoreSettings | null>(null);
 
 
   const form = useForm<OrderFormData>({
@@ -62,7 +63,7 @@ export function OrderForm({ orderId }: OrderFormProps) {
       clientId: "",
       branchInfo: DEFAULT_STORE_SETTINGS.branchInfo || "Sucursal Principal",
       deviceBrand: "", deviceModel: "", deviceIMEI: "", declaredFault: "",
-      unlockPatternInfo: undefined,
+      unlockPatternInfo: "", // Now a string
       checklist: CHECKLIST_ITEMS.reduce((acc, item) => {
         // @ts-ignore
         acc[item.id] = ['enciende', 'tactil', 'imagen', 'botones', 'cam_trasera', 'cam_delantera', 'vibrador', 'microfono', 'auricular', 'parlante', 'sensor_huella', 'senal', 'wifi_bluetooth', 'pin_carga', 'lente_camara'].includes(item.id) ? 'si' : 'no';
@@ -71,13 +72,17 @@ export function OrderForm({ orderId }: OrderFormProps) {
       damageRisk: "",
       pantalla_parcial: false,
       equipo_sin_acceso: false,
-      perdida_informacion: false,
+      perdida_informacion: false, // Risk checkbox
       previousOrderId: "",
       costSparePart: 0, costLabor: 0, costPending: 0,
       classification: undefined, observations: "",
-      customerAccepted: false, customerSignatureName: "",
-      status: "Recibido", // Default to new "Recibido" status
-      // Warranty defaults
+      customerAccepted: false, 
+      customerSignatureName: "",
+      dataLossDisclaimerAccepted: false,
+      privacyPolicyAccepted: false,
+      orderSnapshottedDataLossDisclaimer: "",
+      orderSnapshottedPrivacyPolicy: "",
+      status: "Recibido",
       hasWarranty: false,
       warrantyType: NONE_WARRANTY_TYPE_VALUE as WarrantyType,
       warrantyStartDate: null,
@@ -93,18 +98,31 @@ export function OrderForm({ orderId }: OrderFormProps) {
   const warrantyTypeWatch = useWatch({ control: form.control, name: "warrantyType" });
   const warrantyStartDateWatch = useWatch({ control: form.control, name: "warrantyStartDate" });
 
+  const dataLossDisclaimerTextWatch = currentStoreSettings?.dataLossDisclaimerText;
+  const privacyPolicyTextWatch = currentStoreSettings?.privacyPolicyText;
+
 
   useEffect(() => {
     async function fetchInitialData() {
-      if (!orderId && user) {
+      if (user) { // Always fetch user settings if user is available
         setIsLoadingStoreSettings(true);
         try {
           const userSettings = await getStoreSettingsForUser(user.uid);
-          form.setValue('branchInfo', userSettings.branchInfo || DEFAULT_STORE_SETTINGS.branchInfo || "Sucursal Principal");
+          setCurrentStoreSettings(userSettings);
+          if (!orderId) { // Only set branchInfo if it's a new order
+            form.setValue('branchInfo', userSettings.branchInfo || DEFAULT_STORE_SETTINGS.branchInfo || "Sucursal Principal");
+            form.setValue('orderSnapshottedDataLossDisclaimer', userSettings.dataLossDisclaimerText || "");
+            form.setValue('orderSnapshottedPrivacyPolicy', userSettings.privacyPolicyText || "");
+          }
         } catch (error) {
-          console.error("Failed to load user store settings for new order form:", error);
+          console.error("Failed to load user store settings:", error);
           toast({ variant: "destructive", title: "Error", description: "No se pudo cargar la configuración de su tienda." });
-          form.setValue('branchInfo', DEFAULT_STORE_SETTINGS.branchInfo || "Error carga config");
+          if (!orderId) {
+            form.setValue('branchInfo', DEFAULT_STORE_SETTINGS.branchInfo || "Error carga config");
+            form.setValue('orderSnapshottedDataLossDisclaimer', DEFAULT_STORE_SETTINGS.dataLossDisclaimerText || "");
+            form.setValue('orderSnapshottedPrivacyPolicy', DEFAULT_STORE_SETTINGS.privacyPolicyText || "");
+          }
+           setCurrentStoreSettings(DEFAULT_STORE_SETTINGS); // Fallback
         } finally {
           setIsLoadingStoreSettings(false);
         }
@@ -128,15 +146,20 @@ export function OrderForm({ orderId }: OrderFormProps) {
                 ...(order.checklist || {}),
               },
               clientId: order.clientId,
+              unlockPatternInfo: order.unlockPatternInfo || "", // Ensure it's a string
               previousOrderId: order.previousOrderId || "",
               costSparePart: Number(order.costSparePart || 0),
               costLabor: Number(order.costLabor || 0),
               costPending: Number(order.costPending || 0),
-              classification: order.classification || undefined,
-              unlockPatternInfo: order.unlockPatternInfo || undefined,
+              classification: order.classification as Classification || undefined,
               status: order.status || "Recibido",
-              branchInfo: order.branchInfo,
-              // Warranty fields
+              branchInfo: order.branchInfo, // Use existing branchInfo from order
+              customerAccepted: order.customerAccepted || false,
+              customerSignatureName: order.customerSignatureName || "",
+              dataLossDisclaimerAccepted: order.dataLossDisclaimerAccepted || false,
+              privacyPolicyAccepted: order.privacyPolicyAccepted || false,
+              orderSnapshottedDataLossDisclaimer: order.orderSnapshottedDataLossDisclaimer || "",
+              orderSnapshottedPrivacyPolicy: order.orderSnapshottedPrivacyPolicy || "",
               hasWarranty: order.hasWarranty || false,
               warrantyType: order.warrantyType || NONE_WARRANTY_TYPE_VALUE as WarrantyType,
               warrantyStartDate: order.warrantyStartDate ? format(new Date(order.warrantyStartDate), "yyyy-MM-dd") : null,
@@ -155,17 +178,16 @@ export function OrderForm({ orderId }: OrderFormProps) {
         }
       }
     }
-    if (user || orderId) {
+    if (user) { // Condition ensures user info is available
         fetchInitialData();
     }
   }, [orderId, user, form, router, toast]);
 
-  // Auto-calculate warrantyEndDate
   useEffect(() => {
     if (hasWarrantyWatch && warrantyStartDateWatch && warrantyTypeWatch && warrantyTypeWatch !== 'custom' && warrantyTypeWatch !== NONE_WARRANTY_TYPE_VALUE) {
       try {
         const startDate = new Date(warrantyStartDateWatch);
-        if (isNaN(startDate.getTime())) return; // Invalid start date
+        if (isNaN(startDate.getTime())) return; 
 
         let daysToAdd = 0;
         if (warrantyTypeWatch === '30d') daysToAdd = 30;
@@ -180,7 +202,7 @@ export function OrderForm({ orderId }: OrderFormProps) {
         console.error("Error calculating warranty end date:", error);
       }
     } else if (hasWarrantyWatch && warrantyTypeWatch === 'custom') {
-      // If type is custom, don't auto-calculate, allow manual input.
+      // Allow manual input
     } else if (!hasWarrantyWatch) {
         form.setValue('warrantyEndDate', null);
         form.setValue('warrantyStartDate', null);
@@ -198,16 +220,26 @@ export function OrderForm({ orderId }: OrderFormProps) {
     }
     startTransition(async () => {
       let result;
+      // Ensure snapshotted texts are set from currentStoreSettings if creating new, or existing if editing
+      const finalSnapshottedDataLoss = orderId 
+        ? values.orderSnapshottedDataLossDisclaimer 
+        : currentStoreSettings?.dataLossDisclaimerText || "";
+      const finalSnapshottedPrivacy = orderId 
+        ? values.orderSnapshottedPrivacyPolicy
+        : currentStoreSettings?.privacyPolicyText || "";
+
       const submissionValues = {
         ...values,
+        unlockPatternInfo: values.unlockPatternInfo, // Already a string
         previousOrderId: values.previousOrderId?.trim() === "" ? undefined : values.previousOrderId?.trim(),
         warrantyType: values.hasWarranty ? values.warrantyType : NONE_WARRANTY_TYPE_VALUE as WarrantyType,
         warrantyStartDate: values.hasWarranty && values.warrantyStartDate ? values.warrantyStartDate : null,
         warrantyEndDate: values.hasWarranty && values.warrantyEndDate ? values.warrantyEndDate : null,
         warrantyCoveredItem: values.hasWarranty ? values.warrantyCoveredItem : "",
         warrantyNotes: values.hasWarranty ? values.warrantyNotes : "",
-        status: values.status || "Recibido", // Ensure status has a value
-
+        status: values.status || "Recibido", 
+        orderSnapshottedDataLossDisclaimer: finalSnapshottedDataLoss,
+        orderSnapshottedPrivacyPolicy: finalSnapshottedPrivacy,
       };
 
       if (orderId) {
@@ -244,7 +276,7 @@ export function OrderForm({ orderId }: OrderFormProps) {
     setIsAiLoading(false);
   };
 
-  if ((isLoadingOrder && orderId) || (isLoadingStoreSettings && !orderId && user) ) {
+  if ((isLoadingOrder && orderId) || (isLoadingStoreSettings && user) ) {
     return <div className="flex justify-center items-center h-64"><LoadingSpinner size={48}/> <p className="ml-4">Cargando datos del formulario...</p></div>;
   }
 
@@ -285,17 +317,9 @@ export function OrderForm({ orderId }: OrderFormProps) {
                 <FormField control={form.control} name="declaredFault" render={({ field }) => ( <FormItem><FormLabel>Falla Declarada por el Cliente</FormLabel><FormControl><Textarea placeholder="Descripción de la falla" {...field} /></FormControl><FormMessage /></FormItem> )} />
                 <FormField control={form.control} name="unlockPatternInfo" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Patrón o Clave de Desbloqueo</FormLabel>
-                    <Select 
-                        onValueChange={field.onChange} 
-                        value={field.value || NONE_UNLOCK_PATTERN_VALUE} 
-                        defaultValue={NONE_UNLOCK_PATTERN_VALUE}
-                    >
-                      <FormControl><SelectTrigger><SelectValue placeholder="Seleccione una opción" /></SelectTrigger></FormControl>
-                      <SelectContent>
-                        {UNLOCK_PATTERN_OPTIONS.filter(opt => opt !== "").map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
+                    <FormLabel className="flex items-center gap-1"><LockKeyhole className="h-4 w-4"/>PIN, Patrón o Contraseña del Dispositivo</FormLabel>
+                    <FormControl><Input placeholder="Ej: 1234, L, No tiene, No recuerda" {...field} /></FormControl>
+                    <FormDescription>Este campo es obligatorio. Registre la información de desbloqueo o indique si no aplica.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )} />
@@ -368,7 +392,7 @@ export function OrderForm({ orderId }: OrderFormProps) {
             </Card>
 
             <Card>
-              <CardHeader><CardTitle className="flex items-center gap-2"><AlertCircle className="text-primary"/> Riesgos y Sectores Específicos</CardTitle></CardHeader>
+              <CardHeader><CardTitle className="flex items-center gap-2"><AlertCircle className="text-primary"/> Riesgos y Condiciones Específicas</CardTitle></CardHeader>
               <CardContent className="space-y-4">
                 <FormField control={form.control} name="damageRisk" render={({ field }) => ( <FormItem><FormLabel>Riesgo de Rotura (Daños preexistentes)</FormLabel><FormControl><Textarea placeholder="Describa daños específicos..." {...field} /></FormControl><FormMessage /></FormItem> )} />
                  <div className="space-y-2">
@@ -385,10 +409,10 @@ export function OrderForm({ orderId }: OrderFormProps) {
                             <FormLabel className="text-sm font-normal">Equipo sin clave o que no enciende (sin acceso completo)</FormLabel>
                         </FormItem>
                     )} />
-                    <FormField control={form.control} name="perdida_informacion" render={({ field }) => (
+                    <FormField control={form.control} name="perdida_informacion" render={({ field }) => ( // This is the risk checkbox, not the disclaimer acceptance
                         <FormItem className="flex flex-row items-start space-x-3 space-y-0 mt-2">
                             <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
-                            <FormLabel className="text-sm font-normal">Riesgo de pérdida de información</FormLabel>
+                            <FormLabel className="text-sm font-normal">Riesgo de pérdida de información (a considerar por el técnico)</FormLabel>
                         </FormItem>
                     )} />
                  </div>
@@ -414,7 +438,7 @@ export function OrderForm({ orderId }: OrderFormProps) {
                       <FormControl><SelectTrigger><SelectValue placeholder="Seleccione clasificación" /></SelectTrigger></FormControl>
                       <SelectContent>
                         <SelectItem value={NONE_CLASSIFICATION_VALUE}>Ninguna</SelectItem>
-                        {CLASSIFICATION_OPTIONS.filter(opt => opt !== "").map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+                        {validClassificationOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -598,25 +622,51 @@ export function OrderForm({ orderId }: OrderFormProps) {
           </CardContent>
         </Card>
 
-
         <Separator />
 
         <Card>
-          <CardHeader><CardTitle className="flex items-center gap-2"><Info className="text-primary"/> Observaciones y Aceptación</CardTitle></CardHeader>
-          <CardContent className="space-y-4">
-            <FormField control={form.control} name="observations" render={({ field }) => ( <FormItem><FormLabel>Observaciones Adicionales</FormLabel><FormControl><Textarea placeholder="Comentarios o información relevante..." {...field} /></FormControl><FormMessage /></FormItem> )} />
-
+          <CardHeader><CardTitle className="flex items-center gap-2"><FileLock2 className="text-primary"/> Aceptación de Términos y Descargos</CardTitle></CardHeader>
+          <CardContent className="space-y-6">
+            <FormField control={form.control} name="observations" render={({ field }) => ( <FormItem><FormLabel>Observaciones Adicionales Generales</FormLabel><FormControl><Textarea placeholder="Comentarios o información relevante..." {...field} /></FormControl><FormMessage /></FormItem> )} />
+            
             <FormField control={form.control} name="customerSignatureName" render={({ field }) => ( <FormItem><FormLabel>Nombre del Cliente que Acepta</FormLabel><FormControl><Input placeholder="Nombre completo del cliente" {...field} /></FormControl><FormMessage /></FormItem> )} />
+            
             <FormField control={form.control} name="customerAccepted" render={({ field }) => (
               <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 shadow-sm">
                 <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
                 <div className="space-y-1 leading-none">
-                  <FormLabel>Aceptación del Cliente</FormLabel>
-                  <FormDescription>El cliente acepta las condiciones del servicio y el estado de recepción del equipo.</FormDescription>
+                  <FormLabel>Aceptación General del Cliente</FormLabel>
+                  <FormDescription>El cliente acepta las condiciones generales del servicio y el estado de recepción del equipo como se describe en el comprobante.</FormDescription>
                    <FormMessage />
                 </div>
               </FormItem>
             )} />
+
+            {dataLossDisclaimerTextWatch && dataLossDisclaimerTextWatch.trim() !== "" && (
+              <FormField control={form.control} name="dataLossDisclaimerAccepted" render={({ field }) => (
+                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 shadow-sm">
+                  <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                  <div className="space-y-1 leading-none">
+                    <FormLabel>Aceptación del Descargo por Pérdida de Datos</FormLabel>
+                    <FormDescription className="text-xs">{dataLossDisclaimerTextWatch}</FormDescription>
+                    <FormMessage />
+                  </div>
+                </FormItem>
+              )} />
+            )}
+
+            {privacyPolicyTextWatch && privacyPolicyTextWatch.trim() !== "" && (
+              <FormField control={form.control} name="privacyPolicyAccepted" render={({ field }) => (
+                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 shadow-sm">
+                  <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                  <div className="space-y-1 leading-none">
+                    <FormLabel>Aceptación de la Política de Privacidad y Acceso al Dispositivo</FormLabel>
+                    <FormDescription className="text-xs">{privacyPolicyTextWatch}</FormDescription>
+                    <FormMessage />
+                  </div>
+                </FormItem>
+              )} />
+            )}
           </CardContent>
         </Card>
 

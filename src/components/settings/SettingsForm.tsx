@@ -30,28 +30,30 @@ export function SettingsForm({ userId }: SettingsFormProps) {
   const form = useForm<z.infer<typeof StoreSettingsSchema>>({
     resolver: zodResolver(StoreSettingsSchema),
     defaultValues: {
-      ...DEFAULT_STORE_SETTINGS, // Start with defaults
+      ...DEFAULT_STORE_SETTINGS, 
     },
   });
 
   useEffect(() => {
     async function loadSettings() {
       if (!userId) {
-          setIsLoading(false); // No user, no settings to load
+          setIsLoading(false); 
           return;
       }
       setIsLoading(true);
       try {
         const fetchedSettings = await getStoreSettingsForUser(userId);
         form.reset({ 
-          ...DEFAULT_STORE_SETTINGS, // Ensure all fields are present
+          ...DEFAULT_STORE_SETTINGS, 
           ...fetchedSettings,
           abandonmentPolicyDays30: Number(fetchedSettings.abandonmentPolicyDays30 ?? DEFAULT_STORE_SETTINGS.abandonmentPolicyDays30),
           abandonmentPolicyDays60: Number(fetchedSettings.abandonmentPolicyDays60 ?? DEFAULT_STORE_SETTINGS.abandonmentPolicyDays60),
+          dataLossDisclaimerText: fetchedSettings.dataLossDisclaimerText ?? DEFAULT_STORE_SETTINGS.dataLossDisclaimerText,
+          privacyPolicyText: fetchedSettings.privacyPolicyText ?? DEFAULT_STORE_SETTINGS.privacyPolicyText,
         });
       } catch (error) {
         toast({ variant: "destructive", title: "Error", description: "No se pudo cargar la configuración de su tienda."});
-        form.reset({...DEFAULT_STORE_SETTINGS}); // Reset to defaults on error
+        form.reset({...DEFAULT_STORE_SETTINGS}); 
       } finally {
         setIsLoading(false);
       }
@@ -61,7 +63,7 @@ export function SettingsForm({ userId }: SettingsFormProps) {
   
   const onSubmit = (values: z.infer<typeof StoreSettingsSchema>) => {
     startTransition(async () => {
-      const dataToSave: StoreSettings = { // Explicitly type to StoreSettings
+      const dataToSave: StoreSettings = { 
         ...values,
         abandonmentPolicyDays30: Number(values.abandonmentPolicyDays30),
         abandonmentPolicyDays60: Number(values.abandonmentPolicyDays60),
@@ -75,6 +77,8 @@ export function SettingsForm({ userId }: SettingsFormProps) {
                 ...result.settings,
                 abandonmentPolicyDays30: Number(result.settings.abandonmentPolicyDays30),
                 abandonmentPolicyDays60: Number(result.settings.abandonmentPolicyDays60),
+                dataLossDisclaimerText: result.settings.dataLossDisclaimerText,
+                privacyPolicyText: result.settings.privacyPolicyText,
             });
         }
       } else {
@@ -113,6 +117,8 @@ export function SettingsForm({ userId }: SettingsFormProps) {
                 <FormField control={form.control} name="abandonmentPolicyDays30" render={({ field }) => ( <FormItem><FormLabel>Días para abandono (1er aviso)</FormLabel><FormControl><Input type="number" placeholder="30" {...field} onChange={e => field.onChange(parseInt(e.target.value, 10) || 0)} /></FormControl><FormMessage /></FormItem> )} />
                 <FormField control={form.control} name="abandonmentPolicyDays60" render={({ field }) => ( <FormItem><FormLabel>Días para abandono (final)</FormLabel><FormControl><Input type="number" placeholder="60" {...field} onChange={e => field.onChange(parseInt(e.target.value, 10) || 0)} /></FormControl><FormMessage /></FormItem> )} />
             </div>
+            <FormField control={form.control} name="dataLossDisclaimerText" render={({ field }) => ( <FormItem><FormLabel>Texto de Descargo por Pérdida de Datos</FormLabel><FormControl><Textarea rows={4} placeholder="El cliente acepta que existe riesgo de pérdida de datos..." {...field} /></FormControl><FormDescription>Este texto aparecerá en el comprobante de ingreso para aceptación del cliente.</FormDescription><FormMessage /></FormItem> )} />
+            <FormField control={form.control} name="privacyPolicyText" render={({ field }) => ( <FormItem><FormLabel>Texto de Política de Privacidad (Acceso a Dispositivo)</FormLabel><FormControl><Textarea rows={4} placeholder="El cliente autoriza el acceso al dispositivo para fines de reparación..." {...field} /></FormControl><FormDescription>Este texto aparecerá en el comprobante de ingreso para aceptación del cliente.</FormDescription><FormMessage /></FormItem> )} />
           </div>
         </div>
         

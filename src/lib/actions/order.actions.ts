@@ -15,12 +15,15 @@ let mockOrders: Order[] = [
     id: "ORD001", orderNumber: "ORD001",
     clientId: "CLI001", 
     branchInfo: "Taller Central (Admin)",
-    deviceBrand: "Samsung", deviceModel: "Galaxy S21", deviceIMEI: "123456789012345", declaredFault: "Pantalla rota", unlockPatternInfo: "no tiene",
+    deviceBrand: "Samsung", deviceModel: "Galaxy S21", deviceIMEI: "123456789012345", declaredFault: "Pantalla rota", 
+    unlockPatternInfo: "1234", // Changed to string
     checklist: { golpe: "si", cristal: "si", marco: "no", tapa: "no", lente_camara: "si", enciende: "si", tactil: "no", imagen: "si", botones: "si", cam_trasera: "si", cam_delantera: "si", vibrador: "si", microfono: "si", auricular: "si", parlante: "si", sensor_huella: "si", senal: "si", wifi_bluetooth: "si", pin_carga: "si", humedad: "no"},
     damageRisk: "Cristal trizado en esquina superior.", pantalla_parcial: true, equipo_sin_acceso: false, perdida_informacion: false,
     costSparePart: 15000, costLabor: 5000, costPending: 0,
     classification: "", observations: "Cliente indica que se cayó.",
     customerAccepted: true, customerSignatureName: "Juan Perez",
+    dataLossDisclaimerAccepted: true,
+    privacyPolicyAccepted: true,
     status: "En Diagnóstico", previousOrderId: "",
     entryDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
     commentsHistory: [],
@@ -32,6 +35,8 @@ let mockOrders: Order[] = [
     orderWarrantyConditions: "Admin warranty",
     orderPickupConditions: "Admin pickup",
     orderAbandonmentPolicyDays60: 60,
+    orderSnapshottedDataLossDisclaimer: DEFAULT_STORE_SETTINGS.dataLossDisclaimerText,
+    orderSnapshottedPrivacyPolicy: DEFAULT_STORE_SETTINGS.privacyPolicyText,
     createdByUserId: "admin123", lastUpdatedBy: "admin123",
     updatedAt: new Date().toISOString(), createdAt: new Date().toISOString(),
     hasWarranty: true,
@@ -45,12 +50,15 @@ let mockOrders: Order[] = [
     id: "ORD002", orderNumber: "ORD002",
     clientId: "CLI002", 
     branchInfo: "Taller Norte (Carlos)",
-    deviceBrand: "Apple", deviceModel: "iPhone 12", deviceIMEI: "543210987654321", declaredFault: "No enciende, batería agotada.", unlockPatternInfo: "no recuerda",
+    deviceBrand: "Apple", deviceModel: "iPhone 12", deviceIMEI: "543210987654321", declaredFault: "No enciende, batería agotada.", 
+    unlockPatternInfo: "No recuerda", // Changed to string
     checklist: { golpe: "no", cristal: "no", marco: "no", tapa: "no", lente_camara: "si", enciende: "no", tactil: "si", imagen: "si", botones: "si", cam_trasera: "si", cam_delantera: "si", vibrador: "si", microfono: "si", auricular: "si", parlante: "si", sensor_huella: "si", senal: "si", wifi_bluetooth: "si", pin_carga: "si", humedad: "no"},
     damageRisk: "", pantalla_parcial: false, equipo_sin_acceso: true, perdida_informacion: false,
     costSparePart: 0, costLabor: 0, costPending: 8000,
     classification: "rojo", observations: "Revisar pin de carga también.",
     customerAccepted: true, customerSignatureName: "Maria Lopez",
+    dataLossDisclaimerAccepted: true,
+    privacyPolicyAccepted: false, // Example
     status: "En Espera de Repuestos", previousOrderId: "ORD001",
     entryDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
     commentsHistory: [{ id: "cmt1", description: "Batería solicitada", timestamp: new Date().toISOString(), userId: "tech123", userName: "Carlos Técnico" }],
@@ -62,6 +70,8 @@ let mockOrders: Order[] = [
     orderWarrantyConditions: "Carlos warranty",
     orderPickupConditions: "Carlos pickup",
     orderAbandonmentPolicyDays60: 60,
+    orderSnapshottedDataLossDisclaimer: "Ejemplo de descargo por pérdida de datos para esta orden.",
+    orderSnapshottedPrivacyPolicy: "Ejemplo de política de privacidad para esta orden.",
     createdByUserId: "tech123", lastUpdatedBy: "tech123",
     updatedAt: new Date().toISOString(), createdAt: new Date().toISOString(),
     hasWarranty: false,
@@ -88,18 +98,21 @@ export async function createOrder(
   const userStoreSettings = await getStoreSettingsForUser(creatingUserId);
   const settingsToSnapshot = { ...DEFAULT_STORE_SETTINGS, ...userStoreSettings };
 
-
   const data = validatedFields.data;
   const newOrderNumber = generateOrderNumber();
+  
+  // TODO: Encrypt data.unlockPatternInfo before saving to newOrder
+  const finalUnlockPatternInfo = data.unlockPatternInfo; 
 
   const newOrder: Order = {
     id: newOrderNumber,
     orderNumber: newOrderNumber,
     ...data, 
+    unlockPatternInfo: finalUnlockPatternInfo, // Store potentially encrypted value
     previousOrderId: data.previousOrderId || "",
     entryDate: new Date().toISOString(),
     commentsHistory: [],
-    status: data.status || "Recibido", // Ensure status is set, default from schema
+    status: data.status || "Recibido", 
     
     orderCompanyName: settingsToSnapshot.companyName,
     orderCompanyLogoUrl: settingsToSnapshot.companyLogoUrl,
@@ -109,19 +122,26 @@ export async function createOrder(
     orderWarrantyConditions: settingsToSnapshot.warrantyConditions,
     orderPickupConditions: settingsToSnapshot.pickupConditions,
     orderAbandonmentPolicyDays60: settingsToSnapshot.abandonmentPolicyDays60,
+    orderSnapshottedDataLossDisclaimer: settingsToSnapshot.dataLossDisclaimerText, // Snapshot
+    orderSnapshottedPrivacyPolicy: settingsToSnapshot.privacyPolicyText,       // Snapshot
 
     createdByUserId: creatingUserId,
     lastUpdatedBy: creatingUserId, 
     updatedAt: new Date().toISOString(),
     createdAt: new Date().toISOString(),
 
-    // Warranty fields from schema
     hasWarranty: data.hasWarranty,
     warrantyType: data.warrantyType,
     warrantyStartDate: data.warrantyStartDate,
     warrantyEndDate: data.warrantyEndDate,
     warrantyCoveredItem: data.warrantyCoveredItem,
     warrantyNotes: data.warrantyNotes,
+    
+    // Explicitly set acceptance fields from validated data
+    customerAccepted: data.customerAccepted,
+    customerSignatureName: data.customerSignatureName,
+    dataLossDisclaimerAccepted: data.dataLossDisclaimerAccepted,
+    privacyPolicyAccepted: data.privacyPolicyAccepted,
   };
 
   mockOrders.push(newOrder);
@@ -148,13 +168,14 @@ export async function getOrders(filters?: { client?: string, orderNumber?: strin
     if (filters.imei) {
       filteredOrders = filteredOrders.filter(o => o.deviceIMEI.includes(filters.imei!));
     }
-    if (filters.status && filters.status !== "") { // Ensure empty string filter means all
+    if (filters.status && filters.status !== "") { 
       filteredOrders = filteredOrders.filter(o => o.status === filters.status);
     }
   }
   
   const ordersWithClientNames = filteredOrders.map(order => {
     const client = clients.find(c => c.id === order.clientId);
+    // TODO: Decrypt order.unlockPatternInfo if it was encrypted, for display purposes ONLY IF USER HAS PERMISSION
     return {
       ...order,
       clientName: client?.name || 'N/D',
@@ -168,12 +189,16 @@ export async function getOrders(filters?: { client?: string, orderNumber?: strin
 export async function getOrderById(id: string): Promise<Order | null> {
   await new Promise(resolve => setTimeout(resolve, 300));
   const order = mockOrders.find(o => o.id === id);
-  return order ? JSON.parse(JSON.stringify(order)) : null;
+  if (order) {
+    // TODO: Decrypt order.unlockPatternInfo if it was encrypted, for display purposes ONLY IF USER HAS PERMISSION
+    return JSON.parse(JSON.stringify(order));
+  }
+  return null;
 }
 
 export async function updateOrderStatus(
   orderId: string,
-  status: OrderStatus, // Ensure this uses the new OrderStatus type
+  status: OrderStatus, 
   userId: string 
 ): Promise<{ success: boolean; message: string; order?: Order }> {
   const orderIndex = mockOrders.findIndex(o => o.id === orderId);
@@ -258,6 +283,8 @@ export async function updateOrder(
   values: Partial<Omit<Order, 'id' | 'orderNumber' | 'entryDate' | 'createdAt' | 'createdByUserId' | 'orderCompanyName' | 'orderCompanyLogoUrl' | 'orderCompanyCuit' | 'orderCompanyAddress' | 'orderCompanyContactDetails' | 'orderWarrantyConditions' | 'orderPickupConditions' | 'orderAbandonmentPolicyDays60' | 'clientName' | 'clientLastName' >>,
   userId: string 
 ): Promise<{ success: boolean; message: string; order?: Order }> {
+  
+  // Use a more specific partial schema for updates if needed, or rely on full OrderSchema parse
   const validatedFields = OrderSchema.partial().safeParse(values); 
 
   if (!validatedFields.success) {
@@ -269,14 +296,25 @@ export async function updateOrder(
   if (orderIndex === -1) {
     return { success: false, message: "Orden no encontrada." };
   }
+  
+  const currentOrder = mockOrders[orderIndex];
+  let finalUnlockPatternInfo = currentOrder.unlockPatternInfo;
 
-  const updatedOrderData = {
-    ...mockOrders[orderIndex],
+  if (validatedFields.data.unlockPatternInfo && validatedFields.data.unlockPatternInfo !== currentOrder.unlockPatternInfo) {
+    // TODO: Encrypt validatedFields.data.unlockPatternInfo if it's being changed
+    finalUnlockPatternInfo = validatedFields.data.unlockPatternInfo;
+  }
+
+
+  const updatedOrderData: Order = {
+    ...currentOrder,
     ...validatedFields.data, 
+    unlockPatternInfo: finalUnlockPatternInfo, // Use potentially new/encrypted value
     lastUpdatedBy: userId, 
     updatedAt: new Date().toISOString(),
   };
 
+  // Ensure clientId is correctly handled if passed in validatedFields.data
   if (validatedFields.data.clientId) {
     updatedOrderData.clientId = validatedFields.data.clientId;
   }

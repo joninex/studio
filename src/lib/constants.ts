@@ -1,4 +1,4 @@
-import type { OrderStatus, UnlockPatternInfo, Classification, Checklist, UserRole, WarrantyType } from '@/types';
+import type { OrderStatus, Classification, Checklist, UserRole, WarrantyType } from '@/types';
 
 export const USER_ROLES = {
   ADMIN: 'admin',
@@ -22,15 +22,16 @@ export const ORDER_STATUSES: Array<OrderStatus | ""> = [
   "Entregado",
   "Presupuesto Rechazado",
   "Sin Reparación",
-  "", // For "All statuses" or placeholder options in UI selects
+  "", 
 ];
 
-export const UNLOCK_PATTERN_OPTIONS: UnlockPatternInfo[] = [
-  "tiene",
-  "no tiene",
-  "no recuerda",
-  "no proporciona",
-  "",
+// This constant is no longer directly used for the OrderForm select,
+// as unlockPatternInfo is now a string input. It can be kept for reference or other UI uses if needed.
+export const UNLOCK_PATTERN_INFO_SUGGESTIONS: string[] = [
+  "No tiene",
+  "No recuerda",
+  "No proporciona",
+  "Cliente proveyó patrón/clave",
 ];
 
 export const CLASSIFICATION_OPTIONS: Classification[] = [
@@ -81,7 +82,6 @@ export const WARRANTY_TYPE_OPTIONS: Array<{ value: WarrantyType; label: string }
   { value: "60d", label: "60 Días" },
   { value: "90d", label: "90 Días" },
   { value: "custom", label: "Personalizado" },
-  // { value: "", label: "Ninguna" }, // Removed this line
 ];
 
 
@@ -96,4 +96,6 @@ export const DEFAULT_STORE_SETTINGS = {
   pickupConditions: "Retirar dentro de los 30 días. Luego se cobra almacenaje.",
   abandonmentPolicyDays30: 30,
   abandonmentPolicyDays60: 60,
+  dataLossDisclaimerText: "El cliente comprende y acepta que durante el proceso de diagnóstico y/o reparación existe el riesgo de pérdida total o parcial de la información almacenada en el dispositivo. Se recomienda realizar una copia de seguridad previa. El taller no se responsabiliza por la pérdida de datos.",
+  privacyPolicyText: "El cliente autoriza al taller a acceder a la información del dispositivo necesaria para realizar el diagnóstico y/o reparación. Los datos personales y la información del dispositivo serán tratados con confidencialidad y solo para los fines del servicio.",
 };

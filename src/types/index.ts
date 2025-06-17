@@ -14,6 +14,8 @@ export interface StoreSettings {
   pickupConditions?: string;
   abandonmentPolicyDays30?: number;
   abandonmentPolicyDays60?: number;
+  dataLossDisclaimerText?: string; // New
+  privacyPolicyText?: string; // New
 }
 
 export type UserRole = 'admin' | 'tecnico' | 'recepcionista';
@@ -65,7 +67,8 @@ export interface Checklist {
   humedad: 'si' | 'no';
 }
 
-export type UnlockPatternInfo = "tiene" | "no tiene" | "no recuerda" | "no proporciona" | "";
+// unlockPatternInfo is now a string in Order
+// export type UnlockPatternInfo = "tiene" | "no tiene" | "no recuerda" | "no proporciona" | "";
 
 export type Classification = "rojo" | "verde" | "sin stock" | "";
 
@@ -82,7 +85,6 @@ export type OrderStatus =
   | "Entregado"
   | "Presupuesto Rechazado"
   | "Sin Reparación";
-  // "" is not a valid status for an order, it's used for UI (e.g. "select all")
 
 export interface Comment {
   id?: string;
@@ -99,8 +101,8 @@ export interface Order {
   orderNumber: string;
 
   clientId: string;
-  clientName?: string; // For display in lists
-  clientLastName?: string; // For display in lists
+  clientName?: string; 
+  clientLastName?: string; 
 
   createdByUserId: string; 
 
@@ -108,12 +110,12 @@ export interface Order {
   deviceModel: string;
   deviceIMEI: string;
   declaredFault: string;
-  unlockPatternInfo: UnlockPatternInfo; 
+  unlockPatternInfo: string; // Changed from UnlockPatternInfo enum
 
   damageRisk?: string; 
   pantalla_parcial?: boolean;
   equipo_sin_acceso?: boolean;
-  perdida_informacion?: boolean;
+  perdida_informacion?: boolean; // This refers to the risk checkbox
 
   classification: Classification; 
   observations?: string;
@@ -124,7 +126,6 @@ export interface Order {
   entryDate: Timestamp | Date | string;
   deliveryDate?: Timestamp | Date | string | null;
   readyForPickupDate?: Timestamp | Date | string | null;
-
 
   commentsHistory: Comment[];
 
@@ -140,6 +141,9 @@ export interface Order {
   orderPickupConditions?: string;
   orderAbandonmentPolicyDays60?: number;
   branchInfo?: string; 
+  orderSnapshottedDataLossDisclaimer?: string; // New
+  orderSnapshottedPrivacyPolicy?: string; // New
+
 
   costSparePart: number;
   costLabor: number;
@@ -149,14 +153,16 @@ export interface Order {
   updatedAt: Timestamp | Date | string;
   createdAt?: Timestamp | Date | string;
 
-  customerAccepted?: boolean;
+  customerAccepted?: boolean; // General terms acceptance
   customerSignatureName?: string;
+  dataLossDisclaimerAccepted?: boolean; // New
+  privacyPolicyAccepted?: boolean; // New
 
   // Warranty Fields
   hasWarranty?: boolean;
   warrantyType?: WarrantyType;
-  warrantyStartDate?: string | null; // Store as ISO string (YYYY-MM-DD)
-  warrantyEndDate?: string | null;   // Store as ISO string (YYYY-MM-DD)
+  warrantyStartDate?: string | null; 
+  warrantyEndDate?: string | null;   
   warrantyCoveredItem?: string;
   warrantyNotes?: string;
 }
