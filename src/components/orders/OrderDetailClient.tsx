@@ -143,10 +143,16 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
   
   let abandonmentWarning = "";
   if (daysSinceReady !== null && order.orderSnapshottedAbandonmentPolicyText) { 
-    const abandonmentPolicyDays = order.orderCompanyContactDetails?.includes("60") ? 60 : (order.orderCompanyContactDetails?.includes("30") ? 30 : (DEFAULT_STORE_SETTINGS.abandonmentPolicyDays60 || 60)) ; 
-    const firstWarningDays = abandonmentPolicyDays / 2;
-    if (daysSinceReady >= abandonmentPolicyDays) abandonmentWarning = `Equipo considerado abandonado (${abandonmentPolicyDays}+ días).`;
-    else if (daysSinceReady >= firstWarningDays) abandonmentWarning = `Equipo en riesgo de abandono (${Math.round(firstWarningDays)}+ días).`;
+    // Use abandonment policy days from DEFAULT_STORE_SETTINGS for warning logic.
+    // The full text policy from the order (order.orderSnapshottedAbandonmentPolicyText) is printed.
+    const abandonmentPolicyDaysTotal = DEFAULT_STORE_SETTINGS.abandonmentPolicyDays60 || 60; 
+    const abandonmentPolicyFirstWarningDays = DEFAULT_STORE_SETTINGS.abandonmentPolicyDays30 || (abandonmentPolicyDaysTotal / 2);
+    
+    if (daysSinceReady >= abandonmentPolicyDaysTotal) {
+      abandonmentWarning = `Equipo considerado abandonado (${abandonmentPolicyDaysTotal}+ días).`;
+    } else if (daysSinceReady >= abandonmentPolicyFirstWarningDays) {
+      abandonmentWarning = `Equipo en riesgo de abandono (${Math.round(abandonmentPolicyFirstWarningDays)}+ días).`;
+    }
   }
 
 
@@ -203,7 +209,7 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
   const showChecklistForPrint = isIngresoContext || order.status === "Presupuestado" || isReparacionContext;
   const showBudgetForPrint = (order.costSparePart > 0 || order.costLabor > 0) && (isPresupuestoContext || isReparacionContext || isEntregaContext || order.status === "Presupuestado");
   const showTechnicalCommentsForPrint = order.commentsHistory && order.commentsHistory.length > 0 && (isPresupuestoContext || isReparacionContext || isEntregaContext);
-  const showWarrantyDetailsForPrint = order.hasWarranty && order.warrantyStartDate && order.warrantyEndDate;
+  const showWarrantyDetailsForPrint = order.hasWarranty && order.warrantyStartDate;
   
   const showClientReceptionSignature = isIngresoContext && order.customerAccepted;
   const showTechnicianReceptionSignature = isIngresoContext; 
@@ -353,6 +359,7 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
                     {order.warrantyStartDate && <p><strong>Periodo:</strong> {format(parseISO(order.warrantyStartDate as string), "dd/MM/yyyy", { locale: es })} - {order.warrantyEndDate ? format(parseISO(order.warrantyEndDate as string), "dd/MM/yyyy", { locale: es }) : 'N/A'}</p>}
                     {order.warrantyCoveredItem && <p><strong>Pieza/Procedimiento Cubierto:</strong> {order.warrantyCoveredItem}</p>}
                     {order.warrantyNotes && <p><strong>Notas de Garantía Extendida:</strong> {order.warrantyNotes}</p>}
+                    {/* Display specific snapshotted warranty conditions IF they exist in the order, otherwise general store warranty if that exists */}
                     {order.orderWarrantyConditions && <p className="text-xs mt-1"><strong>Condiciones Generales de Garantía del Taller:</strong> {order.orderWarrantyConditions}</p>}
                     {order.orderSnapshottedWarrantyVoidConditionsText && <p className="text-xs mt-1"><strong>Condiciones de Anulación de Garantía:</strong> {order.orderSnapshottedWarrantyVoidConditionsText}</p>}
                 </div>
@@ -370,9 +377,10 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
             {order.orderSnapshottedHighRiskDeviceText && <div className="print-legal-item"><strong>Equipos con Riesgos Especiales:</strong> <p>{order.orderSnapshottedHighRiskDeviceText}</p></div>}
             {order.orderSnapshottedPartialDamageDisplayText && <div className="print-legal-item"><strong>Pantallas con Daño Parcial:</strong> <p>{order.orderSnapshottedPartialDamageDisplayText}</p></div>}
             {order.orderSnapshottedAbandonmentPolicyText && <div className="print-legal-item"><strong>Política de Retiro y Abandono:</strong> <p>{order.orderSnapshottedAbandonmentPolicyText}</p></div>}
+            {/* Display general warranty conditions from order if not part of extended warranty and specific void conditions not present */}
+            {order.orderWarrantyConditions && !showWarrantyDetailsForPrint && !order.orderSnapshottedWarrantyVoidConditionsText && <div className="print-legal-item"><strong>Condiciones Generales de Garantía (Taller):</strong><p>{order.orderWarrantyConditions}</p></div>}
+            {/* Display pickup conditions from order */}
             {order.pickupConditions && <div className="print-legal-item"><strong>Condiciones Generales de Retiro:</strong><p>{order.pickupConditions}</p></div>}
-            {/* General warranty conditions from store if not part of extended warranty text and specific warranty void conditions not present */}
-            {order.orderWarrantyConditions && !order.hasWarranty && !order.orderSnapshottedWarrantyVoidConditionsText && <div className="print-legal-item"><strong>Condiciones Generales de Garantía (Taller):</strong><p>{order.orderWarrantyConditions}</p></div>}
         </div>
 
 
