@@ -35,15 +35,15 @@ import {
   Settings,
   LogOut,
   ChevronDown,
-  Contact, // Updated icon for Clientes
-  Archive, // Icon for Inventario
-  List, // Icon for Ver Repuestos/Items
-  Truck, // Icon for Proveedores
-  Landmark, // Icon for Finanzas
-  ArrowRightLeft, // Icon for Movimientos de Caja
-  TrendingUp, // Icon for Reporte de Ingresos (reused)
-  BarChartBig, // Icon for Reportes General
-  Lightbulb, // Icon for Guías IA
+  Contact,
+  Archive, 
+  List, 
+  Truck, 
+  Landmark, 
+  ArrowRightLeft, 
+  TrendingUp, 
+  BarChartBig, 
+  Lightbulb,
   Smartphone,
 } from "lucide-react";
 import { useAuth } from "@/providers/AuthProvider";
@@ -105,7 +105,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [activeSubMenu, setActiveSubMenu] = useState<string | null>(null);
 
   useEffect(() => {
-    // Find the parent item of the current path, even if it's a sub-sub-item
     const findParentPath = (items: NavItem[], currentPath: string): string | null => {
       for (const item of items) {
         if (item.subItems) {
@@ -114,7 +113,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           }
           const nestedParentPath = findParentPath(item.subItems, currentPath);
           if (nestedParentPath) {
-            // If a sub-item is a parent, we still want the top-level parent of that sub-item for activeSubMenu
             const topLevelParent = items.find(topItem => topItem.subItems?.some(sub => sub.href === nestedParentPath));
             return topLevelParent?.href || item.href;
           }
@@ -126,7 +124,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (parentPath) {
       setActiveSubMenu(parentPath);
     } else {
-       setActiveSubMenu(null); // Collapse all if no parent matches
+       setActiveSubMenu(null); 
     }
   }, [pathname]);
 
@@ -163,7 +161,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               />
             </SidebarMenuButton>
             {isSubMenuOpen && (
-              // Apply pl based on level for indentation
               <SidebarMenu className={`pl-${(level + 1) * 2} pt-1`}> 
                 {renderNavItems(item.subItems.filter(subItem => !subItem.adminOnly || (user?.role === 'admin')), level + 1)}
               </SidebarMenu>
@@ -174,11 +171,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       return (
         <SidebarMenuItem key={item.href}>
-          <Link href={item.href} legacyBehavior={false} passHref={false}>
+          <Link href={item.href}>
             <SidebarMenuButton 
               asChild={false} 
               isActive={isLinkActive} 
-              // Apply pl based on level for indentation if it's a sub-item directly rendered
               className={level > 0 ? `pl-${level * 2}` : ''} 
             >
               <div className="flex items-center gap-2 w-full">
@@ -192,37 +188,28 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     });
   };
   
-  const companyLogoUrl = user?.storeSettings?.companyLogoUrl || DEFAULT_STORE_SETTINGS.companyLogoUrl;
-  const companyName = user?.storeSettings?.companyName || DEFAULT_STORE_SETTINGS.companyName;
+  const effectiveCompanyName = user?.storeSettings?.companyName || DEFAULT_STORE_SETTINGS.companyName;
+  const effectiveCompanyLogoUrl = user?.storeSettings?.companyLogoUrl || DEFAULT_STORE_SETTINGS.companyLogoUrl;
 
   return (
     <SidebarProvider defaultOpen={!isMobile} open={isMobile ? undefined : undefined}>
       <Sidebar side="left" variant="sidebar" collapsible={isMobile ? "offcanvas" : "icon"}>
         <SidebarHeader className="border-b border-sidebar-border">
           <Link href="/dashboard" className="flex items-center gap-2 p-2 hover:no-underline min-h-[56px]">
-            {companyLogoUrl && companyLogoUrl !== DEFAULT_STORE_SETTINGS.companyLogoUrl && !companyLogoUrl.includes("placehold.co") ? ( 
+            {effectiveCompanyLogoUrl ? ( 
               <Image
-                src={companyLogoUrl}
-                alt={`${companyName || 'Logo'} Logo`}
+                src={effectiveCompanyLogoUrl}
+                alt={`${effectiveCompanyName || 'Logo'} Logo`}
                 width={32} 
                 height={32}
                 className="object-contain h-8 w-8" 
-                data-ai-hint="company logo"
+                data-ai-hint={effectiveCompanyLogoUrl.includes("placehold.co") ? "company logo placeholder" : "company logo"}
               />
-            ) : companyLogoUrl && companyLogoUrl.includes("placehold.co") ? ( 
-                 <Image
-                    src={companyLogoUrl}
-                    alt={`${companyName || 'Placeholder Logo'} Logo`}
-                    width={32} 
-                    height={32}
-                    className="object-contain h-8 w-8"
-                    data-ai-hint="company logo placeholder"
-                 />
             ) : (
               <Smartphone className="h-8 w-8 text-primary" /> 
             )}
             <h1 className="font-headline text-xl font-semibold text-sidebar-foreground group-data-[collapsible=icon]:hidden">
-              {companyName && companyName !== DEFAULT_STORE_SETTINGS.companyName ? companyName.split(' ')[0] : "JO-SERVICE"} 
+              { (effectiveCompanyName && effectiveCompanyName !== DEFAULT_STORE_SETTINGS.companyName) ? effectiveCompanyName.split(' ')[0] : "JO-SERVICE" }
             </h1>
           </Link>
         </SidebarHeader>
@@ -291,3 +278,4 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     </SidebarProvider>
   );
 }
+

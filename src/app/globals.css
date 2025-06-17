@@ -8,7 +8,7 @@ body {
 
 @layer base {
   :root {
-    --background: 240 10% 97%; /* Light Gray - Almost White */
+    --background: 220 29% 95%; /* PRD: Gris claro (#F0F2F5) */
     --foreground: 240 10% 3.9%; /* Near Black */
 
     --card: 0 0% 100%; /* White */
@@ -17,26 +17,26 @@ body {
     --popover: 0 0% 100%;
     --popover-foreground: 240 10% 3.9%;
 
-    --primary: 221.2 83.2% 53.3%; /* Vibrant Blue */
-    --primary-foreground: 0 0% 100%; /* White */
+    --primary: 231 48% 48%; /* PRD: Azul profundo (#3F51B5) */
+    --primary-foreground: 0 0% 100%; /* White for contrast */
 
-    --secondary: 240 4.8% 95.9%; /* Lighter Gray */
+    --secondary: 220 25% 92%; /* Adjusted lighter gray */
     --secondary-foreground: 240 5.9% 10%; /* Darker Gray */
 
-    --muted: 240 4.8% 95.9%;
+    --muted: 220 25% 92%; /* Aligned with secondary */
     --muted-foreground: 240 3.8% 46.1%; /* Medium Gray */
 
-    --accent: 221.2 83.2% 53.3%; /* Vibrant Blue */
-    --accent-foreground: 0 0% 100%;
+    --accent: 36 100% 63%; /* PRD: Naranja suave (#FFAB40) */
+    --accent-foreground: 240 10% 3.9%; /* Near black for contrast with orange */
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 240 5.9% 90%; /* Subtle Light Gray Border */
-    --input: 0 0% 100%; /* White input background, border will define it */
-    --ring: 221.2 83.2% 53.3%; /* Vibrant Blue for focus */
+    --border: 220 20% 88%; /* Adjusted border for new background */
+    --input: 0 0% 100%; /* White input background */
+    --ring: 231 48% 48%; /* New Primary for focus */
     
-    --chart-1: 221.2 83.2% 53.3%;
+    --chart-1: 231 48% 48%; /* New Primary */
     --chart-2: 173 58% 39%;
     --chart-3: 197 37% 24%;
     --chart-4: 43 74% 66%;
@@ -46,12 +46,12 @@ body {
     /* Sidebar specific theme variables */
     --sidebar-background: 240 6% 12%; /* Very Dark Gray / Near Black */
     --sidebar-foreground: 0 0% 95%; /* Light Gray / White text */
-    --sidebar-primary: 221.2 83.2% 53.3%; /* Vibrant Blue for active items */
+    --sidebar-primary: 231 48% 48%; /* New Vibrant Blue for active items */
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 240 5% 18%; /* Slightly lighter dark gray for hover */
     --sidebar-accent-foreground: 0 0% 98%;
     --sidebar-border: 240 5% 16%; /* Subtle border for dark sidebar */
-    --sidebar-ring: 221.2 83.2% 53.3%;
+    --sidebar-ring: 231 48% 48%; /* New Primary */
   }
 
   .dark {
@@ -64,7 +64,7 @@ body {
     --popover: 240 3.7% 15.9%;
     --popover-foreground: 0 0% 95%;
 
-    --primary: 217.2 91.2% 59.8%; /* Adjusted Vibrant Blue for dark mode */
+    --primary: 231 55% 65%; /* Lighter Blue for dark mode */
     --primary-foreground: 0 0% 100%;
 
     --secondary: 240 3.7% 15.9%; 
@@ -73,31 +73,31 @@ body {
     --muted: 240 3.7% 15.9%;
     --muted-foreground: 240 5% 64.9%;
 
-    --accent: 217.2 91.2% 59.8%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 36 100% 70%; /* Lighter Orange for dark mode */
+    --accent-foreground: 240 10% 3.9%; /* Dark for orange */
 
-    --destructive: 0 62.8% 30.6%;
+    --destructive: 0 70% 50%;
     --destructive-foreground: 0 0% 98%;
 
     --border: 240 3.7% 15.9%;
     --input: 240 3.7% 15.9%;
-    --ring: 217.2 91.2% 59.8%;
+    --ring: 231 55% 65%; /* Lighter primary for ring */
     
-    --chart-1: 217.2 91.2% 59.8%;
+    --chart-1: 231 55% 65%; /* Lighter primary for chart */
     --chart-2: 173 50% 49%;
     --chart-3: 197 30% 34%;
     --chart-4: 43 70% 56%;
     --chart-5: 27 80% 57%;
 
-    /* Sidebar Dark Mode (already dark, but can adjust if needed, for now same as light) */
+    /* Sidebar Dark Mode */
     --sidebar-background: 240 6% 10%; /* Slightly darker for true dark mode */
     --sidebar-foreground: 0 0% 98%;
-    --sidebar-primary: 217.2 91.2% 59.8%; 
+    --sidebar-primary: 231 55% 65%; /* Lighter primary for dark mode */
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 240 5% 16%;
     --sidebar-accent-foreground: 0 0% 98%;
     --sidebar-border: 240 5% 14%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-ring: 231 55% 65%; /* Lighter primary for ring */
   }
 }
 
@@ -259,7 +259,7 @@ body {
     background-color: #f9f9f9 !important;
   }
   .print-container-full-page .text-primary {
-      color: #000 !important; 
+      color: #000 !important; /* Keep primary text black for print unless specifically colored */
   }
   .print-container-full-page .text-destructive {
       color: #c00 !important; 
