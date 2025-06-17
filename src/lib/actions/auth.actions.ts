@@ -113,14 +113,18 @@ export async function resetPassword(
   const userExists = mockUsers.some(u => u.email === email);
 
   if (!userExists) {
+    // To prevent user enumeration, return a generic success message
     return { success: true, message: "Si este correo está registrado, se enviará un enlace de restablecimiento." };
   }
 
+  // In a real app, generate a token and send email
   console.log(`Password reset email sent to ${email} (mock)`);
   return { success: true, message: "Si este correo está registrado, se enviará un enlace de restablecimiento." };
 }
 
 export async function logoutAction(): Promise<{ success: boolean }> {
+  // This would typically involve clearing session cookies or tokens on the server
+  // For a mock, just return success
   return { success: true };
 }
 
@@ -131,21 +135,21 @@ export async function getUserById(uid: string): Promise<User | null> {
 }
 
 // Helper to get all users (used by user.actions.ts)
-export function getAllMockUsers(): User[] {
+export async function getAllMockUsers(): Promise<User[]> {
   return JSON.parse(JSON.stringify(mockUsers));
 }
 // Helper to update all users (used by user.actions.ts)
-export function updateAllMockUsers(updatedUsers: User[]): void {
+export async function updateAllMockUsers(updatedUsers: User[]): Promise<void> {
   mockUsers = JSON.parse(JSON.stringify(updatedUsers));
 }
 
 // Helper for password storage (used by user.actions.ts)
-export function getMockPasswords(): Record<string, string> {
+export async function getMockPasswords(): Promise<Record<string, string>> {
     return mockPasswords;
 }
-export function setMockPassword(email: string, pass: string): void {
+export async function setMockPassword(email: string, pass: string): Promise<void> {
     mockPasswords[email] = pass;
 }
-export function deleteMockPassword(email: string): void {
+export async function deleteMockPassword(email: string): Promise<void> {
     delete mockPasswords[email];
 }
