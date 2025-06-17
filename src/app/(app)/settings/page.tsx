@@ -5,8 +5,11 @@ import { PageHeader } from "@/components/shared/PageHeader";
 import { useAuth } from "@/providers/AuthProvider";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { SettingsForm } from "@/components/settings/SettingsForm";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, QrCode } from "lucide-react"; // Added QrCode
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
+import Image from "next/image"; // Added Image
+import { Button } from "@/components/ui/button"; // Added Button
+import { Separator } from "@/components/ui/separator"; // Added Separator
 
 export default function SettingsPage() {
   const { user, loading } = useAuth();
@@ -20,22 +23,7 @@ export default function SettingsPage() {
     );
    }
 
-   // All authenticated users can now access their own settings.
-   // The admin check is removed.
-   // if (user?.role !== 'admin') {
-   //   return (
-   //     <div className="flex flex-col items-center justify-center h-full text-center p-8">
-   //       <AlertTriangle className="w-16 h-16 text-destructive mb-4" />
-   //       <h1 className="text-2xl font-bold text-destructive">Acceso Denegado</h1>
-   //       <p className="text-muted-foreground mt-2">
-   //         No tiene permisos para acceder a esta sección.
-   //       </p>
-   //     </div>
-   //   );
-   // }
-
    if (!user) {
-     // Should be handled by AuthProvider redirect, but as a fallback:
       return (
         <div className="flex flex-col items-center justify-center h-full text-center p-8">
           <AlertTriangle className="w-16 h-16 text-destructive mb-4" />
@@ -51,8 +39,8 @@ export default function SettingsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Configuración de Mi Tienda"
-        description="Ajuste los datos de su tienda, textos legales y políticas."
+        title="Configuración"
+        description="Ajuste los datos de su tienda, textos legales, políticas e integraciones."
       />
        <Card className="shadow-xl">
         <CardHeader>
@@ -61,6 +49,39 @@ export default function SettingsPage() {
         </CardHeader>
         <CardContent>
             {user && <SettingsForm userId={user.uid} />}
+        </CardContent>
+       </Card>
+
+       <Separator />
+
+       <Card className="shadow-xl">
+        <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+                <QrCode className="h-6 w-6 text-primary" />
+                Integración con WhatsApp
+            </CardTitle>
+            <CardDescription>Vincule su cuenta de WhatsApp para habilitar notificaciones y comunicación directa (Funcionalidad en desarrollo).</CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col items-center space-y-4">
+            <div className="p-4 border rounded-md bg-muted/50">
+                 <Image
+                    src="https://placehold.co/250x250.png?text=Escanear+QR+WhatsApp"
+                    alt="WhatsApp QR Code Placeholder"
+                    width={250}
+                    height={250}
+                    className="rounded-md"
+                    data-ai-hint="whatsapp qr code"
+                />
+            </div>
+            <p className="text-sm text-center text-muted-foreground max-w-md">
+                Para vincular su cuenta de WhatsApp, escanee este código QR desde la aplicación WhatsApp en su teléfono (en la sección de Dispositivos Vinculados).
+            </p>
+            <p className="text-xs text-center text-destructive max-w-md">
+                <strong>Nota:</strong> Esta es una demostración visual. La funcionalidad completa de generación dinámica de QR y vinculación de WhatsApp no está implementada.
+            </p>
+            <Button variant="outline" disabled>
+                Generar Nuevo QR (Simulación)
+            </Button>
         </CardContent>
        </Card>
     </div>
