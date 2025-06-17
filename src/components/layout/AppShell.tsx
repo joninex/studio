@@ -125,10 +125,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <SidebarMenuItem key={item.href}>
           <Link href={item.href}>
             <SidebarMenuButton isActive={isActive} asChild={!isSubMenu} className={isSubMenu ? 'text-sm' : ''}>
-              <>
-                <Icon />
-                <span>{item.label}</span>
-              </>
+              {!isSubMenu ? (
+                // When asChild is true, Slot passes props (like className, data-attributes) to this div.
+                // This div needs to layout Icon and label using its own flex properties.
+                // The className from SidebarMenuButton (including w-full, p-2 etc.) gets merged onto this div.
+                <div className="flex items-center gap-2"> 
+                  <Icon />
+                  <span>{item.label}</span>
+                </div>
+              ) : (
+                // When asChild is false, SidebarMenuButton is a real button.
+                // The button itself has flex and gap, so Fragment is fine for its children.
+                <>
+                  <Icon />
+                  <span>{item.label}</span>
+                </>
+              )}
             </SidebarMenuButton>
           </Link>
         </SidebarMenuItem>
@@ -174,7 +186,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                   <Avatar className="h-9 w-9">
-                    <AvatarImage src={user?.uid ? `https://i.pravatar.cc/150?u=${user.uid}` : "https://placehold.co/40x40.png"} alt={user?.name} data-ai-hint="user avatar" />
+                    <AvatarImage src={user?.uid ? `https://i.pravatar.cc/150?u=${user.uid}` : "https://placehold.co/40x40.png"} alt={user?.name || undefined} data-ai-hint="user avatar" />
                     <AvatarFallback>{user?.name?.[0]?.toUpperCase() || 'U'}</AvatarFallback>
                   </Avatar>
                 </Button>
@@ -209,4 +221,3 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     </SidebarProvider>
   );
 }
-
