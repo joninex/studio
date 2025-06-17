@@ -30,6 +30,8 @@ interface OrderFormProps {
   orderId?: string; // For editing existing order
 }
 
+const NONE_CLASSIFICATION_VALUE = "__NONE_CLASSIFICATION_VALUE__";
+
 export function OrderForm({ orderId }: OrderFormProps) {
   const { user } = useAuth();
   const router = useRouter();
@@ -56,6 +58,7 @@ export function OrderForm({ orderId }: OrderFormProps) {
       classification: undefined, observations: "",
       customerAccepted: false, customerSignatureName: "",
       status: "En diagnóstico",
+      branchInfo: DEFAULT_BRANCH_INFO,
     },
   });
 
@@ -78,6 +81,7 @@ export function OrderForm({ orderId }: OrderFormProps) {
               unlockPatternInfo: order.unlockPatternInfo || undefined,
               status: order.status || "En diagnóstico",
               specificSectors: order.specificSectors || [],
+              branchInfo: order.branchInfo || DEFAULT_BRANCH_INFO,
             });
           } else {
             toast({ variant: "destructive", title: "Error", description: "Orden no encontrada." });
@@ -88,6 +92,8 @@ export function OrderForm({ orderId }: OrderFormProps) {
           toast({ variant: "destructive", title: "Error", description: "No se pudo cargar la orden." });
         })
         .finally(() => setIsLoadingOrder(false));
+    } else {
+      form.setValue('branchInfo', DEFAULT_BRANCH_INFO);
     }
   }, [orderId, form, router, toast]);
 
@@ -138,7 +144,7 @@ export function OrderForm({ orderId }: OrderFormProps) {
     setIsAiLoading(false);
   };
 
-  if (isLoadingOrder) {
+  if (isLoadingOrder && orderId) { // Only show loading if editing
     return <div className="flex justify-center items-center h-64"><LoadingSpinner size={48}/> <p className="ml-4">Cargando orden...</p></div>;
   }
 
@@ -171,7 +177,7 @@ export function OrderForm({ orderId }: OrderFormProps) {
                 <FormField control={form.control} name="unlockPatternInfo" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Patrón o Clave de Desbloqueo</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl><SelectTrigger><SelectValue placeholder="Seleccione una opción" /></SelectTrigger></FormControl>
                       <SelectContent>
                         {UNLOCK_PATTERN_OPTIONS.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
@@ -229,7 +235,7 @@ export function OrderForm({ orderId }: OrderFormProps) {
                         <FormControl>
                           <RadioGroup
                             onValueChange={field.onChange}
-                            defaultValue={field.value}
+                            value={field.value} // Use value for controlled component
                             className="flex space-x-2"
                           >
                             {YES_NO_OPTIONS.map(opt => (
@@ -294,10 +300,13 @@ export function OrderForm({ orderId }: OrderFormProps) {
                 <FormField control={form.control} name="classification" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Clasificación</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select
+                      onValueChange={(selectedValue) => field.onChange(selectedValue === NONE_CLASSIFICATION_VALUE ? "" : selectedValue)}
+                      value={field.value === "" || field.value === undefined ? NONE_CLASSIFICATION_VALUE : field.value}
+                    >
                       <FormControl><SelectTrigger><SelectValue placeholder="Seleccione clasificación" /></SelectTrigger></FormControl>
                       <SelectContent>
-                        <SelectItem value="">Ninguna</SelectItem>
+                        <SelectItem value={NONE_CLASSIFICATION_VALUE}>Ninguna</SelectItem>
                         {CLASSIFICATION_OPTIONS.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
                       </SelectContent>
                     </Select>
@@ -311,7 +320,7 @@ export function OrderForm({ orderId }: OrderFormProps) {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Estado de la Orden</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl><SelectTrigger><SelectValue placeholder="Seleccione estado" /></SelectTrigger></FormControl>
                           <SelectContent>
                             {ORDER_STATUSES.map(status => <SelectItem key={status} value={status}>{status}</SelectItem>)}
@@ -328,18 +337,20 @@ export function OrderForm({ orderId }: OrderFormProps) {
         </div>
 
         <Separator />
+        
+        <FormField control={form.control} name="branchInfo" render={({ field }) => (
+          <FormItem className="hidden"> {/* Hidden field, auto-filled */}
+            <FormLabel>Sucursal</FormLabel>
+            <FormControl><Input {...field} readOnly /></FormControl>
+          </FormItem>
+        )} />
+
 
         <Card>
           <CardHeader><CardTitle className="flex items-center gap-2"><Info className="text-primary"/> Observaciones y Aceptación</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             <FormField control={form.control} name="observations" render={({ field }) => ( <FormItem><FormLabel>Observaciones Adicionales</FormLabel><FormControl><Textarea placeholder="Comentarios o información relevante..." {...field} /></FormControl><FormMessage /></FormItem> )} />
-            <FormField control={form.control} name="branchInfo" render={({ field }) => (
-                <FormItem className="hidden">
-                  <FormLabel>Sucursal (auto-completado)</FormLabel>
-                  <FormControl><Input {...field} defaultValue={DEFAULT_BRANCH_INFO} readOnly /></FormControl>
-                </FormItem>
-              )}
-            />
+            
             <FormField control={form.control} name="customerSignatureName" render={({ field }) => ( <FormItem><FormLabel>Nombre del Cliente que Acepta</FormLabel><FormControl><Input placeholder="Nombre completo del cliente" {...field} /></FormControl><FormMessage /></FormItem> )} />
             <FormField control={form.control} name="customerAccepted" render={({ field }) => (
               <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 shadow-sm">
