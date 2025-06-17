@@ -16,9 +16,9 @@ import { useAuth } from "@/providers/AuthProvider";
 import { addOrderComment, updateOrderStatus, updateOrderCosts } from "@/lib/actions/order.actions";
 import { CHECKLIST_ITEMS, ORDER_STATUSES, YES_NO_OPTIONS, SPECIFIC_SECTORS_OPTIONS } from "@/lib/constants";
 import { AlertCircle, Bot, CalendarDays, DollarSign, Edit, FileText, Info, ListChecks, MessageSquare, Printer, User as UserIcon, Wrench, PackageCheck, Smartphone } from "lucide-react";
-import { PrintableView } from "@/components/shared/PrintableView";
 import { Input } from "../ui/input";
 import { LoadingSpinner } from "../shared/LoadingSpinner";
+import Image from "next/image"; // Added for logo in print header
 
 interface OrderDetailClientProps {
   order: Order;
@@ -124,8 +124,19 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
 
   return (
     <div className="space-y-6">
-      <Card className="print-container shadow-xl"> {/* Added print-container for react-to-print */}
-        <CardHeader className="flex flex-row justify-between items-start">
+      <div className="print-only text-center mb-6 hidden print:block">
+        <Image 
+            src="https://placehold.co/200x75.png?text=JO-SERVICE"
+            alt="JO-SERVICE Logo"
+            width={150}
+            height={56}
+            className="mx-auto mb-4"
+            data-ai-hint="company logo"
+        />
+        <h1 className="text-2xl font-bold">Orden de Servicio N°: {order.orderNumber}</h1>
+      </div>
+      <Card className="print-container shadow-xl">
+        <CardHeader className="flex flex-row justify-between items-start no-print">
           <div>
             <CardTitle className="flex items-center gap-2 mb-1">
               <FileText className="h-6 w-6 text-primary" />
@@ -135,19 +146,27 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
               Fecha de Ingreso: {format(new Date(order.entryDate), "dd MMM yyyy, HH:mm", { locale: es })}
             </CardDescription>
              <div className="mt-2">
-                <Badge variant={getStatusBadgeVariant(order.status)} className="text-sm px-3 py-1">{order.status}</Badge>
+                <Badge variant={getStatusBadgeVariant(order.status)} className="text-sm px-3 py-1 badge-print">{order.status}</Badge>
                 {abandonmentWarning && (
-                  <Badge variant="destructive" className="ml-2 text-sm px-3 py-1 animate-pulse">
+                  <Badge variant="destructive" className="ml-2 text-sm px-3 py-1 animate-pulse badge-print">
                     <AlertCircle className="mr-1 h-4 w-4" /> {abandonmentWarning}
                   </Badge>
                 )}
               </div>
           </div>
-          <Button onClick={handlePrint} variant="outline"><Printer className="mr-2 h-4 w-4" /> Imprimir</Button>
+          <Button onClick={handlePrint} variant="outline" className="no-print"><Printer className="mr-2 h-4 w-4" /> Imprimir</Button>
         </CardHeader>
+        {/* Visible only on print - simplified header */}
+        <div className="hidden print:block mb-4 p-6 border-b">
+            <p><strong>Fecha de Ingreso:</strong> {format(new Date(order.entryDate), "dd MMMM yyyy, HH:mm", { locale: es })}</p>
+            <p><strong>Estado Actual:</strong> <span className="font-semibold">{order.status}</span></p>
+             {abandonmentWarning && (
+                <p className="font-bold text-red-600 mt-1">ALERTA: {abandonmentWarning}</p>
+            )}
+        </div>
         <CardContent className="space-y-6">
           <div className="grid md:grid-cols-2 gap-6">
-            <Card className="bg-muted/30">
+            <Card className="bg-muted/30 card-print">
               <CardHeader><CardTitle className="text-lg flex items-center gap-2"><UserIcon className="h-5 w-5 text-primary"/>Datos del Cliente</CardTitle></CardHeader>
               <CardContent className="text-sm space-y-1">
                 <p><strong>Nombre:</strong> {order.clientName} {order.clientLastName}</p>
@@ -156,7 +175,7 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
                 <p><strong>Email:</strong> {order.clientEmail || "No provisto"}</p>
               </CardContent>
             </Card>
-            <Card className="bg-muted/30">
+            <Card className="bg-muted/30 card-print">
               <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Smartphone className="h-5 w-5 text-primary"/>Datos del Equipo</CardTitle></CardHeader>
               <CardContent className="text-sm space-y-1">
                 <p><strong>Marca:</strong> {order.deviceBrand}</p>
@@ -170,13 +189,13 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
 
           <Separator />
 
-          <div>
+          <div className="card-print">
             <h3 className="text-lg font-semibold mb-2 flex items-center gap-2"><ListChecks className="h-5 w-5 text-primary"/>Checklist de Recepción</h3>
             <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-2 text-sm">
               {CHECKLIST_ITEMS.map(item => (
                 <div key={item.id} className="flex justify-between">
                   <span>{item.label}:</span>
-                  <span className={`font-medium ${order.checklist[item.id] === 'si' ? 'text-green-600' : 'text-red-600'}`}>
+                  <span className={`font-medium ${order.checklist[item.id] === 'si' ? 'text-green-600 print:text-black' : 'text-red-600 print:text-black'}`}>
                     {order.checklist[item.id] === 'si' ? 'Sí' : 'No'}
                   </span>
                 </div>
@@ -186,7 +205,7 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
 
           <Separator />
           
-          <div className="grid md:grid-cols-2 gap-6">
+          <div className="grid md:grid-cols-2 gap-6 card-print">
             <div className="space-y-2">
                 <h3 className="text-lg font-semibold flex items-center gap-2"><AlertCircle className="h-5 w-5 text-primary"/>Riesgos y Sectores</h3>
                 <p className="text-sm"><strong>Riesgo de Rotura:</strong> {order.damageRisk || "Ninguno especificado"}</p>
@@ -203,15 +222,15 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
 
           <Separator />
           
-           <div>
+           <div className="card-print">
             <div className="flex justify-between items-center mb-2">
                 <h3 className="text-lg font-semibold flex items-center gap-2"><DollarSign className="h-5 w-5 text-primary"/>Costos</h3>
                 {!isEditingCosts && (
-                  <Button variant="outline" size="sm" onClick={() => setIsEditingCosts(true)}><Edit className="mr-2 h-4 w-4"/>Editar Costos</Button>
+                  <Button variant="outline" size="sm" onClick={() => setIsEditingCosts(true)} className="no-print"><Edit className="mr-2 h-4 w-4"/>Editar Costos</Button>
                 )}
             </div>
             {isEditingCosts ? (
-                <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-4 items-end p-4 border rounded-md bg-muted/20">
+                <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-4 items-end p-4 border rounded-md bg-muted/20 no-print">
                     <div className="space-y-1">
                         <label htmlFor="costSparePartEdit" className="text-xs font-medium">Repuesto ($)</label>
                         <Input id="costSparePartEdit" name="costSparePart" type="number" value={editableCosts.costSparePart} onChange={handleCostChange} className="h-9"/>
@@ -243,7 +262,7 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
 
           <Separator />
 
-          <div>
+          <div className="card-print">
             <h3 className="text-lg font-semibold mb-2 flex items-center gap-2"><PackageCheck className="h-5 w-5 text-primary"/>Seguimiento y Fechas</h3>
             <div className="text-sm space-y-1">
                 <p><strong>Última Actualización:</strong> {format(new Date(order.updatedAt), "dd MMM yyyy, HH:mm", { locale: es })} por {order.lastUpdatedBy}</p>
@@ -251,11 +270,19 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
                 {order.deliveryDate && <p><strong>Entregado:</strong> {format(new Date(order.deliveryDate), "dd MMM yyyy, HH:mm", { locale: es })}</p>}
             </div>
           </div>
+          <div className="hidden print:block mt-8 pt-4 border-t">
+            <p className="text-sm"><strong>Firma del Cliente Aceptando Condiciones:</strong> _________________________</p>
+            <p className="text-sm mt-1"><strong>Aclaración:</strong> {order.customerSignatureName}</p>
+             <p className="text-xs mt-4">
+                CONDICIONES: La garantía cubre únicamente la reparación efectuada por un plazo de 90 días y no cubre fallas preexistentes o nuevas fallas no relacionadas con la reparación original. El equipo debe ser retirado dentro de los 30 días posteriores a la notificación de "Listo para Retirar". Pasado dicho plazo, se aplicarán cargos por almacenamiento. Equipos no retirados luego de 60 días podrán ser declarados en abandono.
+                <br/>Contacto: JO-SERVICE, Tel: 123-456789, Email: contacto@joservice.com.ar (Estos datos se deben configurar en la sección Ajustes).
+            </p>
+          </div>
 
         </CardContent>
       </Card>
 
-      <Card className="shadow-xl">
+      <Card className="shadow-xl no-print">
         <CardHeader><CardTitle className="flex items-center gap-2"><Wrench className="h-5 w-5 text-primary"/>Actualizar Estado</CardTitle></CardHeader>
         <CardContent className="flex flex-col sm:flex-row gap-4 items-end">
           <div className="flex-grow">
@@ -274,7 +301,7 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
         </CardContent>
       </Card>
 
-      <Card className="shadow-xl">
+      <Card className="shadow-xl no-print">
         <CardHeader><CardTitle className="flex items-center gap-2"><MessageSquare className="h-5 w-5 text-primary"/>Comentarios Técnicos</CardTitle></CardHeader>
         <CardContent>
           <div className="space-y-4 mb-4 max-h-60 overflow-y-auto pr-2">
@@ -295,8 +322,6 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
         </CardContent>
       </Card>
       
-      {/* This component will be used by the print function to format the output */}
-      <PrintableView order={order} />
     </div>
   );
 }

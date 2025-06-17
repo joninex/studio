@@ -1,21 +1,61 @@
 // src/app/(app)/dashboard/page.tsx
 "use client";
 
-import { PageHeader } from "@/components/shared/PageHeader";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button"; // Added import
-import { useAuth } from "@/providers/AuthProvider";
-import { BarChart, FileText, Users, Wrench } from "lucide-react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/providers/AuthProvider";
+import { getOrders } from "@/lib/actions/order.actions"; // Import getOrders
+import type { Order } from "@/types"; // Import Order type
+import { BarChart, FileText, Users, Wrench, PackageCheck, AlertTriangle } from "lucide-react"; // Added icons
+import { LoadingSpinner } from "@/components/shared/LoadingSpinner"; // Import LoadingSpinner
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const [ordersData, setOrdersData] = useState<Order[]>([]);
+  const [isLoadingStats, setIsLoadingStats] = useState(true);
+
+  useEffect(() => {
+    async function fetchDashboardData() {
+      setIsLoadingStats(true);
+      try {
+        const fetchedOrders = await getOrders(); // Fetch all orders
+        setOrdersData(fetchedOrders);
+      } catch (error) {
+        console.error("Error fetching orders for dashboard:", error);
+        // Optionally, set an error state and display a message
+      } finally {
+        setIsLoadingStats(false);
+      }
+    }
+    fetchDashboardData();
+  }, []);
+
+  const activeOrdersCount = ordersData.filter(
+    (order) => order.status !== "Entregado" && order.status !== "Abandonado"
+  ).length;
+
+  const repairedTotalCount = ordersData.filter(
+    (order) => order.status === "Reparado" || order.status === "Listo para Retirar" || order.status === "Entregado"
+  ).length;
+
+  const pendingPickupCount = ordersData.filter(
+    (order) => order.status === "Listo para Retirar"
+  ).length;
+  
+  const abandonedCount = ordersData.filter(
+    (order) => order.status === "Abandonado"
+  ).length;
+
 
   const quickStats = [
-    { title: "Órdenes Activas", value: "12", icon: FileText, color: "text-blue-500", bgColor: "bg-blue-100" },
-    { title: "Equipos Reparados (Mes)", value: "34", icon: Wrench, color: "text-green-500", bgColor: "bg-green-100" },
-    { title: "Pendientes de Retiro", value: "5", icon: Users, color: "text-orange-500", bgColor: "bg-orange-100" },
+    { title: "Órdenes Activas", value: activeOrdersCount, icon: FileText, color: "text-blue-500", bgColor: "bg-blue-100" },
+    { title: "Equipos Reparados (Total)", value: repairedTotalCount, icon: Wrench, color: "text-green-500", bgColor: "bg-green-100" },
+    { title: "Pendientes de Retiro", value: pendingPickupCount, icon: PackageCheck, color: "text-orange-500", bgColor: "bg-orange-100" },
+    { title: "Equipos Abandonados", value: abandonedCount, icon: AlertTriangle, color: "text-red-500", bgColor: "bg-red-100" },
   ];
 
   return (
@@ -25,20 +65,37 @@ export default function DashboardPage() {
         description="Resumen general de la actividad del taller."
       />
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {quickStats.map((stat) => (
-          <Card key={stat.title} className="shadow-lg hover:shadow-xl transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
-              <stat.icon className={`h-6 w-6 ${stat.color}`} />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">{stat.value}</div>
-              <p className="text-xs text-muted-foreground pt-1">Actualizado recientemente</p>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      {isLoadingStats ? (
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+          {quickStats.map((stat) => (
+            <Card key={stat.title} className="shadow-lg">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
+                <stat.icon className={`h-6 w-6 ${stat.color}`} />
+              </CardHeader>
+              <CardContent>
+                <LoadingSpinner size={24} className="my-2"/>
+                <p className="text-xs text-muted-foreground pt-1">Cargando...</p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+          {quickStats.map((stat) => (
+            <Card key={stat.title} className="shadow-lg hover:shadow-xl transition-shadow">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
+                <stat.icon className={`h-6 w-6 ${stat.color}`} />
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold">{stat.value}</div>
+                <p className="text-xs text-muted-foreground pt-1">Actualizado recientemente</p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
 
       <div className="grid gap-6 md:grid-cols-2">
         <Card className="shadow-lg">
@@ -46,14 +103,14 @@ export default function DashboardPage() {
             <CardTitle className="flex items-center gap-2"><FileText className="h-5 w-5 text-primary" />Accesos Rápidos</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <Link href="/orders/new" passHref>
+            <Link href="/orders/new">
               <Button variant="outline" className="w-full justify-start">Nueva Orden de Servicio</Button>
             </Link>
-            <Link href="/orders" passHref>
+            <Link href="/orders">
               <Button variant="outline" className="w-full justify-start">Ver Todas las Órdenes</Button>
             </Link>
             {user?.role === 'admin' && (
-               <Link href="/users" passHref>
+               <Link href="/users">
                 <Button variant="outline" className="w-full justify-start">Gestionar Usuarios</Button>
               </Link>
             )}

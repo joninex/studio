@@ -1,4 +1,3 @@
-
 // src/components/layout/AppShell.tsx
 "use client";
 
@@ -126,16 +125,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <Link href={item.href}>
             <SidebarMenuButton isActive={isActive} asChild={!isSubMenu} className={isSubMenu ? 'text-sm' : ''}>
               {!isSubMenu ? (
-                // When asChild is true, Slot passes props (like className, data-attributes) to this div.
-                // This div needs to layout Icon and label using its own flex properties.
-                // The className from SidebarMenuButton (including w-full, p-2 etc.) gets merged onto this div.
                 <div className="flex items-center gap-2"> 
                   <Icon />
                   <span>{item.label}</span>
                 </div>
               ) : (
-                // When asChild is false, SidebarMenuButton is a real button.
-                // The button itself has flex and gap, so Fragment is fine for its children.
                 <>
                   <Icon />
                   <span>{item.label}</span>
@@ -154,7 +148,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <Sidebar side="left" variant="sidebar" collapsible={isMobile ? "offcanvas" : "icon"}>
         <SidebarHeader className="border-b border-sidebar-border">
           <Link href="/dashboard" className="flex items-center gap-2 p-2 hover:no-underline">
-            <Smartphone className="h-8 w-8 text-primary" /> {/* Changed icon */}
+            <Smartphone className="h-8 w-8 text-primary" />
             <h1 className="font-headline text-xl font-semibold text-sidebar-foreground group-data-[collapsible=icon]:hidden">
               JO-SERVICE
             </h1>
@@ -174,7 +168,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </Sidebar>
 
       <SidebarInset>
-        <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b bg-background px-4 shadow-sm sm:px-6">
+        <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b bg-background px-4 shadow-sm sm:px-6 sidebar-inset-header">
           <div className="flex items-center">
             <SidebarTrigger className="md:hidden" />
             <div className="hidden md:block">

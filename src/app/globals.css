@@ -108,3 +108,113 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+/* Print specific styles */
+@media print {
+  body {
+    font-family: Arial, sans-serif; /* Use a common print-friendly font */
+    background-color: #fff !important; /* Ensure white background */
+    color: #000 !important; /* Ensure black text */
+    margin: 0;
+    padding: 0;
+    -webkit-print-color-adjust: exact; /* Chrome, Safari */
+    color-adjust: exact; /* Firefox */
+  }
+
+  /* Hide elements not relevant for print */
+  [data-sidebar="sidebar"], /* Sidebar component */
+  .sidebar-inset-header, /* Header within SidebarInset */
+  .no-print, /* Generic class for elements to hide */
+  #next-devtools-widget-wrapper, /* Next.js dev tools */
+  .ToastViewport /* Toasts */ {
+    display: none !important;
+  }
+  
+  /* Ensure the main content to be printed takes full width */
+  .print-container {
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 1.5rem !important; /* Add some padding for the print version */
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  .print-container .card-print {
+    page-break-inside: avoid;
+    border: 1px solid #ccc; /* Simple border for print */
+    margin-bottom: 1rem;
+    padding: 1rem;
+  }
+
+  /* Specific adjustments for OrderDetailClient content for print */
+  .print-container h1, 
+  .print-container h2, 
+  .print-container h3, 
+  .print-container h4, 
+  .print-container p, 
+  .print-container div,
+  .print-container span,
+  .print-container strong {
+    color: #000 !important;
+    background-color: transparent !important;
+  }
+
+  .print-container .badge-print { /* Style badges for print */
+    border: 1px solid #000 !important;
+    color: #000 !important;
+    background-color: #fff !important; /* Ensure good contrast */
+    padding: 0.1rem 0.3rem;
+  }
+
+  .print-container img {
+    max-width: 100% !important; /* Ensure images don't overflow */
+  }
+
+  /* Ensure cards in the order detail are clearly separated */
+  .print-container > .space-y-6 > .card {
+    border: 1px solid #e0e0e0;
+    box-shadow: none;
+  }
+  .print-container .bg-muted\/30 { /* Example for specific background handling */
+    background-color: #f9f9f9 !important; /* Light gray for sections */
+  }
+  .print-container .text-primary {
+      color: #3F51B5 !important; /* Keep primary color for important elements if desired */
+  }
+
+  /* Hide interactive elements within the order details page */
+  .print-container button,
+  .print-container a[href^="/orders/"][href*="edit=true"], /* Edit buttons */
+  .print-container .lucide-edit, /* Edit icons */
+  .print-container .lucide-eye, /* View icons on edit page */
+  .print-container .lucide-arrow-left, /* Back buttons */
+  .print-container .lucide-printer, /* The print button itself */
+  .print-container .space-y-2 > .lucide-sparkles, /* AI suggestions trigger */
+  .print-container .items-end > button, /* Action buttons like "Actualizar Estado", "Agregar Comentario" */
+  .print-container textarea,
+  .print-container .items-end > .flex-grow > div /* Hide select for status update */ {
+    display: none !important;
+  }
+
+  main {
+    padding: 0 !important; /* Remove padding from main layout element */
+  }
+
+  /* Make sure the PageHeader only prints the title and description cleanly */
+  .page-header-print {
+    border-bottom: 1px solid #ccc;
+    padding-bottom: 0.5rem;
+    margin-bottom: 1rem;
+  }
+  .page-header-print h1 {
+    font-size: 1.5rem; /* Adjust title size for print */
+  }
+  .page-header-print p {
+    font-size: 0.9rem; /* Adjust description size for print */
+  }
+  
+  @page {
+    size: A4;
+    margin: 20mm; /* Standard A4 margins */
+  }
+}
