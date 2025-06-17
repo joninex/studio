@@ -125,8 +125,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <SidebarMenuItem key={item.href}>
           <Link href={item.href}>
             <SidebarMenuButton isActive={isActive} asChild={!isSubMenu} className={isSubMenu ? 'text-sm' : ''}>
-              <Icon />
-              <span>{item.label}</span>
+              <>
+                <Icon />
+                <span>{item.label}</span>
+              </>
             </SidebarMenuButton>
           </Link>
         </SidebarMenuItem>
@@ -207,3 +209,4 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     </SidebarProvider>
   );
 }
+
