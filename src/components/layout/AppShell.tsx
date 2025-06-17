@@ -68,7 +68,7 @@ const navItems: NavItem[] = [
       { href: "/orders/new", label: "Nueva Orden", icon: PlusCircle },
     ],
   },
-  { href: "/clients", label: "Clientes", icon: Contact }, // Updated icon
+  { href: "/clients", label: "Clientes", icon: Contact }, 
   { href: "/users", label: "Usuarios", icon: Users, adminOnly: true },
   { href: "/settings", label: "Configuración", icon: Settings, adminOnly: false },
 ];
@@ -82,14 +82,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [activeSubMenu, setActiveSubMenu] = useState<string | null>(null);
 
   useEffect(() => {
-    // Automatically open the submenu if the current path is one of its children
     const parentPath = navItems.find(item => item.subItems?.some(sub => pathname.startsWith(sub.href)))?.href;
     if (parentPath) {
       setActiveSubMenu(parentPath);
-    } else {
-      // If not a sub-item, collapse all submenus unless user explicitly opens one
-      // This line can be removed if we want submenus to stay open when navigating away
-      // setActiveSubMenu(null); 
     }
   }, [pathname]);
 
@@ -101,8 +96,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const renderNavItems = (items: NavItem[], isSubMenu = false, level = 0) => {
     return items.map((item) => {
-      // An item is active if its href matches the current pathname,
-      // or if one of its subItems is active (for parent menu items).
       const isLinkActive = pathname === item.href;
       const isParentOfActivePath = item.subItems?.some(sub => pathname.startsWith(sub.href)) || false;
       const isActive = isLinkActive || isParentOfActivePath;
@@ -115,7 +108,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <SidebarMenuItem key={item.href}>
             <SidebarMenuButton
               onClick={() => setActiveSubMenu(isSubMenuOpen ? null : item.href)}
-              isActive={isActive} // A parent is active if its own link is active or a child is active
+              isActive={isActive} 
               className="justify-between"
               aria-expanded={isSubMenuOpen}
             >
@@ -140,8 +133,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <SidebarMenuItem key={item.href}>
           <Link href={item.href}>
             <SidebarMenuButton 
-              asChild={false} // Render as button for proper styling and behavior
-              isActive={isLinkActive} // Only direct links are marked active here
+              asChild={false} 
+              isActive={isLinkActive} 
               className={isSubMenu ? `text-sm pl-${level * 2}` : ''}
             >
               <div className="flex items-center gap-2 w-full">
