@@ -5,7 +5,6 @@ import type { Order, User, Comment, AISuggestion } from "@/types";
 import { OrderSchema } from "@/lib/schemas";
 import type { z } from "zod";
 import { suggestRepairSolutions } from "@/ai/flows/suggest-repair-solutions";
-import { DEFAULT_BRANCH_INFO } from "@/lib/constants";
 
 // Mock database for orders
 let mockOrders: Order[] = [
@@ -18,7 +17,7 @@ let mockOrders: Order[] = [
     clientDni: "12345678",
     clientPhone: "1122334455",
     clientEmail: "juan.perez@example.com",
-    branchInfo: DEFAULT_BRANCH_INFO,
+    branchInfo: "JO-SERVICE Taller Central (Config)",
     deviceBrand: "Samsung",
     deviceModel: "Galaxy S21",
     deviceIMEI: "123456789012345",
@@ -54,7 +53,7 @@ let mockOrders: Order[] = [
     clientDni: "87654321",
     clientPhone: "5544332211",
     clientEmail: "maria.lopez@example.com",
-    branchInfo: DEFAULT_BRANCH_INFO,
+    branchInfo: "JO-SERVICE Taller Norte (Config)",
     deviceBrand: "Apple",
     deviceModel: "iPhone 12",
     deviceIMEI: "543210987654321",
@@ -107,9 +106,8 @@ export async function createOrder(
   const newOrder: Order = {
     id: newOrderNumber, // Using orderNumber as ID for mock
     orderNumber: newOrderNumber,
-    ...data,
+    ...data, // This includes branchInfo from the form
     previousOrderId: data.previousOrderId || "", // Ensure it's set
-    branchInfo: DEFAULT_BRANCH_INFO, // Assuming single branch for now
     entryDate: new Date().toISOString(),
     commentsHistory: [],
     lastUpdatedBy: userId,
@@ -241,10 +239,10 @@ export async function getRepairSuggestions(
 // Full order update (for editing more fields)
 export async function updateOrder(
   orderId: string,
-  values: Partial<Omit<Order, 'id' | 'orderNumber' | 'entryDate' | 'createdAt'>>, // Allow partial updates, exclude some fields
+  values: Partial<Omit<Order, 'id' | 'orderNumber' | 'entryDate' | 'createdAt'>>,
   userId: string
 ): Promise<{ success: boolean; message: string; order?: Order }> {
-  const validatedFields = OrderSchema.partial().safeParse(values); // Validate partial data
+  const validatedFields = OrderSchema.partial().safeParse(values); 
 
   if (!validatedFields.success) {
     console.error("Update Validation Errors:", validatedFields.error.flatten().fieldErrors);
@@ -257,15 +255,13 @@ export async function updateOrder(
     return { success: false, message: "Orden no encontrada." };
   }
 
-  // Naive merge for mock. In Firestore, you'd use `updateDoc`.
   mockOrders[orderIndex] = {
     ...mockOrders[orderIndex],
-    ...validatedFields.data, // Use validated data
+    ...validatedFields.data, 
     lastUpdatedBy: userId,
     updatedAt: new Date().toISOString(),
   };
 
-  // Specific logic for dates based on status, if status is part of values
   if (validatedFields.data.status) {
     if (validatedFields.data.status === "Listo para Retirar" && !mockOrders[orderIndex].readyForPickupDate) {
       mockOrders[orderIndex].readyForPickupDate = new Date().toISOString();

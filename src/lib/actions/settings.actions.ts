@@ -13,6 +13,7 @@ let globalSettings: Configurations = {
   companyCuit: "30-12345678-9",
   companyAddress: "Calle Falsa 123, Springfield, Argentina",
   companyContactDetails: "JO-SERVICE\nTel: 123-456789\nEmail: contacto@joservice.com.ar",
+  branchInfo: "JO-SERVICE Taller Central (Config)",
   warrantyConditions: "La garantía cubre únicamente la reparación efectuada por un plazo de 90 días y no cubre fallas preexistentes o nuevas fallas no relacionadas con la reparación original.",
   pickupConditions: "El equipo debe ser retirado dentro de los 30 días posteriores a la notificación de \"Listo para Retirar\". Pasado dicho plazo, se aplicarán cargos por almacenamiento.",
   abandonmentPolicyDays30: 30,

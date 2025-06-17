@@ -9,6 +9,7 @@ import type { z } from "zod";
 
 import { OrderSchema, type OrderFormData } from "@/lib/schemas";
 import { createOrder, getRepairSuggestions, updateOrder, getOrderById } from "@/lib/actions/order.actions";
+import { getSettings } from "@/lib/actions/settings.actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -20,9 +21,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/providers/AuthProvider";
-import { AISuggestion, type Order } from "@/types";
-import { CHECKLIST_ITEMS, CLASSIFICATION_OPTIONS, ORDER_STATUSES, SPECIFIC_SECTORS_OPTIONS, UNLOCK_PATTERN_OPTIONS, YES_NO_OPTIONS, DEFAULT_BRANCH_INFO } from "@/lib/constants";
-import { AlertCircle, Bot, DollarSign, Info, ListChecks, LucideSparkles, User, Wrench, LinkIcon } from "lucide-react";
+import { AISuggestion, type Order, type Configurations } from "@/types";
+import { CHECKLIST_ITEMS, CLASSIFICATION_OPTIONS, ORDER_STATUSES, SPECIFIC_SECTORS_OPTIONS, UNLOCK_PATTERN_OPTIONS, YES_NO_OPTIONS } from "@/lib/constants";
+import { AlertCircle, Bot, DollarSign, Info, ListChecks, LucideSparkles, User, Wrench, LinkIcon, Building } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 
@@ -40,12 +41,15 @@ export function OrderForm({ orderId }: OrderFormProps) {
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [aiSuggestion, setAiSuggestion] = useState<AISuggestion | null>(null);
   const [isLoadingOrder, setIsLoadingOrder] = useState(!!orderId);
+  const [appSettings, setAppSettings] = useState<Configurations | null>(null);
+  const [isLoadingSettings, setIsLoadingSettings] = useState(true);
 
 
   const form = useForm<OrderFormData>({
     resolver: zodResolver(OrderSchema),
     defaultValues: {
       clientName: "", clientLastName: "", clientDni: "", clientPhone: "", clientEmail: "",
+      branchInfo: "", // Will be populated from settings
       deviceBrand: "", deviceModel: "", deviceIMEI: "", declaredFault: "",
       unlockPatternInfo: undefined,
       checklist: {
@@ -58,7 +62,6 @@ export function OrderForm({ orderId }: OrderFormProps) {
       classification: undefined, observations: "",
       customerAccepted: false, customerSignatureName: "",
       status: "En diagnóstico",
-      branchInfo: DEFAULT_BRANCH_INFO,
     },
   });
 
@@ -66,10 +69,28 @@ export function OrderForm({ orderId }: OrderFormProps) {
   const declaredFaultWatch = useWatch({ control: form.control, name: "declaredFault" });
 
   useEffect(() => {
-    if (orderId) {
-      setIsLoadingOrder(true);
-      getOrderById(orderId)
-        .then(order => {
+    async function fetchInitialData() {
+      setIsLoadingSettings(true);
+      try {
+        const settings = await getSettings();
+        setAppSettings(settings);
+        if (!orderId) { // For new orders, set branchInfo from settings
+          form.setValue('branchInfo', settings.branchInfo || "Sucursal Principal"); 
+        }
+      } catch (error) {
+        console.error("Failed to load settings for order form:", error);
+        toast({ variant: "destructive", title: "Error", description: "No se pudieron cargar las configuraciones." });
+         if (!orderId) {
+          form.setValue('branchInfo', "Sucursal Principal (Error carga config)");
+        }
+      } finally {
+        setIsLoadingSettings(false);
+      }
+
+      if (orderId) {
+        setIsLoadingOrder(true);
+        try {
+          const order = await getOrderById(orderId);
           if (order) {
             form.reset({
               ...order,
@@ -81,21 +102,22 @@ export function OrderForm({ orderId }: OrderFormProps) {
               unlockPatternInfo: order.unlockPatternInfo || undefined,
               status: order.status || "En diagnóstico",
               specificSectors: order.specificSectors || [],
-              branchInfo: order.branchInfo || DEFAULT_BRANCH_INFO,
+              branchInfo: order.branchInfo, // Use existing branchInfo for edits
             });
           } else {
             toast({ variant: "destructive", title: "Error", description: "Orden no encontrada." });
             router.push("/orders");
           }
-        })
-        .catch(() => {
+        } catch (error) {
           toast({ variant: "destructive", title: "Error", description: "No se pudo cargar la orden." });
-        })
-        .finally(() => setIsLoadingOrder(false));
-    } else {
-      form.setValue('branchInfo', DEFAULT_BRANCH_INFO);
+        } finally {
+          setIsLoadingOrder(false);
+        }
+      }
     }
+    fetchInitialData();
   }, [orderId, form, router, toast]);
+
 
   const onSubmit = (values: OrderFormData) => {
     if (!user) {
@@ -117,14 +139,13 @@ export function OrderForm({ orderId }: OrderFormProps) {
 
       if (result.success) {
         toast({ title: "Éxito", description: result.message });
-        if (orderId) { // This was an update
-            router.push(`/orders/${orderId}`);
-        } else if (result.order && result.order.id) { // This was a new order creation
+        if (result.order && result.order.id) {
             router.push(`/orders/${result.order.id}`);
+        } else if (orderId) { // Fallback for update if order object isn't returned but was successful
+             router.push(`/orders/${orderId}`);
         } else {
-             // Should not happen if success is true and it's a new order, but as a fallback:
-            toast({ variant: "destructive", title: "Error de Redirección", description: "No se pudo obtener el ID de la nueva orden para redirigir." });
-            router.push("/orders"); // Fallback to orders list
+            toast({ variant: "destructive", title: "Error de Redirección", description: "No se pudo obtener el ID de la orden para redirigir." });
+            router.push("/orders"); 
         }
       } else {
         toast({ variant: "destructive", title: "Error", description: result.message });
@@ -151,8 +172,8 @@ export function OrderForm({ orderId }: OrderFormProps) {
     setIsAiLoading(false);
   };
 
-  if (isLoadingOrder && orderId) { // Only show loading if editing
-    return <div className="flex justify-center items-center h-64"><LoadingSpinner size={48}/> <p className="ml-4">Cargando orden...</p></div>;
+  if ((isLoadingOrder && orderId) || (isLoadingSettings && !orderId) ) {
+    return <div className="flex justify-center items-center h-64"><LoadingSpinner size={48}/> <p className="ml-4">Cargando datos del formulario...</p></div>;
   }
 
   return (
@@ -177,6 +198,14 @@ export function OrderForm({ orderId }: OrderFormProps) {
             <Card>
               <CardHeader><CardTitle className="flex items-center gap-2"><Wrench className="text-primary"/> Detalles del Equipo y Falla</CardTitle></CardHeader>
               <CardContent className="space-y-4">
+                <FormField control={form.control} name="branchInfo" render={({ field }) => ( 
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-1"><Building className="h-4 w-4"/>Sucursal/Taller</FormLabel>
+                    <FormControl><Input placeholder="Nombre de la sucursal" {...field} disabled={isLoadingSettings} /></FormControl>
+                    <FormDescription>Información de la sucursal donde se registra la orden.</FormDescription>
+                    <FormMessage />
+                  </FormItem> 
+                )} />
                 <FormField control={form.control} name="deviceBrand" render={({ field }) => ( <FormItem><FormLabel>Marca</FormLabel><FormControl><Input placeholder="Ej: Samsung, Apple" {...field} /></FormControl><FormMessage /></FormItem> )} />
                 <FormField control={form.control} name="deviceModel" render={({ field }) => ( <FormItem><FormLabel>Modelo</FormLabel><FormControl><Input placeholder="Ej: Galaxy S21, iPhone 13" {...field} /></FormControl><FormMessage /></FormItem> )} />
                 <FormField control={form.control} name="deviceIMEI" render={({ field }) => ( <FormItem><FormLabel>IMEI</FormLabel><FormControl><Input placeholder="IMEI del equipo" {...field} /></FormControl><FormMessage /></FormItem> )} />
@@ -242,7 +271,7 @@ export function OrderForm({ orderId }: OrderFormProps) {
                         <FormControl>
                           <RadioGroup
                             onValueChange={field.onChange}
-                            value={field.value} // Use value for controlled component
+                            value={field.value} 
                             className="flex space-x-2"
                           >
                             {YES_NO_OPTIONS.map(opt => (
@@ -320,7 +349,7 @@ export function OrderForm({ orderId }: OrderFormProps) {
                     <FormMessage />
                   </FormItem>
                 )} />
-                 {orderId && ( // Only show status field when editing
+                 {orderId && ( 
                   <FormField
                     control={form.control}
                     name="status"
@@ -345,14 +374,6 @@ export function OrderForm({ orderId }: OrderFormProps) {
 
         <Separator />
         
-        <FormField control={form.control} name="branchInfo" render={({ field }) => (
-          <FormItem className="hidden"> {/* Hidden field, auto-filled */}
-            <FormLabel>Sucursal</FormLabel>
-            <FormControl><Input {...field} readOnly /></FormControl>
-          </FormItem>
-        )} />
-
-
         <Card>
           <CardHeader><CardTitle className="flex items-center gap-2"><Info className="text-primary"/> Observaciones y Aceptación</CardTitle></CardHeader>
           <CardContent className="space-y-4">
@@ -372,9 +393,9 @@ export function OrderForm({ orderId }: OrderFormProps) {
           </CardContent>
         </Card>
 
-        <Button type="submit" className="w-full sm:w-auto" disabled={isPending || isAiLoading}>
-          {isPending && <LoadingSpinner size={16} className="mr-2"/>}
-          {orderId ? (isPending ? "Actualizando Orden..." : "Actualizar Orden") : (isPending ? "Creando Orden..." : "Crear Orden de Servicio")}
+        <Button type="submit" className="w-full sm:w-auto" disabled={isPending || isAiLoading || isLoadingSettings}>
+          {(isPending || isLoadingSettings) && <LoadingSpinner size={16} className="mr-2"/>}
+          {orderId ? (isPending ? "Actualizando Orden..." : "Actualizar Orden") : (isPending || isLoadingSettings ? "Creando Orden..." : "Crear Orden de Servicio")}
         </Button>
       </form>
     </Form>

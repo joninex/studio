@@ -7,7 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from "@/components/ui/dialog";
+import { 
+  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose 
+} from "@/components/ui/dialog";
+import { 
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, 
+  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger 
+} from "@/components/ui/alert-dialog";
 import { PlusCircle, Edit, Trash2, Search, UserPlus } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -17,34 +23,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { LoadingSpinner } from "../shared/LoadingSpinner";
-
-// Mock server actions for users
-async function getUsersMock(): Promise<User[]> {
-  await new Promise(resolve => setTimeout(resolve, 500));
-  return [
-    { uid: "admin123", name: "Jesús Admin", email: "jesus@mobyland.com.ar", role: "admin", createdAt: new Date(), updatedAt: new Date() },
-    { uid: "tech123", name: "Carlos Técnico", email: "carlos@mobyland.com.ar", role: "tecnico", createdAt: new Date(), updatedAt: new Date() },
-  ];
-}
-async function createUserMock(data: z.infer<typeof UserSchema>): Promise<{ success: boolean; message: string; user?: User }> {
-  await new Promise(resolve => setTimeout(resolve, 500));
-  console.log("Creating user (mock):", data);
-  // This should check for email uniqueness in a real app
-  const newUser: User = { uid: `newUser${Date.now()}`, ...data, createdAt: new Date(), updatedAt: new Date() };
-  // Add to a mock list if maintaining state, or just return success
-  return { success: true, message: "Usuario creado exitosamente (mock).", user: newUser };
-}
-async function updateUserMock(uid: string, data: Partial<z.infer<typeof UserSchema>>): Promise<{ success: boolean; message: string; user?: User }> {
-  await new Promise(resolve => setTimeout(resolve, 500));
-  console.log("Updating user (mock):", uid, data);
-  // Find and update in a mock list if maintaining state
-  return { success: true, message: "Usuario actualizado exitosamente (mock)." };
-}
-async function deleteUserMock(uid: string): Promise<{ success: boolean; message: string }> {
-  await new Promise(resolve => setTimeout(resolve, 500));
-  console.log("Deleting user (mock):", uid);
-  return { success: true, message: "Usuario eliminado exitosamente (mock)." };
-}
+import { getUsers, createUser, updateUser, deleteUser } from "@/lib/actions/user.actions";
+import { Badge } from "@/components/ui/badge";
 
 
 export function UserManagementClient() {
@@ -54,6 +34,8 @@ export function UserManagementClient() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
+  const [isAlertOpen, setIsAlertOpen] = useState(false);
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof UserSchema>>({
@@ -61,13 +43,19 @@ export function UserManagementClient() {
     defaultValues: { name: "", email: "", role: "tecnico", password: "" },
   });
 
-  useEffect(() => {
-    async function loadUsers() {
-      setIsLoading(true);
-      const fetchedUsers = await getUsersMock();
+  async function loadUsers() {
+    setIsLoading(true);
+    try {
+      const fetchedUsers = await getUsers();
       setUsers(fetchedUsers);
-      setIsLoading(false);
+    } catch (error) {
+        toast({ variant: "destructive", title: "Error", description: "No se pudieron cargar los usuarios."});
+    } finally {
+        setIsLoading(false);
     }
+  }
+
+  useEffect(() => {
     loadUsers();
   }, []);
   
@@ -75,12 +63,15 @@ export function UserManagementClient() {
     startTransition(async () => {
       let result;
       if (editingUser) {
-        // For updates, password might be optional or handled differently
-        const updateData = {...values};
-        if(!values.password) delete updateData.password; // Don't send empty password if not changing
-        result = await updateUserMock(editingUser.uid, updateData);
+        const updateData: Partial<z.infer<typeof UserSchema>> = {...values};
+        // If password field is empty or just spaces, don't send it for update
+        if (!values.password || values.password.trim() === "") {
+          delete updateData.password;
+        }
+        result = await updateUser(editingUser.uid, updateData);
       } else {
-        result = await createUserMock(values);
+        // Password is required for new users, schema handles this.
+        result = await createUser(values);
       }
 
       if (result.success) {
@@ -88,9 +79,7 @@ export function UserManagementClient() {
         setIsFormOpen(false);
         setEditingUser(null);
         form.reset({ name: "", email: "", role: "tecnico", password: "" });
-        // Refresh users list
-        const fetchedUsers = await getUsersMock();
-        setUsers(fetchedUsers);
+        await loadUsers(); // Refresh users list
       } else {
         toast({ variant: "destructive", title: "Error", description: result.message });
       }
@@ -99,21 +88,28 @@ export function UserManagementClient() {
   
   const handleEditUser = (user: User) => {
     setEditingUser(user);
-    form.reset({ name: user.name, email: user.email, role: user.role, password: "" }); // Clear password for edit form
+    form.reset({ name: user.name, email: user.email, role: user.role, password: "" }); 
     setIsFormOpen(true);
   };
 
-  const handleDeleteUser = (uid: string) => {
-    if (!confirm("¿Está seguro de que desea eliminar este usuario? Esta acción no se puede deshacer.")) return;
+  const confirmDeleteUser = (user: User) => {
+    setUserToDelete(user);
+    setIsAlertOpen(true);
+  };
+
+  const handleDeleteUser = () => {
+    if (!userToDelete) return;
+
     startTransition(async () => {
-      const result = await deleteUserMock(uid);
+      const result = await deleteUser(userToDelete.uid);
        if (result.success) {
         toast({ title: "Éxito", description: result.message });
-        const fetchedUsers = await getUsersMock(); // Refresh users list
-        setUsers(fetchedUsers);
+        await loadUsers(); // Refresh users list
       } else {
         toast({ variant: "destructive", title: "Error", description: result.message });
       }
+      setIsAlertOpen(false);
+      setUserToDelete(null);
     });
   };
   
@@ -130,6 +126,7 @@ export function UserManagementClient() {
   );
 
   return (
+    <>
     <Card className="shadow-xl">
       <CardHeader className="flex flex-col md:flex-row justify-between items-center gap-4">
         <div>
@@ -176,7 +173,7 @@ export function UserManagementClient() {
                   <TableCell><Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>{user.role}</Badge></TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="icon" onClick={() => handleEditUser(user)}><Edit className="h-4 w-4" /></Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleDeleteUser(user.uid)} disabled={user.email === 'jesus@mobyland.com.ar'}> {/* Prevent deleting main admin */}
+                    <Button variant="ghost" size="icon" onClick={() => confirmDeleteUser(user)} disabled={user.email === 'jesus@mobyland.com.ar'}>
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                   </TableCell>
@@ -187,8 +184,15 @@ export function UserManagementClient() {
           </div>
         )}
       </CardContent>
+    </Card>
 
-      <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+    <Dialog open={isFormOpen} onOpenChange={(isOpen) => {
+        setIsFormOpen(isOpen);
+        if (!isOpen) {
+            setEditingUser(null);
+            form.reset({ name: "", email: "", role: "tecnico", password: "" });
+        }
+    }}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>{editingUser ? "Editar Usuario" : "Nuevo Usuario"}</DialogTitle>
@@ -203,7 +207,7 @@ export function UserManagementClient() {
               <FormField control={form.control} name="role" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Rol</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl><SelectTrigger><SelectValue placeholder="Seleccione un rol" /></SelectTrigger></FormControl>
                     <SelectContent>
                       <SelectItem value="tecnico">Técnico</SelectItem>
@@ -225,6 +229,24 @@ export function UserManagementClient() {
           </Form>
         </DialogContent>
       </Dialog>
-    </Card>
+
+      <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Está absolutamente seguro?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer. Esto eliminará permanentemente al usuario: <strong className="break-all">{userToDelete?.name} ({userToDelete?.email})</strong>.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setUserToDelete(null)}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteUser} disabled={isPending} className="bg-destructive hover:bg-destructive/90">
+              {isPending && <LoadingSpinner size={16} className="mr-2"/>}
+              Sí, eliminar usuario
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

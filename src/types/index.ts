@@ -52,7 +52,7 @@ export interface Order {
   clientPhone: string;
   clientEmail: string;
 
-  branchInfo: string; // Preloaded, e.g., "JO-SERVICE Central"
+  branchInfo: string;
 
   deviceBrand: string;
   deviceModel: string;
@@ -95,7 +95,8 @@ export interface Configurations {
   companyLogoUrl?: string;
   companyCuit?: string;
   companyAddress?: string;
-  companyContactDetails?: string; // Renamed from contactInfo
+  companyContactDetails?: string;
+  branchInfo?: string; // Added for branch/workshop information
   warrantyConditions: string;
   pickupConditions: string;
   abandonmentPolicyDays30: number;

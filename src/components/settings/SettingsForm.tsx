@@ -29,6 +29,7 @@ export function SettingsForm() {
       companyCuit: "",
       companyAddress: "",
       companyContactDetails: "",
+      branchInfo: "",
       warrantyConditions: "",
       pickupConditions: "",
       abandonmentPolicyDays30: 30,
@@ -80,13 +81,14 @@ export function SettingsForm() {
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
         <div>
-          <h3 className="text-lg font-medium mb-2">Datos de la Empresa</h3>
+          <h3 className="text-lg font-medium mb-2">Datos de la Empresa y Sucursal</h3>
           <div className="space-y-4">
             <FormField control={form.control} name="companyName" render={({ field }) => ( <FormItem><FormLabel>Nombre de la Empresa</FormLabel><FormControl><Input placeholder="Nombre de su Taller" {...field} /></FormControl><FormMessage /></FormItem> )} />
             <FormField control={form.control} name="companyLogoUrl" render={({ field }) => ( <FormItem><FormLabel>URL del Logo</FormLabel><FormControl><Input type="url" placeholder="https://ejemplo.com/logo.png" {...field} /></FormControl><FormDescription>Ingrese la URL completa de una imagen para el logo.</FormDescription><FormMessage /></FormItem> )} />
             <FormField control={form.control} name="companyCuit" render={({ field }) => ( <FormItem><FormLabel>CUIT/CUIL (Opcional)</FormLabel><FormControl><Input placeholder="Ej: 20-12345678-9" {...field} /></FormControl><FormMessage /></FormItem> )} />
             <FormField control={form.control} name="companyAddress" render={({ field }) => ( <FormItem><FormLabel>Dirección</FormLabel><FormControl><Textarea rows={2} placeholder="Dirección completa del taller" {...field} /></FormControl><FormMessage /></FormItem> )} />
             <FormField control={form.control} name="companyContactDetails" render={({ field }) => ( <FormItem><FormLabel>Información de Contacto (para impresiones)</FormLabel><FormControl><Textarea rows={3} placeholder="Teléfono, Email, etc." {...field} /></FormControl><FormMessage /></FormItem> )} />
+            <FormField control={form.control} name="branchInfo" render={({ field }) => ( <FormItem><FormLabel>Información de Sucursal/Taller (para órdenes)</FormLabel><FormControl><Input placeholder="Ej: Taller Central, Sucursal Norte" {...field} /></FormControl><FormDescription>Este nombre se usará en las órdenes de servicio.</FormDescription><FormMessage /></FormItem> )} />
           </div>
         </div>
 

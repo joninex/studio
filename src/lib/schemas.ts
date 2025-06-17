@@ -11,12 +11,12 @@ const checklistShape = z.object({
   screenCrystal: z.enum(['si', 'no'], { required_error: "Requerido" }),
   frame: z.enum(['si', 'no'], { required_error: "Requerido" }),
   backCover: z.enum(['si', 'no'], { required_error: "Requerido" }),
-  camera: z.enum(['si', 'no'], { required_error: "Requerido" }), // condition
+  camera: z.enum(['si', 'no'], { required_error: "Requerido" }),
   microphone: z.enum(['si', 'no'], { required_error: "Requerido" }),
   speaker: z.enum(['si', 'no'], { required_error: "Requerido" }),
   powersOn: z.enum(['si', 'no'], { required_error: "Requerido" }),
   touchScreen: z.enum(['si', 'no'], { required_error: "Requerido" }),
-  deviceCamera: z.enum(['si', 'no'], { required_error: "Requerido" }), // functionality
+  deviceCamera: z.enum(['si', 'no'], { required_error: "Requerido" }),
   fingerprintSensor: z.enum(['si', 'no'], { required_error: "Requerido" }),
   signal: z.enum(['si', 'no'], { required_error: "Requerido" }),
   wifi: z.enum(['si', 'no'], { required_error: "Requerido" }),
@@ -29,6 +29,8 @@ export const OrderSchema = z.object({
   clientDni: z.string().min(7, "DNI debe tener al menos 7 caracteres.").max(10, "DNI no puede exceder 10 caracteres."),
   clientPhone: z.string().min(7, "Teléfono debe tener al menos 7 caracteres."),
   clientEmail: z.string().email("Email inválido.").optional().or(z.literal('')),
+
+  branchInfo: z.string().min(1, "Información de sucursal es requerida."),
 
   deviceBrand: z.string().min(1, "Marca del equipo es requerida."),
   deviceModel: z.string().min(1, "Modelo del equipo es requerido."),
@@ -74,7 +76,7 @@ export const UserSchema = z.object({
   name: z.string().min(1, "Nombre es requerido."),
   email: z.string().email("Email inválido."),
   role: z.enum(['admin', 'tecnico'], { required_error: "Rol es requerido."}),
-  password: z.string().min(6, "Contraseña debe tener al menos 6 caracteres.").optional(), // Optional for updates
+  password: z.string().min(6, "Contraseña debe tener al menos 6 caracteres.").optional().or(z.literal('')), // Optional for updates, allow empty string if not changing
 });
 
 export const SettingsSchema = z.object({
@@ -83,6 +85,7 @@ export const SettingsSchema = z.object({
   companyCuit: z.string().optional().or(z.literal('')),
   companyAddress: z.string().optional().or(z.literal('')),
   companyContactDetails: z.string().min(1, "Detalles de contacto de la empresa son requeridos.").optional().or(z.literal('')),
+  branchInfo: z.string().min(1, "Información de sucursal/taller es requerida.").optional().or(z.literal('')),
   warrantyConditions: z.string().min(1, "Condiciones de garantía son requeridas."),
   pickupConditions: z.string().min(1, "Condiciones de retiro son requeridas."),
   abandonmentPolicyDays30: z.preprocess(
