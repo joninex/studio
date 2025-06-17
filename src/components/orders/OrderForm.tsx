@@ -11,6 +11,7 @@ import { format, addDays, parseISO } from "date-fns";
 import { OrderSchema, type OrderFormData } from "@/lib/schemas";
 import { createOrder, getRepairSuggestions, updateOrder, getOrderById } from "@/lib/actions/order.actions";
 import { getStoreSettingsForUser } from "@/lib/actions/settings.actions";
+import { getTechnicians } from "@/lib/actions/user.actions"; // Import getTechnicians
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -24,12 +25,12 @@ import { Calendar } from "@/components/ui/calendar";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/providers/AuthProvider";
-import { AISuggestion, type Order, type StoreSettings, WarrantyType, OrderStatus, Classification, Checklist } from "@/types";
+import { AISuggestion, type Order, type StoreSettings, WarrantyType, OrderStatus, Classification, Checklist, User as TechnicianUser } from "@/types";
 import { 
   CHECKLIST_ITEMS, CLASSIFICATION_OPTIONS, ORDER_STATUSES, 
   YES_NO_OPTIONS, DEFAULT_STORE_SETTINGS, WARRANTY_TYPE_OPTIONS, SALE_CON_HUELLA_OPTIONS
 } from "@/lib/constants";
-import { AlertCircle, Bot, CalendarIcon, DollarSign, Info, ListChecks, LucideSparkles, User, Wrench, LinkIcon, Building, UserSquare, ShieldCheck, FileLock2, FileTextIcon, LockKeyhole, ClipboardSignature, ClockIcon } from "lucide-react";
+import { AlertCircle, Bot, CalendarIcon, DollarSign, Info, ListChecks, LucideSparkles, User, Wrench, LinkIcon, Building, UserSquare, ShieldCheck, FileLock2, FileTextIcon, LockKeyhole, ClipboardSignature, ClockIcon, UserCog } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import { cn } from "@/lib/utils";
@@ -40,18 +41,17 @@ interface OrderFormProps {
 
 const NONE_CLASSIFICATION_VALUE = "__NONE_CLASSIFICATION_VALUE__";
 const NONE_WARRANTY_TYPE_VALUE = "__NONE_WARRANTY_VALUE__"; 
+const NONE_TECHNICIAN_VALUE = "__NONE_TECHNICIAN_VALUE__";
 
 const validOrderStatusOptions = ORDER_STATUSES.filter(status => status !== "") as OrderStatus[];
 const validClassificationOptions = CLASSIFICATION_OPTIONS.filter(opt => opt !== null) as Classification[];
 
 
-// Helper to format date-time string for datetime-local input
 const formatDateTimeForInput = (isoDateString: string | null | undefined): string => {
   if (!isoDateString) return "";
   try {
     const date = new Date(isoDateString);
     if (isNaN(date.getTime())) return "";
-    // Format: YYYY-MM-DDTHH:mm
     const year = date.getFullYear();
     const month = (date.getMonth() + 1).toString().padStart(2, '0');
     const day = date.getDate().toString().padStart(2, '0');
@@ -74,18 +74,17 @@ export function OrderForm({ orderId }: OrderFormProps) {
   const [isLoadingOrder, setIsLoadingOrder] = useState(!!orderId);
   const [isLoadingStoreSettings, setIsLoadingStoreSettings] = useState(!orderId); 
   const [currentStoreSettings, setCurrentStoreSettings] = useState<StoreSettings | null>(null);
+  const [availableTechnicians, setAvailableTechnicians] = useState<TechnicianUser[]>([]);
+  const [isLoadingTechnicians, setIsLoadingTechnicians] = useState(true);
 
   const defaultChecklistValues = CHECKLIST_ITEMS.reduce((acc, item) => {
     if (item.type === 'boolean') {
-      // @ts-ignore
-      acc[item.id] = ['enciende', 'tactil', 'imagen', 'botones', 'cam_trasera', 'cam_delantera', 'vibrador', 'microfono', 'auricular', 'parlante', 'sensor_huella', 'senal', 'wifi_bluetooth', 'pin_carga', 'lente_camara', 'equipo_doblado'].includes(item.id) ? 'si' : 'no';
-       if (item.id === 'humedad' || item.id === 'golpe' || item.id === 'cristal' || item.id === 'marco' || item.id === 'tapa' ) (acc as any)[item.id] = 'no'; // Default specific items to 'no'
+      (acc as any)[item.id] = ['enciende', 'tactil', 'imagen', 'botones', 'cam_trasera', 'cam_delantera', 'vibrador', 'microfono', 'auricular', 'parlante', 'sensor_huella', 'senal', 'wifi_bluetooth', 'pin_carga', 'lente_camara'].includes(item.id) ? 'si' : 'no';
+       if (item.id === 'humedad' || item.id === 'golpe' || item.id === 'cristal' || item.id === 'marco' || item.id === 'tapa' ) (acc as any)[item.id] = 'no'; 
     } else if (item.type === 'text') {
-      // @ts-ignore
-      acc[item.id] = "";
+      (acc as any)[item.id] = "";
     } else if (item.type === 'enum_saleConHuella') {
-      // @ts-ignore
-      acc[item.id] = "no_tiene";
+      (acc as any)[item.id] = "no_tiene";
     }
     return acc;
   }, {} as OrderFormData['checklist']);
@@ -96,6 +95,8 @@ export function OrderForm({ orderId }: OrderFormProps) {
     defaultValues: {
       clientId: "",
       branchInfo: DEFAULT_STORE_SETTINGS.branchInfo || "Sucursal Principal",
+      assignedTechnicianId: null,
+      assignedTechnicianName: null,
       deviceBrand: "", deviceModel: "", deviceIMEI: "", declaredFault: "",
       unlockPatternInfo: "", 
       checklist: defaultChecklistValues,
@@ -140,6 +141,22 @@ export function OrderForm({ orderId }: OrderFormProps) {
   const warrantyStartDateWatch = useWatch({ control: form.control, name: "warrantyStartDate" });
 
   useEffect(() => {
+    async function fetchTechniciansList() {
+      setIsLoadingTechnicians(true);
+      try {
+        const techs = await getTechnicians();
+        setAvailableTechnicians(techs);
+      } catch (error) {
+        console.error("Error fetching technicians:", error);
+        toast({ variant: "destructive", title: "Error", description: "No se pudo cargar la lista de técnicos." });
+      } finally {
+        setIsLoadingTechnicians(false);
+      }
+    }
+    fetchTechniciansList();
+  }, [toast]);
+
+  useEffect(() => {
     async function fetchInitialData() {
       let fetchedStoreSettings = DEFAULT_STORE_SETTINGS;
       if (user) {
@@ -163,6 +180,8 @@ export function OrderForm({ orderId }: OrderFormProps) {
           if (order) {
             form.reset({
               ...order,
+              assignedTechnicianId: order.assignedTechnicianId || null,
+              assignedTechnicianName: order.assignedTechnicianName || null,
               checklist: { 
                 ...defaultChecklistValues, 
                 ...(order.checklist || {}), 
@@ -271,6 +290,8 @@ export function OrderForm({ orderId }: OrderFormProps) {
 
       const submissionValues: OrderFormData = {
         ...values,
+        assignedTechnicianId: values.assignedTechnicianId === NONE_TECHNICIAN_VALUE ? null : values.assignedTechnicianId,
+        assignedTechnicianName: values.assignedTechnicianId === NONE_TECHNICIAN_VALUE || !values.assignedTechnicianId ? null : availableTechnicians.find(t => t.uid === values.assignedTechnicianId)?.name || null,
         promisedDeliveryDate: values.promisedDeliveryDate ? new Date(values.promisedDeliveryDate).toISOString() : null,
         unlockPatternInfo: values.unlockPatternInfo,
         previousOrderId: values.previousOrderId?.trim() === "" ? undefined : values.previousOrderId?.trim(),
@@ -284,8 +305,7 @@ export function OrderForm({ orderId }: OrderFormProps) {
         
         status: values.status || "Recibido", 
         checklist: CHECKLIST_ITEMS.reduce((acc, item) => {
-          // @ts-ignore
-          acc[item.id] = values.checklist[item.id] || (item.type === 'boolean' ? 'no' : (item.type === 'enum_saleConHuella' ? 'no_tiene' : ''));
+          (acc as any)[item.id] = values.checklist[item.id as keyof Checklist] || (item.type === 'boolean' ? 'no' : (item.type === 'enum_saleConHuella' ? 'no_tiene' : ''));
           return acc;
         }, {} as Checklist),
 
@@ -311,6 +331,7 @@ export function OrderForm({ orderId }: OrderFormProps) {
       if (result.success && result.order?.id) {
         toast({ title: "Éxito", description: result.message });
         router.push(`/orders/${result.order.id}`);
+        router.refresh();
       } else {
         toast({ variant: "destructive", title: "Error", description: result.message || "Ocurrió un error." });
       }
@@ -336,7 +357,7 @@ export function OrderForm({ orderId }: OrderFormProps) {
     setIsAiLoading(false);
   };
 
-  if ((isLoadingOrder && orderId) || (isLoadingStoreSettings && !currentStoreSettings && !orderId) ) {
+  if ((isLoadingOrder && orderId) || (isLoadingStoreSettings && !currentStoreSettings && !orderId) || isLoadingTechnicians ) {
     return <div className="flex justify-center items-center h-64"><LoadingSpinner size={48}/> <p className="ml-4">Cargando datos del formulario...</p></div>;
   }
   
@@ -372,6 +393,34 @@ export function OrderForm({ orderId }: OrderFormProps) {
                     <FormLabel className="flex items-center gap-1"><Building className="h-4 w-4"/>Sucursal/Taller</FormLabel>
                     <FormControl><Input placeholder="Nombre de la sucursal" {...field} disabled={isLoadingStoreSettings && !orderId} /></FormControl>
                     <FormDescription>Información de la sucursal donde se registra la orden. (Configurable en Ajustes)</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="assignedTechnicianId" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-1"><UserCog className="h-4 w-4"/>Técnico Asignado (Opcional)</FormLabel>
+                    <Select
+                      onValueChange={(value) => {
+                        if (value === NONE_TECHNICIAN_VALUE) {
+                          field.onChange(null);
+                          form.setValue("assignedTechnicianName", null);
+                        } else {
+                          field.onChange(value);
+                          const selectedTech = availableTechnicians.find(t => t.uid === value);
+                          form.setValue("assignedTechnicianName", selectedTech?.name || null);
+                        }
+                      }}
+                      value={field.value || NONE_TECHNICIAN_VALUE}
+                    >
+                      <FormControl><SelectTrigger disabled={isLoadingTechnicians}><SelectValue placeholder="Seleccione técnico..." /></SelectTrigger></FormControl>
+                      <SelectContent>
+                        <SelectItem value={NONE_TECHNICIAN_VALUE}>Ninguno / Sin asignar</SelectItem>
+                        {availableTechnicians.map(tech => (
+                          <SelectItem key={tech.uid} value={tech.uid}>{tech.name} ({tech.email})</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>Asigne un técnico a esta orden de servicio.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )} />
@@ -766,8 +815,8 @@ export function OrderForm({ orderId }: OrderFormProps) {
           </CardContent>
         </Card>
 
-        <Button type="submit" className="w-full sm:w-auto" disabled={isPending || isAiLoading || isLoadingStoreSettings || isLoadingOrder}>
-          {(isPending || isLoadingStoreSettings || isLoadingOrder) && <LoadingSpinner size={16} className="mr-2"/>}
+        <Button type="submit" className="w-full sm:w-auto" disabled={isPending || isAiLoading || isLoadingStoreSettings || isLoadingOrder || isLoadingTechnicians}>
+          {(isPending || isLoadingStoreSettings || isLoadingOrder || isLoadingTechnicians) && <LoadingSpinner size={16} className="mr-2"/>}
           {orderId ? (isPending ? "Actualizando Orden..." : "Actualizar Orden") : (isPending || isLoadingStoreSettings ? "Creando Orden..." : "Crear Orden de Servicio")}
         </Button>
       </form>

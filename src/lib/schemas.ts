@@ -63,6 +63,8 @@ const validWarrantyTypeEnumValues = WARRANTY_TYPE_OPTIONS.map(opt => opt.value) 
 export const OrderSchema = z.object({
   clientId: z.string().min(1, "ID de Cliente es requerido."),
   branchInfo: z.string().min(1, "Información de sucursal es requerida."),
+  assignedTechnicianId: z.string().optional().nullable(),
+  assignedTechnicianName: z.string().optional().nullable(),
   deviceBrand: z.string().min(1, "Marca del equipo es requerida."),
   deviceModel: z.string().min(1, "Modelo del equipo es requerida."),
   deviceIMEI: z.string().min(14, "IMEI debe tener al menos 14 caracteres.").max(16, "IMEI no puede exceder 16 caracteres."),
@@ -289,7 +291,7 @@ export const SupplierSchema = z.object({
   email: z.string().email("Email inválido.").optional().or(z.literal('')),
   address: z.string().optional().or(z.literal('')),
   cuit: z.string().optional().or(z.literal('')),
-  sellsDescription: z.string().optional().or(z.literal('')), // New field
+  sellsDescription: z.string().optional().or(z.literal('')),
   notes: z.string().optional().or(z.literal('')),
 });
 export type SupplierFormData = z.infer<typeof SupplierSchema>;

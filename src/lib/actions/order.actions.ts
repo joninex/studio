@@ -41,8 +41,10 @@ let mockOrders: Order[] = [
     dataLossDisclaimerAccepted: true, 
     privacyPolicyAccepted: true,    
     status: "En Diagnóstico", previousOrderId: "",
+    assignedTechnicianId: "tech123", 
+    assignedTechnicianName: "Carlos Técnico",
     entryDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-    promisedDeliveryDate: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString(), // Promised tomorrow
+    promisedDeliveryDate: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString(), 
     commentsHistory: [
       { id: 'cmt-1', userId: 'tech123', userName: 'Carlos Técnico', description: 'Se confirma pantalla rota, posible daño en flex de display.', timestamp: new Date(Date.now() - 1.5 * 24 * 60 * 60 * 1000).toISOString()}
     ],
@@ -90,13 +92,15 @@ let mockOrders: Order[] = [
     classification: "verde", observations: "Probable falla en pin de carga o batería.",
     customerAccepted: true, customerSignatureName: "Maria Lopez",
     dataLossDisclaimerAccepted: true, privacyPolicyAccepted: true,    
-    status: "En Reparación", previousOrderId: "",
+    status: "Reparado", previousOrderId: "", 
+    assignedTechnicianId: "tech123",
+    assignedTechnicianName: "Carlos Técnico",
     entryDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-    promisedDeliveryDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), // Promised yesterday (already late)
+    promisedDeliveryDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), 
     commentsHistory: [
       { id: 'cmt-2a', userId: 'tech123', userName: 'Carlos Técnico', description: 'Diagnóstico: pin de carga defectuoso. Cliente aprueba presupuesto.', timestamp: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString()},
       { id: 'cmt-2b', userId: 'tech123', userName: 'Carlos Técnico', description: 'Repuesto solicitado. En espera.', timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()},
-      { id: 'cmt-2c', userId: 'tech123', userName: 'Carlos Técnico', description: 'Repuesto recibido. Iniciando reparación.', timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString()}
+      { id: 'cmt-2c', userId: 'tech123', userName: 'Carlos Técnico', description: 'Repuesto recibido. Reparación completada.', timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString()}
     ],
     orderCompanyName: "JO-SERVICE (Ejemplo)",
     orderCompanyLogoUrl: DEFAULT_STORE_SETTINGS.companyLogoUrl,
@@ -136,10 +140,15 @@ let mockOrders: Order[] = [
     customerAccepted: true, customerSignatureName: "Carlos Gomez",
     dataLossDisclaimerAccepted: true, 
     privacyPolicyAccepted: true,    
-    status: "Recibido", previousOrderId: "",
-    entryDate: new Date(Date.now() - 10 * 60 * 1000).toISOString(), // Entered 10 minutes ago
-    promisedDeliveryDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(), // Promised in 3 days
-    commentsHistory: [],
+    status: "Entregado", previousOrderId: "",
+    assignedTechnicianId: "tech123",
+    assignedTechnicianName: "Carlos Técnico",
+    entryDate: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(), 
+    promisedDeliveryDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+    deliveryDate: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString(),
+    commentsHistory: [
+      { id: 'cmt-3', userId: 'tech123', userName: 'Carlos Técnico', description: 'Falla de placa, no se pudo reparar. Equipo devuelto sin costo.', timestamp: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString()}
+    ],
     orderCompanyName: DEFAULT_STORE_SETTINGS.companyName,
     orderCompanyLogoUrl: DEFAULT_STORE_SETTINGS.companyLogoUrl,
     orderCompanyCuit: DEFAULT_STORE_SETTINGS.companyCuit,
@@ -157,7 +166,7 @@ let mockOrders: Order[] = [
     orderSnapshottedWarrantyVoidConditionsText: DEFAULT_STORE_SETTINGS.warrantyVoidConditionsText,
     orderSnapshottedPrivacyPolicy: DEFAULT_STORE_SETTINGS.privacyPolicyText,
     createdByUserId: "admin123", lastUpdatedBy: "admin123",
-    updatedAt: new Date(Date.now() - 10 * 60 * 1000).toISOString(), createdAt: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
+    updatedAt: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString(), createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
     hasWarranty: false,
   },
 ];
@@ -190,6 +199,8 @@ export async function createOrder(
     id: newOrderNumber,
     orderNumber: newOrderNumber,
     ...data, 
+    assignedTechnicianId: data.assignedTechnicianId || undefined,
+    assignedTechnicianName: data.assignedTechnicianName || undefined,
     unlockPatternInfo: data.unlockPatternInfo, 
     previousOrderId: data.previousOrderId || "",
     entryDate: new Date().toISOString(),
@@ -203,9 +214,8 @@ export async function createOrder(
     orderCompanyAddress: settingsToSnapshot.companyAddress,
     orderCompanyContactDetails: settingsToSnapshot.companyContactDetails,
     
-    // Snapshot all legal texts
     orderWarrantyConditions: settingsToSnapshot.warrantyConditions,
-    pickupConditions: settingsToSnapshot.pickupConditions, // Snapshot pickupConditions
+    pickupConditions: settingsToSnapshot.pickupConditions, 
     orderSnapshottedUnlockDisclaimer: settingsToSnapshot.unlockDisclaimerText,
     orderSnapshottedAbandonmentPolicyText: settingsToSnapshot.abandonmentPolicyText,
     orderSnapshottedDataLossPolicyText: settingsToSnapshot.dataLossPolicyText,
@@ -285,7 +295,7 @@ export async function getOrders(filters?: {
     if (filters.sortBy === 'createdAt') {
       sortedOrders = ordersWithClientNames.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
     } else if (filters.sortBy === 'updatedAt') {
-      sortedOrders = ordersWithClientNames.sort((a, b) => new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime());
+      sortedOrders = ordersWithClientNames.sort((a, b) => new Date(b.updatedAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
     } else if (filters.sortBy === 'entryDate') {
         sortedOrders = ordersWithClientNames.sort((a, b) => new Date(b.entryDate || 0).getTime() - new Date(a.entryDate || 0).getTime());
     }
@@ -414,12 +424,8 @@ export async function updateOrder(
   }
   
   const currentOrder = mockOrders[orderIndex];
-  
-  // Prepare the data for update, ensuring that any undefined fields in validatedFields.data
-  // do not overwrite existing values in currentOrder unless explicitly set to null or a new value.
   const dataToUpdate = { ...validatedFields.data };
   
-  // Explicitly handle promisedDeliveryDate conversion
   if (dataToUpdate.promisedDeliveryDate !== undefined) {
     dataToUpdate.promisedDeliveryDate = dataToUpdate.promisedDeliveryDate ? new Date(dataToUpdate.promisedDeliveryDate).toISOString() : null;
   }
@@ -427,7 +433,8 @@ export async function updateOrder(
   const updatedOrderData: Order = {
     ...currentOrder,
     ...dataToUpdate, 
-    // Ensure specific fields that might be handled differently are explicitly set
+    assignedTechnicianId: dataToUpdate.assignedTechnicianId === null ? undefined : (dataToUpdate.assignedTechnicianId ?? currentOrder.assignedTechnicianId),
+    assignedTechnicianName: dataToUpdate.assignedTechnicianName === null ? undefined : (dataToUpdate.assignedTechnicianName ?? currentOrder.assignedTechnicianName),
     unlockPatternInfo: dataToUpdate.unlockPatternInfo ?? currentOrder.unlockPatternInfo,
     lastUpdatedBy: userId, 
     updatedAt: new Date().toISOString(),
@@ -439,15 +446,8 @@ export async function updateOrder(
     warrantyNotes: (dataToUpdate.hasWarranty ?? currentOrder.hasWarranty) ? (dataToUpdate.warrantyNotes ?? currentOrder.warrantyNotes) : "",
   };
 
-
-  // Legal texts are snapshotted at creation and should not change on update.
-  // They are already part of currentOrder and will be preserved by the spread operator.
-  // However, if for some reason they need to be updated (e.g. a system-wide policy change affecting old orders - unlikely),
-  // that would be a separate, specific action.
-
   mockOrders[orderIndex] = updatedOrderData;
 
-  // Update related dates if status changes
   if (dataToUpdate.status) {
     if (dataToUpdate.status === "Listo para Entrega" && !mockOrders[orderIndex].readyForPickupDate) {
       mockOrders[orderIndex].readyForPickupDate = new Date().toISOString();

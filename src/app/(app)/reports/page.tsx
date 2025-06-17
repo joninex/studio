@@ -1,11 +1,11 @@
-
 // src/app/(app)/reports/page.tsx
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getOrders } from "@/lib/actions/order.actions";
-import type { Order, OrderStatus } from "@/types";
-import { BarChartBig, Briefcase, DollarSign, PackageSearch, BarChartHorizontalBig, Clock4, Info } from "lucide-react";
+import { getUsers } from "@/lib/actions/user.actions"; // Assuming you have this
+import type { Order, User, OrderStatus } from "@/types";
+import { BarChartBig, Briefcase, DollarSign, PackageSearch, BarChartHorizontalBig, Clock4, Info, UserCog } from "lucide-react";
 
 export const revalidate = 0; // Revalidate on every request
 
@@ -14,8 +14,17 @@ interface OrderStatusCount {
   count: number;
 }
 
+interface TechnicianPerformance {
+  technicianId: string;
+  technicianName: string;
+  assignedOrders: number;
+  completedOrders: number;
+  // Future: averageRepairTime, revenueGenerated, etc.
+}
+
 export default async function ReportsPage() {
   const allOrders: Order[] = await getOrders();
+  const allUsers: User[] = await getUsers(); // Fetch all users
 
   const ordersByStatus: OrderStatusCount[] = allOrders.reduce((acc, order) => {
     const existingStatus = acc.find(item => item.status === order.status);
@@ -25,16 +34,31 @@ export default async function ReportsPage() {
       acc.push({ status: order.status, count: 1 });
     }
     return acc;
-  }, [] as OrderStatusCount[]).sort((a,b) => b.count - a.count); // Sort by count descending
+  }, [] as OrderStatusCount[]).sort((a,b) => b.count - a.count);
+
+  // Calculate Technician Performance
+  const technicians = allUsers.filter(user => user.role === 'tecnico' && user.status === 'active');
+  const technicianPerformanceData: TechnicianPerformance[] = technicians.map(tech => {
+    const assignedToTech = allOrders.filter(order => order.assignedTechnicianId === tech.uid);
+    const completedByTech = assignedToTech.filter(
+      order => order.status === "Reparado" || order.status === "Entregado"
+    );
+    return {
+      technicianId: tech.uid,
+      technicianName: tech.name,
+      assignedOrders: assignedToTech.length,
+      completedOrders: completedByTech.length,
+    };
+  }).sort((a,b) => b.completedOrders - a.completedOrders); // Sort by most completed
 
   const placeholderReports = [
+    // { 
+    //   title: "Rendimiento por Técnico", // This one is now partially implemented
+    //   description: "Análisis del número de órdenes completadas, tiempos promedio y eficiencia por cada técnico.",
+    //   icon: Briefcase 
+    // },
     { 
-      title: "Rendimiento por Técnico", 
-      description: "Análisis del número de órdenes completadas, tiempos promedio y eficiencia por cada técnico.",
-      icon: Briefcase 
-    },
-    { 
-      title: "Análisis de Rentabilidad", 
+      title: "Análisis de Rentabilidad por Tipo de Reparación", 
       description: "Rentabilidad por tipo de reparación, marca de dispositivo o período de tiempo.",
       icon: DollarSign
     },
@@ -44,7 +68,7 @@ export default async function ReportsPage() {
       icon: PackageSearch
     },
     { 
-      title: "Tiempos Promedio de Reparación", 
+      title: "Tiempos Promedio de Reparación por Estado/Tipo", 
       description: "Duración promedio de las reparaciones por estado, tipo de dispositivo o técnico.",
       icon: Clock4
     },
@@ -56,6 +80,47 @@ export default async function ReportsPage() {
         title="Central de Reportes"
         description="Visualice análisis y métricas clave de su taller."
       />
+
+      <Card className="shadow-xl">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <UserCog className="h-6 w-6 text-primary" />
+            Rendimiento por Técnico
+          </CardTitle>
+          <CardDescription>
+            Resumen de órdenes asignadas y completadas por cada técnico activo.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {technicianPerformanceData.length > 0 ? (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nombre del Técnico</TableHead>
+                    <TableHead className="text-right">Órdenes Asignadas</TableHead>
+                    <TableHead className="text-right">Órdenes Completadas</TableHead>
+                    {/* Add more columns later, e.g., % Completadas, Tiempo Promedio */}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {technicianPerformanceData.map((tech) => (
+                    <TableRow key={tech.technicianId}>
+                      <TableCell className="font-medium">{tech.technicianName}</TableCell>
+                      <TableCell className="text-right font-semibold">{tech.assignedOrders}</TableCell>
+                      <TableCell className="text-right font-semibold">{tech.completedOrders}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <p className="text-muted-foreground text-center py-8">
+              No hay datos de rendimiento de técnicos para mostrar. Asegúrese de asignar técnicos a las órdenes.
+            </p>
+          )}
+        </CardContent>
+      </Card>
 
       <Card className="shadow-xl">
         <CardHeader>

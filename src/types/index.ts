@@ -119,6 +119,8 @@ export interface Order {
   clientLastName?: string; 
 
   createdByUserId: string; 
+  assignedTechnicianId?: string;
+  assignedTechnicianName?: string;
 
   branchInfo: string;
   deviceBrand: string;
@@ -240,7 +242,7 @@ export interface Supplier {
   email?: string;
   address?: string;
   cuit?: string;
-  sellsDescription?: string; // New field
+  sellsDescription?: string; 
   notes?: string;
   createdAt: Timestamp | Date | string;
   updatedAt: Timestamp | Date | string;

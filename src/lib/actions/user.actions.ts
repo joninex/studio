@@ -10,15 +10,21 @@ import {
   getMockPasswords,
   setMockPassword,
   deleteMockPassword,
-  getUserById // Added getUserById
-} from "./auth.actions"; // Import helpers
+  getUserById
+} from "./auth.actions"; 
 import { DEFAULT_STORE_SETTINGS } from "@/lib/constants";
 
 const SUPER_ADMIN_EMAIL = "jesus@mobyland.com.ar";
 
 export async function getUsers(): Promise<User[]> {
-  await new Promise(resolve => setTimeout(resolve, 300)); // Simulate delay
+  await new Promise(resolve => setTimeout(resolve, 300)); 
   return await getAllMockUsers();
+}
+
+export async function getTechnicians(): Promise<User[]> {
+  await new Promise(resolve => setTimeout(resolve, 100));
+  const allUsers = await getAllMockUsers();
+  return allUsers.filter(user => user.role === 'tecnico' && user.status === 'active');
 }
 
 export async function createUser(data: z.infer<typeof UserSchema>): Promise<{ success: boolean; message: string; user?: User }> {
@@ -44,8 +50,8 @@ export async function createUser(data: z.infer<typeof UserSchema>): Promise<{ su
     email,
     name,
     avatarUrl: avatarUrl || `https://i.pravatar.cc/150?u=${email}`,
-    role: email === SUPER_ADMIN_EMAIL ? 'admin' : role, // Ensure super admin is admin
-    status: email === SUPER_ADMIN_EMAIL ? 'active' : "active", // Super admin and admin-created users are active
+    role: email === SUPER_ADMIN_EMAIL ? 'admin' : role, 
+    status: email === SUPER_ADMIN_EMAIL ? 'active' : "active", 
     createdAt: new Date().toISOString(), 
     updatedAt: new Date().toISOString(),
     storeSettings: { ...DEFAULT_STORE_SETTINGS, companyName: `${name}'s Store (Default)` }
@@ -58,7 +64,6 @@ export async function createUser(data: z.infer<typeof UserSchema>): Promise<{ su
 }
 
 export async function updateUser(uid: string, data: Partial<z.infer<typeof UserSchema>>): Promise<{ success: boolean; message: string; user?: User }> {
-  // Use UserSchema.partial() for update to allow only specific fields
   const validatedFields = UserSchema.partial().safeParse(data);
   if (!validatedFields.success) {
     console.error("Update User Validation Error:", validatedFields.error.flatten().fieldErrors);
@@ -76,7 +81,6 @@ export async function updateUser(uid: string, data: Partial<z.infer<typeof UserS
   const { password, email, role, avatarUrl, ...restData } = validatedFields.data;
   const existingUser = currentUsers[userIndex];
 
-  // Super admin protection
   if (existingUser.email === SUPER_ADMIN_EMAIL) {
     if (email && email !== SUPER_ADMIN_EMAIL) {
       return { success: false, message: "No se puede cambiar el email del super administrador." };
@@ -93,14 +97,13 @@ export async function updateUser(uid: string, data: Partial<z.infer<typeof UserS
   const updatedUser: User = { 
     ...existingUser, 
     ...restData,
-    name: validatedFields.data.name ?? existingUser.name, // Ensure name updates if provided
-    avatarUrl: avatarUrl === undefined ? existingUser.avatarUrl : (avatarUrl || undefined), // Handle empty string as undefined
+    name: validatedFields.data.name ?? existingUser.name, 
+    avatarUrl: avatarUrl === undefined ? existingUser.avatarUrl : (avatarUrl || undefined), 
     role: (existingUser.email === SUPER_ADMIN_EMAIL) ? 'admin' : (role || existingUser.role), 
     email: (existingUser.email === SUPER_ADMIN_EMAIL) ? SUPER_ADMIN_EMAIL : (email || existingUser.email), 
     updatedAt: new Date().toISOString() 
   };
   
-  // If email is changing for a non-superadmin user
   if (email && email !== existingUser.email && existingUser.email !== SUPER_ADMIN_EMAIL) {
     const oldEmail = existingUser.email;
     const currentPasswords = await getMockPasswords();
