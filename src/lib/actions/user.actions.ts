@@ -12,7 +12,6 @@ import {
   deleteMockPassword,
   getUserById
 } from "./auth.actions"; 
-import { DEFAULT_STORE_SETTINGS } from "@/lib/constants";
 
 const SUPER_ADMIN_EMAIL = "jesus@mobyland.com.ar";
 
@@ -51,10 +50,10 @@ export async function createUser(data: z.infer<typeof UserSchema>): Promise<{ su
     name,
     avatarUrl: avatarUrl || `https://i.pravatar.cc/150?u=${email}`,
     role: email === SUPER_ADMIN_EMAIL ? 'admin' : role, 
-    status: email === SUPER_ADMIN_EMAIL ? 'active' : "active", 
+    status: "active", // New users created by admin are active by default
     createdAt: new Date().toISOString(), 
     updatedAt: new Date().toISOString(),
-    storeSettings: { ...DEFAULT_STORE_SETTINGS, companyName: `${name}'s Store (Default)` }
+    assignments: [{ branchId: 'B001', role: role }] // Assign to default branch
   };
   const updatedUsers = [...currentUsers, newUser];
   await updateAllMockUsers(updatedUsers);
