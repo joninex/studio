@@ -115,7 +115,7 @@ export function WorkOrderDashboard({ stats, alertOrders, chartData }: WorkOrderD
                         <TableRow>
                             <TableHead>Cliente</TableHead>
                             <TableHead>Equipo</TableHead>
-                            <TableHead>Estado (Razón de Alerta)</TableHead>
+                            <TableHead>Razón de Alerta</TableHead>
                             <TableHead className="text-right">Acción</TableHead>
                         </TableRow>
                         </TableHeader>
