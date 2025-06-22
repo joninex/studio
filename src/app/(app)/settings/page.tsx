@@ -16,7 +16,7 @@ export default function SettingsPage() {
   const { user, loading } = useAuth();
   // For now, we'll assume the user edits the settings for their FIRST assigned branch.
   // In a real multi-branch UI, there would be a branch selector here.
-  const primaryBranchId = user?.assignments?.[0]?.branchId || user?.role === 'admin' ? 'B001' : undefined;
+  const primaryBranchId = user?.assignments?.[0]?.branchId || (user?.role === 'admin' ? 'B001' : undefined);
 
    if (loading) {
     return (
