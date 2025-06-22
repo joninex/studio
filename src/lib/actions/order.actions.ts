@@ -330,7 +330,7 @@ export async function recordPaymentForOrder(orderId: string, payment: PaymentIte
     return { success: true, message: "Pago registrado (simulado)." };
 }
 
-export async function logCustomerVoucherPrint(
+export async function logIntakeDocumentPrint(
   orderId: string,
   userName: string
 ): Promise<{ success: boolean; message: string; order?: Order }> {
@@ -339,7 +339,7 @@ export async function logCustomerVoucherPrint(
     return { success: false, message: "Orden no encontrada." };
   }
   
-  const logDescription = `Comprobante para cliente impreso.`;
+  const logDescription = `Documentos de ingreso (Interno y Cliente) impresos.`;
   mockOrders[orderIndex].auditLog.push(createAuditLogEntry(userName, userName, logDescription));
 
   return { success: true, message: "Acción registrada en la bitácora.", order: mockOrders[orderIndex] };

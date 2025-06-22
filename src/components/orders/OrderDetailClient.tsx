@@ -15,7 +15,7 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/providers/AuthProvider";
-import { addOrderComment, updateOrderStatus, updateOrderConfirmations, updateOrderImei, logCustomerVoucherPrint } from "@/lib/actions/order.actions";
+import { addOrderComment, updateOrderStatus, updateOrderConfirmations, updateOrderImei, logIntakeDocumentPrint } from "@/lib/actions/order.actions";
 import { ORDER_STATUSES, CHECKLIST_ITEMS } from "@/lib/constants";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -102,19 +102,19 @@ export function OrderDetailClient({ order: initialOrder, branch }: OrderDetailCl
     });
   };
 
-  const handlePrintCustomerVoucher = async () => {
+  const handlePrint = async () => {
     if (!user) {
         toast({ variant: "destructive", title: "Error", description: "Debe iniciar sesión." });
         return;
     }
     setIsPrinting(true);
     try {
-        await logCustomerVoucherPrint(order.id, user.name);
-        toast({ title: "Acción Registrada", description: "La impresión del comprobante de cliente ha sido registrada en la bitácora." });
-        window.open(`/print/customer/${order.id}`, '_blank');
+        await logIntakeDocumentPrint(order.id, user.name);
+        toast({ title: "Acción Registrada", description: "La impresión de los documentos de ingreso ha sido registrada." });
+        window.open(`/print/${order.id}`, '_blank');
     } catch (error) {
         toast({ variant: "destructive", title: "Error", description: "No se pudo registrar la acción de impresión." });
-        console.error("Failed to log customer voucher print:", error);
+        console.error("Failed to log document print:", error);
     } finally {
         setIsPrinting(false);
     }
@@ -166,29 +166,18 @@ export function OrderDetailClient({ order: initialOrder, branch }: OrderDetailCl
     return acc;
   }, {} as Record<string, typeof CHECKLIST_ITEMS>);
 
-  const canPrintCustomerVoucher = ["Recibido", "En Reparación", "Listo para Entrega", "Entregado"].includes(order.status);
-
-
   return (
     <div className="space-y-6">
        <Alert className="no-print">
             <Printer className="h-4 w-4" />
             <AlertTitle>Documentación de la Orden</AlertTitle>
             <AlertDescription className="flex justify-between items-center flex-wrap gap-2">
-                <span>Imprima los documentos necesarios para la firma del cliente.</span>
+                <span>Imprima los documentos de ingreso para la firma manuscrita del cliente.</span>
                  <div className="flex gap-2">
-                    <Button asChild variant="outline">
-                        <Link href={`/print/${order.id}`} target="_blank">
-                            <Printer className="mr-2 h-4 w-4" />
-                            Imprimir Contrato de Ingreso
-                        </Link>
+                    <Button onClick={handlePrint} disabled={isPrinting}>
+                        {isPrinting ? <LoadingSpinner size={16} className="mr-2"/> : <Printer className="mr-2 h-4 w-4" />}
+                        Imprimir Documentos de Ingreso
                     </Button>
-                    {canPrintCustomerVoucher && (
-                         <Button variant="default" onClick={handlePrintCustomerVoucher} disabled={isPrinting}>
-                            {isPrinting ? <LoadingSpinner size={16} className="mr-2"/> : <FileText className="mr-2 h-4 w-4" />}
-                            Comprobante para Cliente
-                        </Button>
-                    )}
                  </div>
             </AlertDescription>
         </Alert>
