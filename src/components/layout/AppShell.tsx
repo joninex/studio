@@ -40,6 +40,8 @@ import {
   Lightbulb,
   Truck,
   Package,
+  TrendingUp,
+  ArrowRightLeft,
 } from "lucide-react";
 import { useAuth } from "@/providers/AuthProvider";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -52,6 +54,8 @@ const navItems = [
   { href: "/inventory/suppliers", label: "Proveedores", icon: Truck },
   { href: "/ai-guides", label: "Guías IA", icon: Lightbulb },
   { href: "/reports", label: "Reportes", icon: BarChart },
+  { href: "/finance/income-report", label: "Reporte Ingresos", icon: TrendingUp },
+  { href: "/finance/cashflow", label: "Flujo de Caja", icon: ArrowRightLeft },
   { href: "/users", label: "Usuarios", icon: Users, adminOnly: true },
   { href: "/settings", label: "Configuración", icon: Settings },
 ];

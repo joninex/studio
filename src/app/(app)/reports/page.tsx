@@ -3,7 +3,7 @@ import { PageHeader } from "@/components/shared/PageHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getOrders } from "@/lib/actions/order.actions";
-import { getUsers } from "@/lib/actions/user.actions"; // Assuming you have this
+import { getUsers } from "@/lib/actions/user.actions";
 import type { Order, User, OrderStatus } from "@/types";
 import { BarChartBig, Briefcase, DollarSign, PackageSearch, BarChartHorizontalBig, Clock4, Info, UserCog } from "lucide-react";
 
