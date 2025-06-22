@@ -4,6 +4,29 @@ export type UserStatus = 'pending' | 'active' | 'denied';
 
 export type UserRole = 'admin' | 'tecnico' | 'recepcionista';
 
+export interface StoreSettings {
+    id: string;
+    companyName: string;
+    companyLogoUrl?: string;
+    companyCuit?: string;
+    companyAddress: string;
+    companyContactDetails: string;
+    branchInfo?: string;
+    unlockDisclaimerText: string;
+    abandonmentPolicyText: string;
+    abandonmentPolicyDays30: number;
+    abandonmentPolicyDays60: number;
+    dataLossPolicyText: string;
+    untestedDevicePolicyText: string;
+    budgetVariationText: string;
+    highRiskDeviceText: string;
+    partialDamageDisplayText: string;
+    warrantyVoidConditionsText: string;
+    privacyPolicyText?: string;
+    warrantyConditions: string;
+    pickupConditions: string;
+}
+
 export interface User {
   uid: string;
   name: string;
@@ -11,6 +34,9 @@ export interface User {
   avatarUrl?: string; 
   role: UserRole;
   status: UserStatus;
+  storeSettings?: StoreSettings;
+  createdAt?: string | Date;
+  updatedAt?: string | Date;
 }
 
 export interface Client {
@@ -73,6 +99,55 @@ export interface Comment {
   timestamp: string | Date | Timestamp;
 }
 
+export type PartCategory = "Pantalla" | "Batería" | "Flex" | "Cámara" | "Placa" | "Componente" | "Carcasa" | "Otro" | "";
+export type PartUnit = "unidad" | "metro" | "kit";
+
+export interface Part {
+    id: string;
+    name: string;
+    sku: string;
+    description?: string;
+    category: PartCategory;
+    unit: PartUnit;
+    costPrice: number;
+    salePrice: number;
+    stock: number;
+    minStock?: number;
+    supplierInfo?: string;
+    notes?: string;
+    imageUrl?: string;
+    createdAt?: string | Date;
+    updatedAt?: string | Date;
+}
+
+export interface Supplier {
+    id: string;
+    name: string;
+    contactName?: string;
+    phone: string;
+    email?: string;
+    address?: string;
+    cuit?: string;
+    sellsDescription: string;
+    notes?: string;
+    createdAt?: string | Date;
+    updatedAt?: string | Date;
+}
+
+export interface OrderPartItem {
+    partId: string;
+    partName: string;
+    quantity: number;
+    unitPrice: number;
+}
+
+export interface PaymentItem {
+    id: string;
+    amount: number;
+    method: 'efectivo' | 'tarjeta' | 'transferencia';
+    date: string | Date;
+}
+
 export interface Order {
   id: string;
   orderNumber: string;
@@ -94,6 +169,10 @@ export interface Order {
   readyForPickupDate?: string | Date | Timestamp;
   deliveryDate?: string | Date | Timestamp;
   commentsHistory: Comment[];
+  assignedTechnicianId?: string;
+  assignedTechnicianName?: string;
+  partsUsed?: OrderPartItem[];
+  paymentHistory?: PaymentItem[];
 }
 
 export type AISuggestion = {

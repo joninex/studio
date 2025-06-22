@@ -1,12 +1,13 @@
 // src/lib/actions/auth.actions.ts
 "use server";
 
-import type { User, UserStatus } from "@/types";
+import type { User, UserStatus, StoreSettings } from "@/types";
 import { LoginSchema, ResetPasswordSchema, RegisterSchema } from "@/lib/schemas";
 import type { z } from "zod";
+import { DEFAULT_STORE_SETTINGS } from "@/lib/constants";
 
 // Mock database of users
-const mockUsers: User[] = [
+let mockUsers: User[] = [
   {
     uid: "admin123",
     name: "Admin User",
@@ -14,6 +15,9 @@ const mockUsers: User[] = [
     avatarUrl: "https://i.pravatar.cc/150?u=admin123", // Example avatar
     role: "admin",
     status: "active",
+    storeSettings: { ...DEFAULT_STORE_SETTINGS },
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
   },
   {
     uid: "tech123",
@@ -22,14 +26,48 @@ const mockUsers: User[] = [
     avatarUrl: "https://i.pravatar.cc/150?u=tech123", // Example avatar
     role: "tecnico",
     status: "active",
+    storeSettings: { ...DEFAULT_STORE_SETTINGS, companyName: "Tech User's Shop" },
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
   },
 ];
 
 // Mock password store
-const mockPasswords: Record<string, string> = {
+let mockPasswords: Record<string, string> = {
   "admin@example.com": "password123",
   "tech@example.com": "password123",
 };
+
+
+// --- NEWLY EXPORTED HELPER FUNCTIONS ---
+
+export async function getAllMockUsers(): Promise<User[]> {
+  return JSON.parse(JSON.stringify(mockUsers));
+}
+
+export async function updateAllMockUsers(newUsers: User[]): Promise<void> {
+  mockUsers = newUsers;
+}
+
+export async function getMockPasswords(): Promise<Record<string, string>> {
+  return JSON.parse(JSON.stringify(mockPasswords));
+}
+
+export async function setMockPassword(email: string, password: string): Promise<void> {
+  mockPasswords[email] = password;
+}
+
+export async function deleteMockPassword(email: string): Promise<void> {
+  delete mockPasswords[email];
+}
+
+export async function getUserById(uid: string): Promise<User | undefined> {
+  const user = mockUsers.find(u => u.uid === uid);
+  return user ? JSON.parse(JSON.stringify(user)) : undefined;
+}
+
+
+// --- EXISTING AUTH FUNCTIONS ---
 
 export async function login(
   values: z.infer<typeof LoginSchema>
@@ -58,7 +96,7 @@ export async function login(
     return { success: false, message: "Contraseña incorrecta." };
   }
   
-  return { success: true, message: "Inicio de sesión exitoso.", user };
+  return { success: true, message: "Inicio de sesión exitoso.", user: JSON.parse(JSON.stringify(user)) };
 }
 
 export async function registerUser(
@@ -80,13 +118,16 @@ export async function registerUser(
     uid: `user-${Date.now()}`,
     name,
     email,
-    avatarUrl: `https://i.pravatar.cc/150?u=${email}`, // Default avatar
-    role: "tecnico", // Default role for new registrations
-    status: "pending", // New users start as pending
+    avatarUrl: `https://i.pravatar.cc/150?u=${email}`,
+    role: "tecnico",
+    status: "pending",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    storeSettings: { ...DEFAULT_STORE_SETTINGS }
   };
 
   mockUsers.push(newUser);
-  mockPasswords[email] = password; // Store password
+  mockPasswords[email] = password;
 
   console.log(`New user pending approval: ${email}`);
   return { success: true, message: "Registro exitoso. Su cuenta está pendiente de aprobación por un administrador." };
@@ -106,17 +147,13 @@ export async function resetPassword(
   const userExists = mockUsers.some(u => u.email === email);
 
   if (!userExists) {
-    // To prevent user enumeration, return a generic success message
     return { success: true, message: "Si este correo está registrado, se enviará un enlace de restablecimiento." };
   }
 
-  // In a real app, generate a token and send email
   console.log(`Password reset email sent to ${email} (mock)`);
   return { success: true, message: "Si este correo está registrado, se enviará un enlace de restablecimiento." };
 }
 
 export async function logoutAction(): Promise<{ success: boolean }> {
-  // This would typically involve clearing session cookies or tokens on the server
-  // For a mock, just return success
   return { success: true };
 }
