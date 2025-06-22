@@ -1,18 +1,20 @@
 // src/components/print/PrintableOrder.tsx
 "use client";
 
-import type { Order } from "@/types";
+import type { Order, Branch } from "@/types";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import Image from "next/image";
 import { CHECKLIST_ITEMS } from "@/lib/constants";
+import { DEFAULT_STORE_SETTINGS } from "@/lib/constants";
 
 interface PrintableOrderProps {
   order: Order;
+  branch: Branch | null;
 }
 
-export function PrintableOrder({ order }: PrintableOrderProps) {
-  const settings = order.storeSettingsSnapshot;
+export function PrintableOrder({ order, branch }: PrintableOrderProps) {
+  const settings = branch?.settings || DEFAULT_STORE_SETTINGS;
   const qrUrl = typeof window !== 'undefined' 
     ? `${window.location.origin}/orders/${order.id}` 
     : '';

@@ -6,13 +6,13 @@ import { OrderSchema } from "@/lib/schemas";
 import type { z } from "zod";
 import { suggestRepairSolutions } from "@/ai/flows/suggest-repair-solutions";
 import { getMockClients } from "./client.actions";
-import { getStoreSettingsForUser } from "./settings.actions";
 import { DEFAULT_STORE_SETTINGS } from "../constants";
 
 let mockOrders: Order[] = [
   {
     id: "ORD001",
     orderNumber: "ORD001",
+    branchId: "B001", // Belongs to Taller Central
     clientId: "CLI001",
     deviceBrand: "Samsung",
     deviceModel: "Galaxy S21",
@@ -42,11 +42,11 @@ let mockOrders: Order[] = [
       { id: "PAY001", amount: 100, method: 'efectivo', date: new Date().toISOString() },
       { id: "PAY002", amount: 100, method: 'tarjeta', date: new Date().toISOString() }
     ],
-    storeSettingsSnapshot: DEFAULT_STORE_SETTINGS
   },
   {
     id: "ORD002",
     orderNumber: "ORD002",
+    branchId: "B002", // Belongs to Sucursal Norte
     clientId: "CLI002",
     deviceBrand: "Apple",
     deviceModel: "iPhone 12",
@@ -67,11 +67,6 @@ let mockOrders: Order[] = [
     readyForPickupDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
     entryDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
     commentsHistory: [],
-    storeSettingsSnapshot: {
-      ...DEFAULT_STORE_SETTINGS,
-      companyName: "Tech Repair Plus",
-      companyAddress: "Avenida Siempreviva 742"
-    }
   },
 ];
 let orderCounter = mockOrders.length;
@@ -83,7 +78,8 @@ function generateOrderNumber(): string {
 
 export async function createOrder(
   values: z.infer<typeof OrderSchema>,
-  userId: string
+  userId: string,
+  branchId: string, // Branch context is now required
 ): Promise<{ success: boolean; message: string; order?: Order }> {
   const validatedFields = OrderSchema.safeParse(values);
 
@@ -93,19 +89,16 @@ export async function createOrder(
   }
   
   const data = validatedFields.data;
-  
-  // Snapshot the store settings at the time of order creation
-  const storeSettingsSnapshot = await getStoreSettingsForUser(userId);
 
   const newOrderNumber = generateOrderNumber();
   const newOrder: Order = {
     id: newOrderNumber,
     orderNumber: newOrderNumber,
     ...data,
+    branchId: branchId, // Assign to the correct branch
     entryDate: new Date().toISOString(),
     commentsHistory: [],
     status: "Recibido",
-    storeSettingsSnapshot, // Attach the settings snapshot
   };
 
   mockOrders.push(newOrder);

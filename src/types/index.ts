@@ -27,14 +27,29 @@ export interface StoreSettings {
     pickupConditions: string;
 }
 
+export interface Branch {
+  id: string;
+  name: string;
+  address: string;
+  status: 'active' | 'inactive';
+  settings: StoreSettings;
+  createdAt?: string | Date;
+  updatedAt?: string | Date;
+}
+
+export interface UserAssignment {
+    branchId: string;
+    role: UserRole;
+}
+
 export interface User {
   uid: string;
   name: string;
   email: string;
   avatarUrl?: string; 
-  role: UserRole;
+  role: UserRole; // Global role, e.g. for super admin
+  assignments?: UserAssignment[]; // Specific roles per branch
   status: UserStatus;
-  storeSettings?: StoreSettings;
   createdAt?: string | Date;
   updatedAt?: string | Date;
 }
@@ -151,6 +166,7 @@ export interface PaymentItem {
 export interface Order {
   id: string;
   orderNumber: string;
+  branchId: string; // NEW: Every order belongs to a branch
   clientId: string;
   clientName?: string;
   clientLastName?: string;
@@ -175,7 +191,6 @@ export interface Order {
   assignedTechnicianName?: string;
   partsUsed?: OrderPartItem[];
   paymentHistory?: PaymentItem[];
-  storeSettingsSnapshot?: StoreSettings;
 }
 
 export type AISuggestion = {

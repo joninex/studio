@@ -1,10 +1,11 @@
 // src/lib/actions/auth.actions.ts
 "use server";
 
-import type { User, UserStatus, StoreSettings } from "@/types";
+import type { User, UserStatus, StoreSettings, Branch } from "@/types";
 import { LoginSchema, ResetPasswordSchema, RegisterSchema } from "@/lib/schemas";
 import type { z } from "zod";
 import { DEFAULT_STORE_SETTINGS } from "@/lib/constants";
+import { getBranches } from "./branch.actions";
 
 // Mock database of users
 let mockUsers: User[] = [
@@ -12,21 +13,37 @@ let mockUsers: User[] = [
     uid: "admin123",
     name: "Jesús (Super Admin)",
     email: "jesus@mobyland.com.ar",
-    avatarUrl: "https://i.pravatar.cc/150?u=admin123", // Example avatar
-    role: "admin",
+    avatarUrl: "https://i.pravatar.cc/150?u=admin123",
+    role: "admin", // Global role
+    assignments: [], // Super admin has access to everything, no specific assignments needed
     status: "active",
-    storeSettings: { ...DEFAULT_STORE_SETTINGS },
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
   {
     uid: "tech123",
-    name: "Tech User",
+    name: "Tech User (Suc. Central)",
     email: "tech@example.com",
-    avatarUrl: "https://i.pravatar.cc/150?u=tech123", // Example avatar
+    avatarUrl: "https://i.pravatar.cc/150?u=tech123",
     role: "tecnico",
+    assignments: [
+        { branchId: "B001", role: "tecnico" }
+    ],
     status: "active",
-    storeSettings: { ...DEFAULT_STORE_SETTINGS, companyName: "Tech User's Shop" },
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    uid: "manager456",
+    name: "Manager User (Multi-Sucursal)",
+    email: "manager@example.com",
+    avatarUrl: "https://i.pravatar.cc/150?u=manager456",
+    role: "admin", // Highest role across assignments
+    assignments: [
+        { branchId: "B001", role: "admin" },
+        { branchId: "B002", role: "tecnico" }
+    ],
+    status: "active",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
@@ -36,6 +53,7 @@ let mockUsers: User[] = [
 let mockPasswords: Record<string, string> = {
   "jesus@mobyland.com.ar": "42831613aA@",
   "tech@example.com": "password123",
+  "manager@example.com": "password123",
 };
 
 
@@ -114,6 +132,9 @@ export async function registerUser(
     return { success: false, message: "Este email ya está registrado." };
   }
 
+  const branches = await getBranches();
+  const defaultBranchId = branches.length > 0 ? branches[0].id : undefined;
+
   const newUser: User = {
     uid: `user-${Date.now()}`,
     name,
@@ -121,9 +142,9 @@ export async function registerUser(
     avatarUrl: `https://i.pravatar.cc/150?u=${email}`,
     role: "tecnico",
     status: "pending",
+    assignments: defaultBranchId ? [{ branchId: defaultBranchId, role: 'tecnico'}] : [],
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    storeSettings: { ...DEFAULT_STORE_SETTINGS }
   };
 
   mockUsers.push(newUser);

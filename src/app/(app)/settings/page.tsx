@@ -6,7 +6,7 @@ import { useAuth } from "@/providers/AuthProvider";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { SettingsForm } from "@/components/settings/SettingsForm";
 import { ProfileSettingsCard } from "@/components/settings/ProfileSettingsCard"; // Import new component
-import { AlertTriangle, QrCode, UserCircle } from "lucide-react"; 
+import { AlertTriangle, QrCode, Building } from "lucide-react"; 
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import Image from "next/image"; 
 import { Button } from "@/components/ui/button"; 
@@ -14,6 +14,9 @@ import { Separator } from "@/components/ui/separator";
 
 export default function SettingsPage() {
   const { user, loading } = useAuth();
+  // For now, we'll assume the user edits the settings for their FIRST assigned branch.
+  // In a real multi-branch UI, there would be a branch selector here.
+  const primaryBranchId = user?.assignments?.[0]?.branchId || user?.role === 'admin' ? 'B001' : undefined;
 
    if (loading) {
     return (
@@ -41,15 +44,28 @@ export default function SettingsPage() {
     <div className="space-y-6">
       <PageHeader
         title="Configuración y Perfil"
-        description="Ajuste los datos de su perfil, tienda, textos legales, políticas e integraciones."
+        description="Ajuste los datos de su perfil, sucursales, textos legales e integraciones."
       />
       
-      {user && <ProfileSettingsCard user={user} />}
+      <ProfileSettingsCard user={user} />
 
       <Separator />
       
-      {/* SettingsForm ahora renderiza sus propias tarjetas internas */}
-      {user && <SettingsForm userId={user.uid} />}
+      {primaryBranchId ? (
+        <SettingsForm branchId={primaryBranchId} />
+      ) : (
+         <Card className="shadow-xl">
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                    <Building className="h-6 w-6 text-primary" />
+                    Configuración de Sucursal
+                </CardTitle>
+            </CardHeader>
+            <CardContent>
+                <p className="text-muted-foreground">No está asignado a ninguna sucursal para poder editar su configuración.</p>
+            </CardContent>
+        </Card>
+      )}
        
       <Separator />
 

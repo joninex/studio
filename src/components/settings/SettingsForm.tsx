@@ -14,15 +14,16 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { LoadingSpinner } from "../shared/LoadingSpinner";
-import { getStoreSettingsForUser, updateStoreSettingsForUser } from "@/lib/actions/settings.actions";
+import { getSettingsForBranch, updateSettingsForBranch } from "@/lib/actions/branch.actions";
 import { DEFAULT_STORE_SETTINGS } from "@/lib/constants";
+import { Building } from "lucide-react";
 
 
 interface SettingsFormProps {
-    userId: string;
+    branchId: string;
 }
 
-export function SettingsForm({ userId }: SettingsFormProps) {
+export function SettingsForm({ branchId }: SettingsFormProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
@@ -36,67 +37,36 @@ export function SettingsForm({ userId }: SettingsFormProps) {
 
   useEffect(() => {
     async function loadSettings() {
-      if (!userId) {
+      if (!branchId) {
           setIsLoading(false); 
           return;
       }
       setIsLoading(true);
       try {
-        const fetchedSettings = await getStoreSettingsForUser(userId);
+        const fetchedSettings = await getSettingsForBranch(branchId);
         form.reset({ 
           ...DEFAULT_STORE_SETTINGS, 
-          ...fetchedSettings,
-          abandonmentPolicyDays30: Number(fetchedSettings.abandonmentPolicyDays30 ?? DEFAULT_STORE_SETTINGS.abandonmentPolicyDays30),
-          abandonmentPolicyDays60: Number(fetchedSettings.abandonmentPolicyDays60 ?? DEFAULT_STORE_SETTINGS.abandonmentPolicyDays60),
-          unlockDisclaimerText: fetchedSettings.unlockDisclaimerText ?? DEFAULT_STORE_SETTINGS.unlockDisclaimerText,
-          abandonmentPolicyText: fetchedSettings.abandonmentPolicyText ?? DEFAULT_STORE_SETTINGS.abandonmentPolicyText,
-          dataLossPolicyText: fetchedSettings.dataLossPolicyText ?? DEFAULT_STORE_SETTINGS.dataLossPolicyText,
-          untestedDevicePolicyText: fetchedSettings.untestedDevicePolicyText ?? DEFAULT_STORE_SETTINGS.untestedDevicePolicyText,
-          budgetVariationText: fetchedSettings.budgetVariationText ?? DEFAULT_STORE_SETTINGS.budgetVariationText,
-          highRiskDeviceText: fetchedSettings.highRiskDeviceText ?? DEFAULT_STORE_SETTINGS.highRiskDeviceText,
-          partialDamageDisplayText: fetchedSettings.partialDamageDisplayText ?? DEFAULT_STORE_SETTINGS.partialDamageDisplayText,
-          warrantyVoidConditionsText: fetchedSettings.warrantyVoidConditionsText ?? DEFAULT_STORE_SETTINGS.warrantyVoidConditionsText,
-          privacyPolicyText: fetchedSettings.privacyPolicyText ?? DEFAULT_STORE_SETTINGS.privacyPolicyText,
-          warrantyConditions: fetchedSettings.warrantyConditions ?? DEFAULT_STORE_SETTINGS.warrantyConditions,
-          pickupConditions: fetchedSettings.pickupConditions ?? DEFAULT_STORE_SETTINGS.pickupConditions,
+          ...fetchedSettings
         });
       } catch (error) {
-        toast({ variant: "destructive", title: "Error", description: "No se pudo cargar la configuración de su tienda."});
+        toast({ variant: "destructive", title: "Error", description: "No se pudo cargar la configuración de la sucursal."});
         form.reset({...DEFAULT_STORE_SETTINGS}); 
       } finally {
         setIsLoading(false);
       }
     }
     loadSettings();
-  }, [userId, form, toast]);
+  }, [branchId, form, toast]);
   
   const onSubmit = (values: z.infer<typeof StoreSettingsSchema>) => {
     startTransition(async () => {
-      const dataToSave: StoreSettings = { 
-        ...values,
-        abandonmentPolicyDays30: Number(values.abandonmentPolicyDays30),
-        abandonmentPolicyDays60: Number(values.abandonmentPolicyDays60),
-      };
-      const result = await updateStoreSettingsForUser(userId, dataToSave);
+      const result = await updateSettingsForBranch(branchId, values);
       if (result.success) {
         toast({ title: "Éxito", description: result.message });
         if (result.settings) {
             form.reset({
                 ...DEFAULT_STORE_SETTINGS,
                 ...result.settings,
-                abandonmentPolicyDays30: Number(result.settings.abandonmentPolicyDays30),
-                abandonmentPolicyDays60: Number(result.settings.abandonmentPolicyDays60),
-                unlockDisclaimerText: result.settings.unlockDisclaimerText,
-                abandonmentPolicyText: result.settings.abandonmentPolicyText,
-                dataLossPolicyText: result.settings.dataLossPolicyText,
-                untestedDevicePolicyText: result.settings.untestedDevicePolicyText,
-                budgetVariationText: result.settings.budgetVariationText,
-                highRiskDeviceText: result.settings.highRiskDeviceText,
-                partialDamageDisplayText: result.settings.partialDamageDisplayText,
-                warrantyVoidConditionsText: result.settings.warrantyVoidConditionsText,
-                privacyPolicyText: result.settings.privacyPolicyText,
-                warrantyConditions: result.settings.warrantyConditions,
-                pickupConditions: result.settings.pickupConditions,
             });
         }
       } else {
@@ -106,7 +76,7 @@ export function SettingsForm({ userId }: SettingsFormProps) {
   };
 
   if (isLoading) {
-    return <div className="flex justify-center items-center py-10"><LoadingSpinner size={32}/> <p className="ml-2">Cargando configuración...</p></div>;
+    return <div className="flex justify-center items-center py-10"><LoadingSpinner size={32}/> <p className="ml-2">Cargando configuración de sucursal...</p></div>;
   }
 
   return (
@@ -114,8 +84,8 @@ export function SettingsForm({ userId }: SettingsFormProps) {
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <Card className="shadow-lg">
           <CardHeader>
-            <CardTitle>Datos de la Tienda y Sucursal</CardTitle>
-            <CardDescription>Información básica de su negocio que aparecerá en comprobantes y comunicaciones.</CardDescription>
+            <CardTitle className="flex items-center gap-2"><Building className="text-primary"/>Datos de la Sucursal</CardTitle>
+            <CardDescription>Información de la sucursal <span className="font-bold">{form.getValues("branchInfo")}</span> que aparecerá en comprobantes y comunicaciones.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <FormField control={form.control} name="companyName" render={({ field }) => ( <FormItem><FormLabel>Nombre de la Tienda/Empresa</FormLabel><FormControl><Input placeholder="Nombre de su Taller" {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
@@ -153,7 +123,7 @@ export function SettingsForm({ userId }: SettingsFormProps) {
             <FormField control={form.control} name="dataLossPolicyText" render={({ field }) => ( <FormItem><FormLabel>Política de Pérdida/Recuperación de Información y Privacidad</FormLabel><FormControl><Textarea rows={4} placeholder="PÉRDIDA DE INFORMACIÓN: JO-SERVICE NO se responsabiliza... El cliente autoriza el acceso al dispositivo..." {...field} value={field.value ?? DEFAULT_STORE_SETTINGS.dataLossPolicyText} /></FormControl><FormMessage /></FormItem> )} />
             <FormField control={form.control} name="privacyPolicyText" render={({ field }) => ( <FormItem><FormLabel>Texto Adicional de Política de Privacidad (Opcional)</FormLabel><FormControl><Textarea rows={3} placeholder="Texto adicional sobre privacidad si es necesario..." {...field} value={field.value ?? DEFAULT_STORE_SETTINGS.privacyPolicyText} /></FormControl><FormDescription>Complementa la política de pérdida de datos si necesita detallar más aspectos de privacidad.</FormDescription><FormMessage /></FormItem> )} />
             <FormField control={form.control} name="untestedDevicePolicyText" render={({ field }) => ( <FormItem><FormLabel>Política para Equipos Sin Encender o Sin Clave</FormLabel><FormControl><Textarea rows={4} placeholder="EQUIPOS SIN ENCENDER O CON CLAVE/PATRÓN NO INFORMADO..." {...field} value={field.value ?? DEFAULT_STORE_SETTINGS.untestedDevicePolicyText} /></FormControl><FormMessage /></FormItem> )} />
-            <FormField control={form.control} name="budgetVariationText" render={({ field }) => ( <FormItem><FormLabel>Política sobre Variaciones de Presupuesto</FormLabel><FormControl><Textarea rows={4} placeholder="PRESUPUESTO: El presupuesto informado se basa..." {...field} value={field.value ?? DEFAULT_STORE_SETTINGS.budgetVariationText} /></FormControl><FormMessage /></FormItem> )} />
+            <FormField control={form.control} name="budgetVariationText" render={({ field }) => ( <FormItem><FormLabel>Política sobre Variaciones de Presupuesto</FormLabel><FormControl><Textarea rows={4} placeholder="PRESUPUESTO: El presupuesto informado es una estimación..." {...field} value={field.value ?? DEFAULT_STORE_SETTINGS.budgetVariationText} /></FormControl><FormMessage /></FormItem> )} />
             <FormField control={form.control} name="highRiskDeviceText" render={({ field }) => ( <FormItem><FormLabel>Política para Teléfonos con Riesgos Especiales</FormLabel><FormControl><Textarea rows={4} placeholder="TELÉFONOS CON RIESGOS: Equipos mojados, sulfatados..." {...field} value={field.value ?? DEFAULT_STORE_SETTINGS.highRiskDeviceText} /></FormControl><FormMessage /></FormItem> )} />
             <FormField control={form.control} name="partialDamageDisplayText" render={({ field }) => ( <FormItem><FormLabel>Política para Pantallas con Daño Parcial</FormLabel><FormControl><Textarea rows={4} placeholder="PANTALLAS CON DAÑO PARCIAL: En equipos con pantallas parcialmente..." {...field} value={field.value ?? DEFAULT_STORE_SETTINGS.partialDamageDisplayText} /></FormControl><FormMessage /></FormItem> )} />
             <FormField control={form.control} name="warrantyVoidConditionsText" render={({ field }) => ( <FormItem><FormLabel>Condiciones Detalladas de Anulación de Garantía</FormLabel><FormControl><Textarea rows={6} placeholder="ANULACIÓN DE GARANTÍA: La garantía quedará anulada por..." {...field} value={field.value ?? DEFAULT_STORE_SETTINGS.warrantyVoidConditionsText} /></FormControl><FormMessage /></FormItem> )} />
@@ -162,7 +132,7 @@ export function SettingsForm({ userId }: SettingsFormProps) {
         
         <Button type="submit" className="w-full sm:w-auto" disabled={isPending || isLoading}>
           {isPending && <LoadingSpinner size={16} className="mr-2"/>}
-          Guardar Configuración
+          Guardar Configuración de Sucursal
         </Button>
       </form>
     </Form>

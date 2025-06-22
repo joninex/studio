@@ -38,6 +38,10 @@ export function OrderForm({ orderId }: OrderFormProps) {
   const [aiSuggestion, setAiSuggestion] = useState<AISuggestion | null>(null);
   const [isLoading, setIsLoading] = useState(!!orderId);
 
+  // In a multi-branch app, this would come from a context provider or selector.
+  // For now, we hardcode the user's first assigned branch or the default 'B001' for admins.
+  const currentBranchId = user?.assignments?.[0]?.branchId || 'B001';
+
   const defaultChecklistValues = CHECKLIST_ITEMS.reduce((acc, item) => {
     (acc as any)[item.id] = item.type === 'boolean' ? 'no' : '';
     return acc;
@@ -46,6 +50,7 @@ export function OrderForm({ orderId }: OrderFormProps) {
   const form = useForm<OrderFormData>({
     resolver: zodResolver(OrderSchema),
     defaultValues: {
+      branchId: currentBranchId,
       clientId: "", deviceBrand: "", deviceModel: "", deviceIMEI: "", declaredFault: "",
       checklist: defaultChecklistValues,
       damageRisk: "", costSparePart: 0, costLabor: 0,
@@ -63,8 +68,11 @@ export function OrderForm({ orderId }: OrderFormProps) {
           }
         })
         .finally(() => setIsLoading(false));
+    } else {
+        // Set default branchId when creating a new order
+        form.setValue('branchId', currentBranchId);
     }
-  }, [orderId, form]);
+  }, [orderId, form, currentBranchId]);
 
   const onSubmit = (values: OrderFormData) => {
     if (!user) {
@@ -76,7 +84,7 @@ export function OrderForm({ orderId }: OrderFormProps) {
       if (orderId) {
         result = await updateOrder(orderId, values, user.uid);
       } else {
-        result = await createOrder(values, user.uid);
+        result = await createOrder(values, user.uid, values.branchId);
       }
 
       if (result.success && result.order?.id) {
@@ -114,6 +122,9 @@ export function OrderForm({ orderId }: OrderFormProps) {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+        {/* Hidden BranchId Field */}
+        <FormField control={form.control} name="branchId" render={({ field }) => ( <FormItem className="hidden"><FormControl><Input type="hidden" {...field} /></FormControl><FormMessage /></FormItem> )} />
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {/* Left Column */}
           <div className="space-y-6">

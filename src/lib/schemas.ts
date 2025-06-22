@@ -34,6 +34,7 @@ const validOrderStatuses = ORDER_STATUSES.filter(status => status !== "") as [Or
 const validClassificationOptions = CLASSIFICATION_OPTIONS.filter(opt => opt !== null) as [Classification, ...Classification[]];
 
 export const OrderSchema = z.object({
+  branchId: z.string().min(1, "La sucursal es requerida."),
   clientId: z.string().min(1, "ID de Cliente es requerido."),
   clientName: z.string().optional(),
   clientLastName: z.string().optional(),
