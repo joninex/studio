@@ -5,6 +5,7 @@ import type { Order } from "@/types";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import Image from "next/image";
+import { CHECKLIST_ITEMS } from "@/lib/constants";
 
 interface PrintableOrderProps {
   order: Order;
@@ -18,22 +19,12 @@ export function PrintableOrder({ order }: PrintableOrderProps) {
 
   const totalCost = (order.costLabor || 0) + (order.costSparePart || 0);
 
-  const checklistItems = [
-    { label: "Marcas/golpes", value: order.checklist?.golpe },
-    { label: "Cristal astillado/roto", value: order.checklist?.cristal },
-    { label: "Marco roto/dañado", value: order.checklist?.marco },
-    { label: "Tapa trasera", value: order.checklist?.tapa },
-    { label: "Enciende", value: order.checklist?.enciende },
-    { label: "Táctil", value: order.checklist?.tactil },
-    { label: "Imagen", value: order.checklist?.imagen },
-    { label: "Botones", value: order.checklist?.botones },
-    { label: "Cámara Trasera", value: order.checklist?.cam_trasera },
-    { label: "Cámara Delantera", value: order.checklist?.cam_delantera },
-    { label: "Pin de Carga", value: order.checklist?.pin_carga },
-    { label: "Wi-Fi / BT", value: order.checklist?.wifi_bluetooth },
-    { label: "Señal", value: order.checklist?.senal },
-    { label: "Humedad", value: order.checklist?.humedad },
-  ].filter(item => item.value); // Only show items that have a value
+  const checklistItems = CHECKLIST_ITEMS
+    .map(item => ({
+      label: item.label,
+      value: order.checklist?.[item.id as keyof typeof order.checklist]
+    }))
+    .filter(item => item.value && item.value.toString().trim() !== ''); // Only show items that have a value
 
   return (
     <div className="font-sans text-xs text-black bg-white p-8">
@@ -86,19 +77,27 @@ export function PrintableOrder({ order }: PrintableOrderProps) {
         
         {/* Fault and Observations */}
         <div className="border border-gray-200 p-3 rounded mb-4">
-           <h3 className="font-bold border-b border-gray-200 pb-1 mb-2">Falla Reportada y Estado Físico</h3>
-           <p><strong>Falla Reportada:</strong> {order.declaredFault || "No especificada"}</p>
-           <p><strong>Observaciones de Ingreso:</strong> {order.damageRisk || "Sin daños visibles reportados."}</p>
+           <h3 className="font-bold border-b border-gray-200 pb-1 mb-2">Falla Reportada y Checklist de Recepción</h3>
+           <p className="mb-2"><strong>Falla Reportada por el Cliente:</strong> {order.declaredFault || "No especificada"}</p>
+           <p className="mb-2"><strong>Observaciones (Daños Visibles):</strong> {order.damageRisk || "Sin daños visibles reportados."}</p>
            <div className="mt-2">
-             <h4 className="font-semibold">Checklist de Ingreso:</h4>
-             <ul className="list-disc list-inside columns-2">
-                {checklistItems.map(item => (
-                    <li key={item.label}>
-                       {item.label}: <span className="font-semibold uppercase">{item.value}</span>
-                    </li>
-                ))}
-             </ul>
+             <h4 className="font-semibold mb-1">Checklist Técnico de Ingreso:</h4>
+             {checklistItems.length > 0 ? (
+                <ul className="list-none space-y-1 text-[9pt] columns-2 gap-x-6">
+                    {checklistItems.map(item => (
+                        <li key={item.label} className="border-b border-dotted flex justify-between">
+                           <span>{item.label}:</span>
+                           <span className="font-semibold uppercase">{typeof item.value === 'boolean' ? (item.value ? 'Sí' : 'No') : item.value}</span>
+                        </li>
+                    ))}
+                </ul>
+             ) : (
+                <p className="text-gray-500">No se completó el checklist de ingreso.</p>
+             )}
            </div>
+            <div className="mt-3 p-2 bg-gray-100 rounded text-[8pt] text-center">
+                <p><strong>Clave / Patrón de Desbloqueo:</strong> ____________________________________________</p>
+            </div>
         </div>
         
         {/* Terms and Conditions */}
@@ -115,6 +114,9 @@ export function PrintableOrder({ order }: PrintableOrderProps) {
                 <li><strong>Anulación de Garantía:</strong> {settings?.warrantyVoidConditionsText}</li>
                 <li><strong>Política de Abandono:</strong> {settings?.abandonmentPolicyText}</li>
              </ol>
+           </div>
+           <div className="mt-2 p-2 border border-dashed border-gray-400 rounded text-center font-semibold">
+            <p>El cliente acepta que si no se proporciona la clave o patrón de desbloqueo, el técnico solo podrá verificar y garantizar la reparación física solicitada. No se asegura el funcionamiento general del dispositivo sin acceso completo al sistema operativo.</p>
            </div>
         </div>
 
@@ -150,6 +152,7 @@ export function PrintableOrder({ order }: PrintableOrderProps) {
                 width={120}
                 height={40}
                 className="object-contain"
+                data-ai-hint="company logo"
               />
             )}
             <div>
