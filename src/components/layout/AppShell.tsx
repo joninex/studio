@@ -46,6 +46,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/providers/AuthProvider";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { ThemeToggle } from "@/components/shared/ThemeToggle";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -120,6 +121,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <SidebarTrigger className="md:hidden" />
           </div>
           <div className="flex items-center gap-4">
+            <ThemeToggle />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-8 w-8 rounded-full">

@@ -100,8 +100,19 @@ export function PrintableOrder({ order, branch }: PrintableOrderProps) {
              )}
            </div>
 
-            <div className="mt-3 p-2 bg-gray-100 rounded text-[8pt] text-center">
-                <p><strong>Clave / Patrón de Desbloqueo:</strong> ____________________________________________</p>
+           <div className="mt-3 p-2 bg-gray-100 rounded text-center">
+                <h4 className="font-bold mb-2">Clave / Patrón de Desbloqueo</h4>
+                <div className="flex justify-center items-center gap-4">
+                    <Image
+                        src="https://storage.googleapis.com/project-os-prod-images/a64f7754-07d0-4f96-b258-3d12b7a4a275.png"
+                        alt="Patrón de desbloqueo"
+                        width={80}
+                        height={80}
+                        className="object-contain"
+                        data-ai-hint="unlock pattern"
+                    />
+                    <div className="border-b-2 border-dotted border-gray-400 w-48 h-1 self-end mb-4"></div>
+                </div>
             </div>
             <div className="mt-2 p-2 border border-dashed border-red-400 rounded text-center text-[9pt] font-semibold text-red-700">
                <p>{settings?.unlockDisclaimerText}</p>
