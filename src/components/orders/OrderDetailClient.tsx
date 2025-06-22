@@ -1,7 +1,7 @@
 // src/components/orders/OrderDetailClient.tsx
 "use client";
 
-import type { Order, User, Comment as OrderComment, OrderStatus, OrderPartItem, PaymentItem, Branch } from "@/types";
+import type { Order, User, Comment as OrderComment, OrderStatus, OrderPartItem, PaymentItem, Branch, Checklist } from "@/types";
 import { useState, useTransition, useRef, useEffect } from "react";
 import { format, differenceInDays, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
@@ -16,7 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/providers/AuthProvider";
 import { addOrderComment, updateOrderStatus } from "@/lib/actions/order.actions";
-import { ORDER_STATUSES } from "@/lib/constants";
+import { ORDER_STATUSES, CHECKLIST_ITEMS } from "@/lib/constants";
 import { AlertCircle, CalendarDays, DollarSign, FileText, Info, ListChecks, MessageSquare, Printer, User as UserIcon, Wrench, Package, CreditCard, Pencil, CheckCircle, Clock } from "lucide-react";
 import { LoadingSpinner } from "../shared/LoadingSpinner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -74,11 +74,7 @@ export function OrderDetailClient({ order: initialOrder, branch }: OrderDetailCl
 
     const cleanedPhone = order.clientPhone.replace(/[\s+()-]/g, '');
     
-    // Multi-tenant logic: Uses the specific 'branch' prop passed to the component.
-    // This ensures the message uses the correct store's name, maintaining data isolation.
     const storeName = branch?.settings?.companyName || 'el taller'; 
-    
-    // Uses the logged-in user's name for personalization.
     const userName = user?.name || 'un técnico';
     const estimatedTime = order.estimatedCompletionTime || 'el final del día';
     
@@ -87,7 +83,6 @@ export function OrderDetailClient({ order: initialOrder, branch }: OrderDetailCl
     const whatsappUrl = `https://wa.me/${cleanedPhone}?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, '_blank');
   };
-
 
   if (!order) {
     return (
@@ -103,7 +98,14 @@ export function OrderDetailClient({ order: initialOrder, branch }: OrderDetailCl
     : null;
 
   const totalCost = (order.costLabor || 0) + (order.costSparePart || 0);
-  
+
+  const relevantChecklistItems = CHECKLIST_ITEMS
+    .map(item => ({
+      label: item.label,
+      value: order.checklist?.[item.id as keyof Checklist]
+    }))
+    .filter(item => item.value && (typeof item.value === 'string' ? item.value.trim() !== '' && item.value !== 'no' : false) || (typeof item.value === 'boolean' && item.value === true) || item.value === 'si');
+
   return (
     <div className="space-y-6">
        <div className="flex justify-end no-print">
@@ -115,7 +117,6 @@ export function OrderDetailClient({ order: initialOrder, branch }: OrderDetailCl
             </Button>
        </div>
        
-       {/* Main content remains visible on the screen */}
         <Card>
             <CardHeader>
             <div className="flex items-center justify-between">
@@ -167,20 +168,38 @@ export function OrderDetailClient({ order: initialOrder, branch }: OrderDetailCl
                     </CardContent>
                 </Card>
             </div>
+            
             <Separator/>
-            <Card>
-                <CardHeader><CardTitle className="text-lg flex items-center gap-2"><DollarSign/>Costos y Presupuesto</CardTitle></CardHeader>
-                <CardContent className="text-sm grid sm:grid-cols-3 gap-4">
-                    <p><strong>Costo Repuestos:</strong> ${order.costSparePart.toFixed(2)}</p>
-                    <p><strong>Costo Mano de Obra:</strong> ${order.costLabor.toFixed(2)}</p>
-                    <p className="font-bold text-base"><strong>Total Presupuestado:</strong> ${totalCost.toFixed(2)}</p>
-                </CardContent>
-            </Card>
+            <div className="grid md:grid-cols-2 gap-6">
+                <Card>
+                    <CardHeader><CardTitle className="text-lg flex items-center gap-2"><DollarSign/>Costos y Presupuesto</CardTitle></CardHeader>
+                    <CardContent className="text-sm grid sm:grid-cols-3 gap-4">
+                        <p><strong>Costo Repuestos:</strong> ${order.costSparePart.toFixed(2)}</p>
+                        <p><strong>Costo Mano de Obra:</strong> ${order.costLabor.toFixed(2)}</p>
+                        <p className="font-bold text-base"><strong>Total Presupuestado:</strong> ${totalCost.toFixed(2)}</p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader><CardTitle className="text-lg flex items-center gap-2"><ListChecks/>Checklist de Recepción</CardTitle></CardHeader>
+                    <CardContent>
+                        {relevantChecklistItems.length > 0 ? (
+                            <ul className="list-disc list-inside columns-2 text-sm">
+                                {relevantChecklistItems.map((item, index) => (
+                                    <li key={index}>
+                                        {item.label}: <strong className="uppercase">{typeof item.value === 'string' ? item.value : 'Sí'}</strong>
+                                    </li>
+                                ))}
+                            </ul>
+                        ) : (
+                            <p className="text-sm text-muted-foreground">No se marcaron items relevantes en el checklist.</p>
+                        )}
+                    </CardContent>
+                </Card>
+            </div>
             </CardContent>
         </Card>
 
       <div className="grid md:grid-cols-2 gap-6 no-print">
-        {/* Parts Card */}
         <Card>
             <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="flex items-center gap-2"><Package/>Piezas Utilizadas</CardTitle>
@@ -212,7 +231,6 @@ export function OrderDetailClient({ order: initialOrder, branch }: OrderDetailCl
             </CardContent>
         </Card>
 
-        {/* Payments Card */}
         <Card>
             <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="flex items-center gap-2"><CreditCard/>Historial de Pagos</CardTitle>
@@ -246,7 +264,6 @@ export function OrderDetailClient({ order: initialOrder, branch }: OrderDetailCl
       </div>
 
       <div className="grid md:grid-cols-3 gap-6 no-print">
-            {/* Status Update Card */}
             <Card>
                 <CardHeader><CardTitle className="flex items-center gap-2"><CheckCircle/>Actualizar Estado</CardTitle></CardHeader>
                 <CardContent className="flex flex-col sm:flex-row gap-4 items-end">
@@ -266,7 +283,6 @@ export function OrderDetailClient({ order: initialOrder, branch }: OrderDetailCl
                 </CardContent>
             </Card>
 
-             {/* Communication Card */}
             <Card>
                 <CardHeader><CardTitle className="flex items-center gap-2"><MessageSquare/>Comunicación</CardTitle></CardHeader>
                 <CardContent>
@@ -277,7 +293,6 @@ export function OrderDetailClient({ order: initialOrder, branch }: OrderDetailCl
                 </CardContent>
             </Card>
 
-            {/* Comments Card */}
             <Card>
                 <CardHeader><CardTitle className="flex items-center gap-2"><MessageSquare/>Comentarios Internos</CardTitle></CardHeader>
                 <CardContent>

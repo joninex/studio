@@ -1,7 +1,7 @@
 // src/components/print/PrintableOrder.tsx
 "use client";
 
-import type { Order, Branch } from "@/types";
+import type { Order, Branch, Checklist } from "@/types";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import Image from "next/image";
@@ -24,9 +24,9 @@ export function PrintableOrder({ order, branch }: PrintableOrderProps) {
   const checklistItems = CHECKLIST_ITEMS
     .map(item => ({
       label: item.label,
-      value: order.checklist?.[item.id as keyof typeof order.checklist]
+      value: order.checklist?.[item.id as keyof Checklist]
     }))
-    .filter(item => item.value && (typeof item.value === 'string' ? item.value.trim() !== '' : true) && item.value !== 'no'); // Only show items that have a value and are not 'no'
+    .filter(item => item.value && (typeof item.value === 'string' ? item.value.trim() !== '' : true));
 
 
   return (
@@ -83,6 +83,7 @@ export function PrintableOrder({ order, branch }: PrintableOrderProps) {
            <h3 className="font-bold border-b border-gray-200 pb-1 mb-2">Falla Reportada y Checklist de Recepción</h3>
            <p className="mb-2"><strong>Falla Reportada por el Cliente:</strong> {order.declaredFault || "No especificada"}</p>
            <p className="mb-2"><strong>Observaciones (Daños Visibles):</strong> {order.damageRisk || "Sin daños visibles reportados."}</p>
+           
            <div className="mt-2">
              <h4 className="font-semibold mb-1">Checklist Técnico de Ingreso:</h4>
              {checklistItems.length > 0 ? (
@@ -98,6 +99,7 @@ export function PrintableOrder({ order, branch }: PrintableOrderProps) {
                 <p className="text-gray-500">No se completó el checklist de ingreso.</p>
              )}
            </div>
+
             <div className="mt-3 p-2 bg-gray-100 rounded text-[8pt] text-center">
                 <p><strong>Clave / Patrón de Desbloqueo:</strong> ____________________________________________</p>
             </div>
