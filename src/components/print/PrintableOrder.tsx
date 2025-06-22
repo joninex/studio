@@ -24,7 +24,8 @@ export function PrintableOrder({ order }: PrintableOrderProps) {
       label: item.label,
       value: order.checklist?.[item.id as keyof typeof order.checklist]
     }))
-    .filter(item => item.value && item.value.toString().trim() !== ''); // Only show items that have a value
+    .filter(item => item.value && (typeof item.value === 'string' ? item.value.trim() !== '' : true) && item.value !== 'no'); // Only show items that have a value and are not 'no'
+
 
   return (
     <div className="font-sans text-xs text-black bg-white p-8">
@@ -87,7 +88,7 @@ export function PrintableOrder({ order }: PrintableOrderProps) {
                     {checklistItems.map(item => (
                         <li key={item.label} className="border-b border-dotted flex justify-between">
                            <span>{item.label}:</span>
-                           <span className="font-semibold uppercase">{typeof item.value === 'boolean' ? (item.value ? 'Sí' : 'No') : item.value}</span>
+                           <span className="font-semibold uppercase">{typeof item.value === 'string' ? item.value.toUpperCase() : (item.value ? 'SÍ' : 'NO')}</span>
                         </li>
                     ))}
                 </ul>
@@ -97,6 +98,9 @@ export function PrintableOrder({ order }: PrintableOrderProps) {
            </div>
             <div className="mt-3 p-2 bg-gray-100 rounded text-[8pt] text-center">
                 <p><strong>Clave / Patrón de Desbloqueo:</strong> ____________________________________________</p>
+            </div>
+            <div className="mt-2 p-2 border border-dashed border-red-400 rounded text-center text-[9pt] font-semibold text-red-700">
+               <p>El cliente declara conocer que, en caso de no facilitar clave o patrón de desbloqueo, el técnico solo podrá verificar la reparación superficial solicitada. No se garantiza el funcionamiento total del equipo sin acceso completo al sistema operativo. El cliente asume esta limitación.</p>
             </div>
         </div>
         
@@ -115,9 +119,6 @@ export function PrintableOrder({ order }: PrintableOrderProps) {
                 <li><strong>Política de Abandono:</strong> {settings?.abandonmentPolicyText}</li>
              </ol>
            </div>
-           <div className="mt-2 p-2 border border-dashed border-gray-400 rounded text-center font-semibold">
-            <p>El cliente acepta que si no se proporciona la clave o patrón de desbloqueo, el técnico solo podrá verificar y garantizar la reparación física solicitada. No se asegura el funcionamiento general del dispositivo sin acceso completo al sistema operativo.</p>
-           </div>
         </div>
 
         {/* Signature Area */}
@@ -127,7 +128,7 @@ export function PrintableOrder({ order }: PrintableOrderProps) {
               <div className="border-t border-black pt-1">Firma del Cliente</div>
             </div>
             <div className="flex-1 text-center">
-              <div className="border-t border-black pt-1">Aclaración</div>
+              <div className="border-t border-black pt-1">Aclaración y DNI</div>
             </div>
             <div className="flex-1 text-center">
               <div className="border-t border-black pt-1">Firma del Técnico Responsable</div>
@@ -173,8 +174,8 @@ export function PrintableOrder({ order }: PrintableOrderProps) {
             <p className="mb-4"><strong>Fecha de Retiro:</strong> ______ / ______ / ________</p>
             
             <div className="p-4 border border-gray-300 rounded bg-gray-50 text-justify">
-                <p>
-                    Declaro haber recibido el dispositivo arriba mencionado en conformidad. He verificado el funcionamiento del mismo y estoy de acuerdo con la reparación efectuada.
+                <p className="font-semibold">
+                    Declaro que retiro el equipo en las condiciones detalladas, y que fui informado del tipo de reparación, garantía y observaciones. Acepto las condiciones del servicio.
                 </p>
                 <p className="mt-2">
                     Entiendo que la garantía de la reparación es de <strong>{settings?.warrantyConditions?.match(/\d+/)?.[0] || '90'} días</strong>, cubriendo exclusivamente la falla reparada y las piezas reemplazadas, según los términos y condiciones firmados en el comprobante de ingreso. La garantía no cubre daños por mal uso, golpes, humedad o intervención de terceros.
@@ -189,7 +190,7 @@ export function PrintableOrder({ order }: PrintableOrderProps) {
               <div className="border-t border-black pt-1">Firma del Cliente</div>
             </div>
             <div className="flex-1 text-center">
-              <div className="border-t border-black pt-1">Aclaración</div>
+              <div className="border-t border-black pt-1">Aclaración y DNI</div>
             </div>
             <div className="flex-1 text-center">
               <div className="border-t border-black pt-1">Firma del Técnico que Entrega</div>
@@ -203,3 +204,5 @@ export function PrintableOrder({ order }: PrintableOrderProps) {
     </div>
   );
 }
+
+    
