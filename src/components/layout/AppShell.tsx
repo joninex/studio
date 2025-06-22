@@ -38,6 +38,8 @@ import {
   Contact,
   Smartphone,
   Lightbulb,
+  Truck,
+  Package,
 } from "lucide-react";
 import { useAuth } from "@/providers/AuthProvider";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -46,7 +48,8 @@ const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/orders", label: "Órdenes", icon: FileText },
   { href: "/clients", label: "Clientes", icon: Contact },
-  { href: "/inventory", label: "Inventario", icon: Warehouse },
+  { href: "/inventory/parts", label: "Repuestos", icon: Package },
+  { href: "/inventory/suppliers", label: "Proveedores", icon: Truck },
   { href: "/ai-guides", label: "Guías IA", icon: Lightbulb },
   { href: "/reports", label: "Reportes", icon: BarChart },
   { href: "/users", label: "Usuarios", icon: Users, adminOnly: true },
