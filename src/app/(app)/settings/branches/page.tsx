@@ -8,14 +8,40 @@ import { getBranches } from "@/lib/actions/branch.actions";
 import { BranchListClient } from "@/components/settings/BranchListClient";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { Suspense } from "react";
+import { useState, useEffect } from "react";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import type { Branch } from "@/types";
 
 // Note: This component is client-side to easily check for user role.
-// The data fetching is done inside an async server component wrapper.
+// The data fetching is also handled on the client side due to this constraint.
 export default function BranchesPage() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // Wait for auth to finish loading
+    if (authLoading) return;
+
+    // Only fetch branches if the user is an admin
+    if (user?.role === 'admin') {
+      getBranches().then(data => {
+        setBranches(data);
+        setIsLoading(false);
+      });
+    } else {
+      // If user is not an admin, we don't need to load anything.
+      setIsLoading(false);
+    }
+  }, [user, authLoading]);
+
+  if (authLoading || isLoading) {
+     return (
+        <div className="flex justify-center items-center h-64">
+            <LoadingSpinner size={48} /> <p className="ml-4">Cargando...</p>
+        </div>
+      );
+  }
 
   if (user?.role !== 'admin') {
     return (
@@ -29,30 +55,21 @@ export default function BranchesPage() {
     );
   }
 
-  return <BranchManagement />;
-}
-
-
-async function BranchManagement() {
-    const branches: Branch[] = await getBranches();
-
-    return (
-        <div className="space-y-6">
-        <PageHeader
-            title="Gestión de Sucursales"
-            description="Administre todas las tiendas o sucursales del sistema."
-            actions={
-            <Link href="/settings/branches/new" passHref>
-                <Button>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Nueva Sucursal
-                </Button>
-            </Link>
-            }
-        />
-        <Suspense fallback={<div className="flex justify-center items-center h-64"><LoadingSpinner size={48} /> <p className="ml-4">Cargando sucursales...</p></div>}>
-            <BranchListClient branches={branches} />
-        </Suspense>
-        </div>
-    );
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title="Gestión de Sucursales"
+        description="Administre todas las tiendas o sucursales del sistema."
+        actions={
+          <Link href="/settings/branches/new" passHref>
+            <Button>
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Nueva Sucursal
+            </Button>
+          </Link>
+        }
+      />
+      <BranchListClient branches={branches} />
+    </div>
+  );
 }
