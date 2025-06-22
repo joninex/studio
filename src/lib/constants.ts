@@ -51,8 +51,8 @@ export const CHECKLIST_ITEMS: Array<{ id: keyof Checklist; label: string, group:
 
   // Audio y Vibración
   { id: "microfono", label: "Micrófono", group: "Audio y Vibración", type: 'boolean' },
-  { id: "auricular", label: "Auricular", group: "Audio y Vibración", type: 'boolean' },
-  { id: "parlante", label: "Altavoz / Parlante externo", group: "Audio y Vibración", type: 'boolean' },
+  { id: "auricular", label: "Auricular (Llamadas)", group: "Audio y Vibración", type: 'boolean' },
+  { id: "parlante", label: "Altavoz (Multimedia)", group: "Audio y Vibración", type: 'boolean' },
   { id: "vibrador", label: "Vibrador", group: "Audio y Vibración", type: 'boolean' },
 
   // Conectividad y Carga
@@ -66,6 +66,12 @@ export const YES_NO_OPTIONS = [
   { label: "No", value: "no" },
   { label: "S/C", value: "sc" },
 ];
+
+export const LEGAL_TEXTS = {
+  checklistDisclaimer: "Diagnóstico inicial no invasivo. El estado de componentes no comprobados se definirá en una etapa posterior.",
+  noUnlockCodeDisclaimer: "El cliente no ha dejado el código de desbloqueo. La empresa solo se responsabiliza por el componente intervenido y no por otras funciones no verificadas."
+};
+
 
 export const PART_CATEGORIES: Array<PartCategory | ""> = ["", "Pantalla", "Batería", "Flex", "Cámara", "Placa", "Componente", "Carcasa", "Otro"];
 export const PART_UNITS: PartUnit[] = ["unidad", "metro", "kit"];
@@ -86,7 +92,7 @@ export const DEFAULT_STORE_SETTINGS = {
     abandonmentPolicyDays30: 30,
     abandonmentPolicyDays60: 60,
     dataLossPolicyText: "PÉRDIDA DE INFORMACIÓN: La empresa NO se responsabiliza por la pérdida total o parcial de información (contactos, fotos, software, etc.) del equipo. Es responsabilidad del cliente realizar una copia de seguridad antes de entregar el equipo para su reparación.",
-    untestedDevicePolicyText: "EQUIPOS SIN ENCENDER/SIN CLAVE: El diagnóstico se basará en la falla reportada. Cualquier otra falla no podrá ser detectada hasta que el equipo encienda o se pueda acceder a él, pudiendo generar costos adicionales que serán informados para su aprobación.",
+    untestedDevicePolicyText: "EQUIPOS SIN ENCENDER O CON CLAVE/PATRÓN NO INFORMADO: El diagnóstico se basará en la falla reportada. Cualquier otra falla no podrá ser detectada hasta que el equipo encienda o se pueda acceder a él, pudiendo generar costos adicionales que serán informados para su aprobación.",
     budgetVariationText: "VARIACIÓN DE PRESUPUESTO: El presupuesto informado es una estimación. Si durante la reparación surgieran fallas no detectadas que impliquen un costo adicional, se notificará al cliente para su aprobación antes de continuar.",
     highRiskDeviceText: "EQUIPOS CON RIESGOS ESPECIALES (Mojados, sulfatados, golpes severos): Estos equipos pueden presentar fallas impredecibles durante o después de la reparación. El cliente asume el riesgo de que el equipo pueda no volver a encender o presentar nuevas fallas.",
     partialDamageDisplayText: "PANTALLAS CON DAÑO PARCIAL: En equipos con pantallas parcialmente funcionales (daño de cristal pero con imagen), existe el riesgo de que la pantalla deje de funcionar por completo durante el desarme. El cliente acepta este riesgo al autorizar la reparación.",

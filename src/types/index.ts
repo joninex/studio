@@ -177,6 +177,7 @@ export interface Order {
   accessories?: string;
   deviceIMEI: string;
   declaredFault: string;
+  unlockPatternProvided: boolean; // NEW: Track if unlock code is given
   checklist: Checklist;
   damageRisk?: string;
   costSparePart: number;

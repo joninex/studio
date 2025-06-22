@@ -46,6 +46,7 @@ export const OrderSchema = z.object({
   deviceIMEI: z.string().min(14, "IMEI debe tener al menos 14 caracteres.").max(16, "IMEI no puede exceder 16 caracteres."),
   accessories: z.string().optional(),
   declaredFault: z.string().min(1, "Falla declarada es requerida."),
+  unlockPatternProvided: z.boolean().default(false),
   checklist: ChecklistSchema,
   damageRisk: z.string().optional(),
   costSparePart: z.number().nonnegative(),

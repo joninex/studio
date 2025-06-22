@@ -5,7 +5,7 @@ import type { Order, Branch, Checklist } from "@/types";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import Image from "next/image";
-import { CHECKLIST_ITEMS } from "@/lib/constants";
+import { CHECKLIST_ITEMS, LEGAL_TEXTS } from "@/lib/constants";
 import { DEFAULT_STORE_SETTINGS } from "@/lib/constants";
 
 interface PrintableOrderProps {
@@ -30,9 +30,9 @@ export function PrintableOrder({ order, branch }: PrintableOrderProps) {
   }, {} as Record<string, (typeof CHECKLIST_ITEMS[0] & { value: any })[]>);
 
   const getChecklistValueDisplay = (value: 'si' | 'no' | 'sc' | string | undefined) => {
-    if (value === 'si') return "Sí";
-    if (value === 'no') return "No";
-    if (value === 'sc') return "S/C"; // Sin Comprobar
+    if (value === 'si') return "✅ Sí";
+    if (value === 'no') return "❌ No";
+    if (value === 'sc') return "🟡 S/C"; // Sin Comprobar
     if (value) return value;
     return 'N/A';
   }
@@ -73,7 +73,7 @@ export function PrintableOrder({ order, branch }: PrintableOrderProps) {
             <h3 className="font-bold border-b border-gray-200 pb-1 mb-2">Datos del Cliente</h3>
             <p><strong>Nombre:</strong> {order.clientName || 'N/A'} {order.clientLastName || ''}</p>
             <p><strong>DNI:</strong> {order.clientId || 'N/A'}</p> {/* Assuming DNI is in clientId */}
-            <p><strong>Teléfono:</strong> {order.clientName ? 'Obtenido de ficha' : 'N/A'}</p>
+            <p><strong>Teléfono:</strong> {order.clientPhone || 'N/A'}</p>
             <p><strong>Email:</strong> {order.clientName ? 'Obtenido de ficha' : 'N/A'}</p>
           </div>
           <div className="border border-gray-200 p-3 rounded">
@@ -93,8 +93,15 @@ export function PrintableOrder({ order, branch }: PrintableOrderProps) {
            <p className="mb-2"><strong>Observaciones (Daños Visibles):</strong> {order.damageRisk || "Sin daños visibles reportados."}</p>
            
            <div className="mt-2 text-[8pt] p-2 bg-gray-50 rounded border border-gray-200">
-            <p className="font-bold text-center mb-1">CHECKLIST TÉCNICO DE INGRESO - Estado Inicial</p>
-            <p className="text-[7pt] text-center italic mb-2">Significado: ✅ "Sí" (Funciona/Presente), ❌ "No" (Falla/Ausente), 🟡 "S/C" (Sin Comprobar)</p>
+            <p className="font-bold text-center mb-1">CHECKLIST TÉCNICO DE INGRESO</p>
+            <p className="text-[7pt] text-center italic mb-2">{LEGAL_TEXTS.checklistDisclaimer}</p>
+            
+            {!order.unlockPatternProvided && (
+              <div className="my-2 p-2 border border-dashed border-red-500 bg-red-50 text-red-800 text-center font-semibold">
+                {LEGAL_TEXTS.noUnlockCodeDisclaimer}
+              </div>
+            )}
+            
              {Object.keys(checklistGroups).length > 0 ? (
                 <div className="space-y-1">
                     {Object.entries(checklistGroups).map(([groupName, items]) => (
@@ -114,10 +121,6 @@ export function PrintableOrder({ order, branch }: PrintableOrderProps) {
              ) : (
                 <p className="text-gray-500 text-center">No se completó el checklist de ingreso.</p>
              )}
-           </div>
-
-           <div className="mt-3 p-2 border border-dashed border-red-400 rounded text-center text-[9pt] font-semibold text-red-700">
-               <p>El presente checklist documenta el estado observable sin intervención técnica interna. El cliente declara haber sido informado y acepta que componentes marcados como "No" o "S/C" pueden requerir diagnóstico adicional.</p>
            </div>
         </div>
         

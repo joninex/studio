@@ -15,15 +15,19 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/providers/AuthProvider";
-import { AISuggestion, type Order } from "@/types";
-import { CHECKLIST_ITEMS, YES_NO_OPTIONS } from "@/lib/constants";
-import { AlertCircle, Bot, DollarSign, Info, ListChecks, LucideSparkles, User, Wrench, Clock } from "lucide-react";
+import { AISuggestion, type Order, type Checklist } from "@/types";
+import { CHECKLIST_ITEMS, YES_NO_OPTIONS, LEGAL_TEXTS } from "@/lib/constants";
+import { AlertCircle, Bot, DollarSign, Info, ListChecks, LucideSparkles, User, Wrench, Clock, Lock, LockOpen } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 
+const FUNCTIONAL_CHECKLIST_IDS = CHECKLIST_ITEMS
+    .filter(item => item.group !== 'Condiciones Físicas' && item.type === 'boolean')
+    .map(item => `checklist.${item.id}`);
 
 interface OrderFormProps {
   orderId?: string;
@@ -50,12 +54,24 @@ export function OrderForm({ orderId }: OrderFormProps) {
     defaultValues: {
       branchId: currentBranchId || "",
       clientId: "", deviceBrand: "", deviceModel: "", deviceIMEI: "", declaredFault: "",
+      unlockPatternProvided: true, // Default to true for convenience
       checklist: defaultChecklistValues,
       damageRisk: "", costSparePart: 0, costLabor: 0,
       observations: "",
       estimatedCompletionTime: "",
     },
   });
+  
+  const unlockPatternProvided = form.watch("unlockPatternProvided");
+
+  useEffect(() => {
+    if (!unlockPatternProvided) {
+        FUNCTIONAL_CHECKLIST_IDS.forEach(id => {
+            form.setValue(id as keyof OrderFormData, 'sc');
+        });
+    }
+  }, [unlockPatternProvided, form]);
+
 
   useEffect(() => {
     if (orderId) {
@@ -176,41 +192,87 @@ export function OrderForm({ orderId }: OrderFormProps) {
 
           <div className="space-y-6">
             <Card>
-              <CardHeader><CardTitle className="flex items-center gap-2"><ListChecks className="text-primary"/> Checklist de Recepción</CardTitle></CardHeader>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2"><ListChecks className="text-primary"/> Checklist de Recepción</CardTitle>
+                <CardDescription>{LEGAL_TEXTS.checklistDisclaimer}</CardDescription>
+              </CardHeader>
               <CardContent className="space-y-4">
-                 {Object.entries(checklistGroups).map(([groupName, items]) => (
-                    <div key={groupName}>
-                        <h4 className="font-semibold mb-2 text-md text-primary/90">{groupName}</h4>
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-6 gap-y-4">
-                            {items.map(item => (
-                            <FormField
-                                key={item.id}
-                                control={form.control}
-                                name={`checklist.${item.id as keyof OrderFormData['checklist']}`}
-                                render={({ field }) => (
-                                <FormItem className="flex flex-col sm:flex-row sm:items-center justify-between rounded-lg border p-2 shadow-sm gap-2">
-                                    <FormLabel className="text-sm font-normal shrink-0">{item.label}</FormLabel>
-                                    <FormControl>
-                                    {item.type === 'boolean' ? (
-                                        <RadioGroup onValueChange={field.onChange} value={field.value as string} defaultValue="sc" className="flex space-x-2">
-                                        {YES_NO_OPTIONS.map(opt => (
-                                            <FormItem key={opt.value} className="flex items-center space-x-1 space-y-0">
-                                            <FormControl><RadioGroupItem value={opt.value} /></FormControl>
-                                            <FormLabel className="font-normal text-xs">{opt.label}</FormLabel>
-                                            </FormItem>
-                                        ))}
-                                        </RadioGroup>
-                                    ) : (
-                                        <Input type="text" {...field} className="h-8 text-xs w-full sm:w-24"/>
-                                    )}
-                                    </FormControl>
-                                </FormItem>
-                                )}
-                            />
-                            ))}
+                <FormField
+                    control={form.control}
+                    name="unlockPatternProvided"
+                    render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm bg-muted/30">
+                        <div className="space-y-0.5">
+                            <FormLabel className="text-base flex items-center gap-2">
+                                {field.value ? <LockOpen className="text-green-600"/> : <Lock className="text-destructive"/>}
+                                ¿El cliente deja código/patrón de desbloqueo?
+                            </FormLabel>
+                            <FormDescription>
+                                Determina si se pueden probar todas las funciones.
+                            </FormDescription>
                         </div>
-                    </div>
-                ))}
+                        <FormControl>
+                            <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            />
+                        </FormControl>
+                        </FormItem>
+                    )}
+                />
+                
+                {!unlockPatternProvided && (
+                     <Alert variant="destructive">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertTitle>Atención: Funciones no comprobadas</AlertTitle>
+                        <AlertDescription>{LEGAL_TEXTS.noUnlockCodeDisclaimer}</AlertDescription>
+                    </Alert>
+                )}
+
+                 {Object.entries(checklistGroups).map(([groupName, items]) => {
+                    const isFunctionalGroup = items.some(item => FUNCTIONAL_CHECKLIST_IDS.includes(`checklist.${item.id}`));
+                    const isDisabled = isFunctionalGroup && !unlockPatternProvided;
+
+                    return (
+                        <div key={groupName}>
+                            <h4 className="font-semibold mb-2 text-md text-primary/90">{groupName}</h4>
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-6 gap-y-4">
+                                {items.map(item => (
+                                <FormField
+                                    key={item.id}
+                                    control={form.control}
+                                    name={`checklist.${item.id as keyof Checklist}`}
+                                    render={({ field }) => (
+                                    <FormItem className={`flex flex-col sm:flex-row sm:items-center justify-between rounded-lg border p-2 shadow-sm gap-2 ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                                        <FormLabel className="text-sm font-normal shrink-0">{item.label}</FormLabel>
+                                        <FormControl>
+                                        {item.type === 'boolean' ? (
+                                            <RadioGroup 
+                                                onValueChange={field.onChange} 
+                                                value={field.value as string} 
+                                                defaultValue="sc" 
+                                                className="flex space-x-2"
+                                                disabled={isDisabled}
+                                            >
+                                            {YES_NO_OPTIONS.map(opt => (
+                                                <FormItem key={opt.value} className="flex items-center space-x-1 space-y-0">
+                                                <FormControl><RadioGroupItem value={opt.value} disabled={isDisabled} /></FormControl>
+                                                <FormLabel className={`font-normal text-xs ${isDisabled ? 'cursor-not-allowed' : ''}`}>{opt.label}</FormLabel>
+                                                </FormItem>
+                                            ))}
+                                            </RadioGroup>
+                                        ) : (
+                                            <Input type="text" {...field} className="h-8 text-xs w-full sm:w-24"/>
+                                        )}
+                                        </FormControl>
+                                    </FormItem>
+                                    )}
+                                />
+                                ))}
+                            </div>
+                        </div>
+                    );
+                })}
               </CardContent>
             </Card>
 
