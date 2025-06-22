@@ -91,6 +91,11 @@ export async function createOrder(
   
   const data = validatedFields.data;
 
+  // Ensure the branchId from the form matches the user's context (security check)
+  if (data.branchId !== branchId) {
+      return { success: false, message: "Error de permisos: La sucursal no coincide." };
+  }
+
   const newOrderNumber = generateOrderNumber();
   const newOrder: Order = {
     id: newOrderNumber,
