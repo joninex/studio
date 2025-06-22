@@ -10,8 +10,8 @@ import { DEFAULT_STORE_SETTINGS } from "@/lib/constants";
 let mockUsers: User[] = [
   {
     uid: "admin123",
-    name: "Admin User",
-    email: "admin@example.com",
+    name: "Jesús (Super Admin)",
+    email: "jesus@mobyland.com.ar",
     avatarUrl: "https://i.pravatar.cc/150?u=admin123", // Example avatar
     role: "admin",
     status: "active",
@@ -34,7 +34,7 @@ let mockUsers: User[] = [
 
 // Mock password store
 let mockPasswords: Record<string, string> = {
-  "admin@example.com": "password123",
+  "jesus@mobyland.com.ar": "42831613aA@",
   "tech@example.com": "password123",
 };
 

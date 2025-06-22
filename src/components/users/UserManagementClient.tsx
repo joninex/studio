@@ -156,23 +156,19 @@ export function UserManagementClient() {
   };
 
   const getRoleDisplayName = (role: UserRole): string => {
-    switch (role) {
-      case 'admin': return 'Administrador';
-      case 'tecnico': return 'Técnico';
-      case 'recepcionista': return 'Recepcionista';
-      case 'cadete': return 'Cadete';
-      case 'proveedor_externo': return 'Proveedor Externo';
-      default: return role.charAt(0).toUpperCase() + role.slice(1);
-    }
+    const roleMap: Record<UserRole, string> = {
+      admin: 'Administrador',
+      tecnico: 'Técnico',
+      recepcionista: 'Recepcionista',
+    };
+    return roleMap[role] || role.charAt(0).toUpperCase() + role.slice(1);
   };
   
   const getRoleBadgeVariant = (role: UserRole): "default" | "secondary" | "outline" | "destructive" => {
     switch (role) {
       case 'admin': return 'default'; // Primary color
       case 'tecnico': return 'secondary'; // Secondary color
-      case 'recepcionista': return 'outline'; // Outline, can be styled further via CSS
-      case 'cadete': return 'default'; // Could use another color, e.g., bg-blue-500
-      case 'proveedor_externo': return 'outline'; // bg-purple-500 or similar
+      case 'recepcionista': return 'outline'; 
       default: return 'outline';
     }
   };
@@ -241,11 +237,7 @@ export function UserManagementClient() {
                   <TableCell className="font-medium">{user.name}</TableCell>
                   <TableCell>{user.email}</TableCell>
                   <TableCell>
-                     <Badge variant={getRoleBadgeVariant(user.role)} 
-                           className={
-                            user.role === 'cadete' ? 'bg-sky-500 hover:bg-sky-600 text-white' : 
-                            user.role === 'proveedor_externo' ? 'bg-purple-500 hover:bg-purple-600 text-white' : ''
-                           }>
+                     <Badge variant={getRoleBadgeVariant(user.role)}>
                         {getRoleDisplayName(user.role)}
                      </Badge>
                   </TableCell>
