@@ -22,7 +22,8 @@ import {
 } from "@/components/ui/form";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Eye, EyeOff, KeyRound, Mail } from "lucide-react";
+import { Eye, EyeOff, KeyRound, Mail, LogIn } from "lucide-react";
+import { LoadingSpinner } from "../shared/LoadingSpinner";
 
 
 export function LoginForm() {
@@ -114,7 +115,8 @@ export function LoginForm() {
               <p className="text-sm font-medium text-destructive">{error}</p>
             )}
             <Button type="submit" className="w-full" disabled={isPending}>
-              {isPending ? "Ingresando..." : "Ingresar"}
+              {isPending ? <LoadingSpinner size={16} className="mr-2"/> : <LogIn className="mr-2"/>}
+              {isPending ? "Verificando Credenciales..." : "Ingresar al Sistema"}
             </Button>
           </form>
         </Form>

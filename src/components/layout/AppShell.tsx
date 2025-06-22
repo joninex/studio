@@ -37,6 +37,7 @@ import {
   BarChart,
   Contact,
   Smartphone,
+  Lightbulb,
 } from "lucide-react";
 import { useAuth } from "@/providers/AuthProvider";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -46,6 +47,7 @@ const navItems = [
   { href: "/orders", label: "Órdenes", icon: FileText },
   { href: "/clients", label: "Clientes", icon: Contact },
   { href: "/inventory", label: "Inventario", icon: Warehouse },
+  { href: "/ai-guides", label: "Guías IA", icon: Lightbulb },
   { href: "/reports", label: "Reportes", icon: BarChart },
   { href: "/users", label: "Usuarios", icon: Users, adminOnly: true },
   { href: "/settings", label: "Configuración", icon: Settings },
@@ -67,9 +69,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <Sidebar side="left" variant="sidebar" collapsible="icon">
         <SidebarHeader>
            <Link href="/dashboard" className="flex items-center gap-2 p-2 hover:no-underline">
-            <Smartphone className="h-8 w-8 text-primary" />
-            <h1 className="font-headline text-xl font-semibold text-sidebar-foreground group-data-[collapsible=icon]:hidden">
-              NexusServ
+            <Smartphone className="h-8 w-8 text-primary transition-all duration-300 group-hover:animate-pulse" />
+            <h1 className="font-headline text-xl font-bold text-primary group-data-[collapsible=icon]:hidden">
+              NexusServ 360
             </h1>
           </Link>
         </SidebarHeader>
@@ -96,7 +98,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </SidebarMenu>
         </SidebarContent>
         <SidebarFooter>
-          <Button variant="ghost" className="w-full" onClick={handleLogout}>
+          <Button variant="ghost" className="w-full justify-start" onClick={handleLogout}>
             <LogOut className="mr-2 h-4 w-4" />
             <span className="group-data-[collapsible=icon]:hidden">Cerrar Sesión</span>
           </Button>
@@ -104,18 +106,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </Sidebar>
 
       <SidebarInset>
-        <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b bg-background px-4 shadow-sm sm:px-6">
+        <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b bg-background/80 px-4 shadow-sm backdrop-blur-sm sm:px-6">
           <div className="flex items-center">
             <SidebarTrigger className="md:hidden" />
-            <div className="hidden md:block">
-              {/* Could put breadcrumbs here */}
-            </div>
           </div>
           <div className="flex items-center gap-4">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                  <Avatar className="h-8 w-8">
+                  <Avatar className="h-8 w-8 border-2 border-transparent group-hover:border-primary">
                      <AvatarImage 
                       src={user?.avatarUrl || `https://i.pravatar.cc/150?u=${user?.uid}`} 
                       alt={user?.name || "Avatar de usuario"} 

@@ -21,6 +21,9 @@ export interface Client {
   phone: string;
   email?: string;
   address?: string;
+  notes?: string;
+  createdAt?: string | Date;
+  updatedAt?: string | Date;
 }
 
 export interface Checklist {
