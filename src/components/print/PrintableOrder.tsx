@@ -104,7 +104,7 @@ export function PrintableOrder({ order, branch }: PrintableOrderProps) {
                 <h4 className="font-bold mb-2">Clave / Patrón de Desbloqueo</h4>
                 <div className="flex justify-center items-center gap-4">
                     <Image
-                        src="https://storage.googleapis.com/project-os-prod-images/a64f7754-07d0-4f96-b258-3d12b7a4a275.png"
+                        src="https://static.vecteezy.com/system/resources/previews/005/148/464/non_2x/lock-screen-pattern-icon-in-flat-style-vector.jpg"
                         alt="Patrón de desbloqueo"
                         width={80}
                         height={80}
