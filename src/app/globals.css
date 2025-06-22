@@ -94,41 +94,72 @@ body {
 @media print {
   @page {
     size: A4;
-    margin: 1cm;
+    margin: 0;
   }
 
   body {
-    background-image: none !important;
-    background-color: #ffffff !important;
-    color: #000000 !important;
+    background: #fff !important;
+    color: #000 !important;
     font-family: 'Helvetica Neue', Arial, sans-serif;
-    font-size: 9pt;
+    font-size: 10pt;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
-  }
-
-  .printable-area {
-    display: block;
-    width: 100%;
-    margin: 0;
-    padding: 0;
-    box-shadow: none !important;
-    border: none !important;
-  }
-  
-  .printable-area * {
-    color: #000000 !important;
-    background-color: transparent !important;
-    box-shadow: none !important;
-    border-color: #dee2e6 !important;
   }
 
   .no-print {
     display: none !important;
   }
+
+  .printable-area-wrapper, .printable-area {
+    visibility: visible;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    box-shadow: none !important;
+    border: none !important;
+    background-color: #fff !important;
+  }
+
+  .printable-area * {
+    color: #000 !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
+    border-color: #ccc !important;
+  }
   
-  .print-only {
-    display: block !important;
+  .print-page {
+    width: 210mm;
+    min-height: 297mm;
+    padding: 15mm;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    background: white;
+    box-shadow: none;
+    border: none;
+  }
+
+  .print-header {
+    @apply flex justify-between items-start pb-4 border-b border-gray-300;
+  }
+  
+  .print-main {
+    @apply flex-grow;
+  }
+
+  .print-footer {
+    @apply mt-auto pt-4 border-t-2 border-dashed border-gray-400;
+  }
+
+  .print-section {
+    @apply mt-4;
+  }
+  
+  .section-title {
+    @apply font-bold border-b pb-1 mb-2 text-sm text-gray-800;
   }
   
   .page-break {
@@ -143,16 +174,7 @@ body {
     content: none !important;
   }
 
-  /* Hide everything except the printable area when printing from the main app */
   body > *:not(.printable-area-wrapper) {
     display: none;
-  }
-
-  .printable-area-wrapper, .printable-area {
-    visibility: visible;
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
   }
 }
