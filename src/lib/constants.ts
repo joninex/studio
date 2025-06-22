@@ -25,40 +25,38 @@ export const CLASSIFICATION_OPTIONS: Array<Classification | null> = [
 
 // Re-structured checklist based on user's legal and logical grouping
 export const CHECKLIST_ITEMS: Array<{ id: keyof Checklist; label: string, group: string, type?: 'boolean' | 'text' }> = [
-  // Condiciones Físicas
-  { id: "golpe", label: "Marcas o golpes visibles", group: "Condiciones Físicas", type: 'boolean' },
-  { id: "cristal", label: "Cristal astillado o roto", group: "Condiciones Físicas", type: 'boolean' },
-  { id: "marco", label: "Marco roto o dañado", group: "Condiciones Físicas", type: 'boolean' },
-  { id: "tapa", label: "Tapa trasera rota o floja", group: "Condiciones Físicas", type: 'boolean' },
-  { id: "humedad", label: "Señales de humedad interna", group: "Condiciones Físicas", type: 'boolean' },
-  
+  // Estado Físico
+  { id: "golpes_marcas", label: "Golpes o marcas visibles", group: "Estado Físico", type: 'boolean' },
+  { id: "cristal_roto", label: "Cristal astillado o roto", group: "Estado Físico", type: 'boolean' },
+  { id: "marco_doblado", label: "Marco doblado o dañado", group: "Estado Físico", type: 'boolean' },
+  { id: "tapa_trasera", label: "Tapa trasera rota o floja", group: "Estado Físico", type: 'boolean' },
+  { id: "signos_humedad", label: "Indicadores de humedad activos", group: "Estado Físico", type: 'boolean' },
+
   // Encendido y Energía
-  { id: "enciende", label: "Enciende", group: "Encendido y Energía", type: 'boolean' },
-  { id: "consumoV", label: "Consumo (Voltios)", group: "Encendido y Energía", type: 'text' },
-  { id: "mah", label: "Carga en batería (estimado)", group: "Encendido y Energía", type: 'text' },
+  { id: "enciende", label: "Equipo Enciende", group: "Encendido y Energía", type: 'boolean' },
+  { id: "consumo_voltaje", label: "Consumo Voltaje (V)", group: "Encendido y Energía", type: 'text' },
+  { id: "bateria_mah", label: "Batería Carga (mAh)", group: "Encendido y Energía", type: 'text' },
+
+  // Pantalla y Controles
+  { id: "imagen_pantalla", label: "Imagen en pantalla", group: "Pantalla y Controles", type: 'boolean' },
+  { id: "respuesta_tactil", label: "Respuesta táctil", group: "Pantalla y Controles", type: 'boolean' },
+  { id: "botones_fisicos", label: "Botones físicos", group: "Pantalla y Controles", type: 'boolean' },
+  { id: "sensor_huella_faceid", label: "Sensor Huella / Face ID", group: "Pantalla y Controles", type: 'boolean' },
+
+  // Audio y Comunicaciones
+  { id: "auricular_llamadas", label: "Auricular (Llamadas)", group: "Audio y Comunicaciones", type: 'boolean' },
+  { id: "altavoz_multimedia", label: "Altavoz (Multimedia)", group: "Audio y Comunicaciones", type: 'boolean' },
+  { id: "microfono", label: "Micrófono", group: "Audio y Comunicaciones", type: 'boolean' },
+  { id: "vibrador", label: "Vibrador", group: "Audio y Comunicaciones", type: 'boolean' },
   
-  // Pantalla y Táctil
-  { id: "imagen", label: "Imagen en pantalla", group: "Pantalla y Táctil", type: 'boolean' },
-  { id: "tactil", label: "Respuesta táctil", group: "Pantalla y Táctil", type: 'boolean' },
-
-  // Botones y Sensores
-  { id: "botones", label: "Botones físicos", group: "Botones y Sensores", type: 'boolean' },
-  { id: "sensor_huella", label: "Sensor de huella", group: "Botones y Sensores", type: 'boolean' },
-
   // Cámaras
-  { id: "cam_trasera", label: "Cámara trasera", group: "Cámaras", type: 'boolean' },
-  { id: "cam_delantera", label: "Cámara delantera", group: "Cámaras", type: 'boolean' },
-
-  // Audio y Vibración
-  { id: "microfono", label: "Micrófono", group: "Audio y Vibración", type: 'boolean' },
-  { id: "auricular", label: "Auricular (Llamadas)", group: "Audio y Vibración", type: 'boolean' },
-  { id: "parlante", label: "Altavoz (Multimedia)", group: "Audio y Vibración", type: 'boolean' },
-  { id: "vibrador", label: "Vibrador", group: "Audio y Vibración", type: 'boolean' },
+  { id: "camara_trasera", label: "Cámara trasera", group: "Cámaras", type: 'boolean' },
+  { id: "camara_delantera", label: "Cámara delantera", group: "Cámaras", type: 'boolean' },
 
   // Conectividad y Carga
-  { id: "pin_carga", label: "Pin de carga (puerto físico)", group: "Conectividad y Carga", type: 'boolean' },
+  { id: "puerto_carga", label: "Puerto de carga", group: "Conectividad y Carga", type: 'boolean' },
   { id: "wifi_bluetooth", label: "Conexión Wi-Fi / Bluetooth", group: "Conectividad y Carga", type: 'boolean' },
-  { id: "senal", label: "Señal de red móvil (SIM)", group: "Conectividad y Carga", type: 'boolean' },
+  { id: "senal_red_movil", label: "Señal de red móvil (SIM)", group: "Conectividad y Carga", type: 'boolean' },
 ];
 
 export const YES_NO_OPTIONS = [
@@ -69,7 +67,7 @@ export const YES_NO_OPTIONS = [
 
 export const LEGAL_TEXTS = {
   checklistDisclaimer: "Diagnóstico inicial no invasivo. El estado de componentes no comprobados se definirá en una etapa posterior.",
-  noUnlockCodeDisclaimer: "El cliente no ha dejado el código de desbloqueo. La empresa solo se responsabiliza por el componente intervenido y no por otras funciones no verificadas."
+  noUnlockCodeDisclaimer: "El cliente no ha dejado el código de desbloqueo. Por esta razón, no se han podido comprobar ciertas funciones del equipo. Acepta que la empresa solo se responsabiliza por el componente intervenido y no por otras funciones no verificadas."
 };
 
 

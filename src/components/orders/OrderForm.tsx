@@ -26,7 +26,7 @@ import { Separator } from "@/components/ui/separator";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 
 const FUNCTIONAL_CHECKLIST_IDS = CHECKLIST_ITEMS
-    .filter(item => item.group !== 'Condiciones Físicas' && item.type === 'boolean')
+    .filter(item => item.group !== 'Estado Físico' && item.type === 'boolean')
     .map(item => `checklist.${item.id}`);
 
 interface OrderFormProps {

@@ -94,15 +94,15 @@ body {
 @media print {
   @page {
     size: A4;
-    margin: 20mm;
+    margin: 15mm;
   }
 
   body {
     background-image: none !important;
     background-color: #ffffff !important;
     color: #000000 !important;
-    font-family: Arial, sans-serif;
-    font-size: 12pt;
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-size: 10pt;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
@@ -120,6 +120,7 @@ body {
     color: #000000 !important;
     background-color: transparent !important;
     box-shadow: none !important;
+    border-color: #dee2e6 !important;
   }
 
   .no-print {
@@ -133,8 +134,8 @@ body {
   .page-break {
     page-break-before: always;
   }
-
-  .section-container {
+  
+  .break-inside-avoid {
     page-break-inside: avoid;
   }
 

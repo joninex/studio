@@ -68,27 +68,38 @@ export interface Client {
 }
 
 export interface Checklist {
-  golpe?: 'si' | 'no' | 'sc';
-  cristal?: 'si' | 'no' | 'sc';
-  marco?: 'si' | 'no' | 'sc';
-  tapa?: 'si' | 'no' | 'sc';
-  humedad?: 'si' | 'no' | 'sc';
+  // Estado Físico
+  golpes_marcas?: 'si' | 'no' | 'sc';
+  cristal_roto?: 'si' | 'no' | 'sc';
+  marco_doblado?: 'si' | 'no' | 'sc';
+  tapa_trasera?: 'si' | 'no' | 'sc';
+  signos_humedad?: 'si' | 'no' | 'sc';
+  
+  // Encendido y Energía
   enciende: 'si' | 'no' | 'sc';
-  consumoV?: string;
-  mah?: string;
-  imagen: 'si' | 'no' | 'sc';
-  tactil: 'si' | 'no' | 'sc';
-  botones?: 'si' | 'no' | 'sc';
-  sensor_huella?: 'si' | 'no' | 'sc';
-  cam_trasera?: 'si' | 'no' | 'sc';
-  cam_delantera?: 'si' | 'no' | 'sc';
+  consumo_voltaje?: string;
+  bateria_mah?: string;
+  
+  // Pantalla y Controles
+  imagen_pantalla: 'si' | 'no' | 'sc';
+  respuesta_tactil: 'si' | 'no' | 'sc';
+  botones_fisicos?: 'si' | 'no' | 'sc';
+  sensor_huella_faceid?: 'si' | 'no' | 'sc';
+  
+  // Audio y Comunicaciones
+  auricular_llamadas?: 'si' | 'no' | 'sc';
+  altavoz_multimedia?: 'si' | 'no' | 'sc';
   microfono?: 'si' | 'no' | 'sc';
-  auricular?: 'si' | 'no' | 'sc';
-  parlante?: 'si' | 'no' | 'sc';
   vibrador?: 'si' | 'no' | 'sc';
-  pin_carga?: 'si' | 'no' | 'sc';
+
+  // Cámaras
+  camara_trasera?: 'si' | 'no' | 'sc';
+  camara_delantera?: 'si' | 'no' | 'sc';
+  
+  // Conectividad y Carga
+  puerto_carga?: 'si' | 'no' | 'sc';
   wifi_bluetooth?: 'si' | 'no' | 'sc';
-  senal?: 'si' | 'no' | 'sc';
+  senal_red_movil?: 'si' | 'no' | 'sc';
 }
 
 export type Classification = "rojo" | "verde" | "sin stock";
