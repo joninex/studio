@@ -1,7 +1,7 @@
 // src/app/(auth)/login/page.tsx
 import { LoginForm } from "@/components/auth/LoginForm";
-import { Smartphone } from "lucide-react";
 import Link from "next/link"; 
+import Image from "next/image";
 
 export default function LoginPage() {
   return (
@@ -10,9 +10,14 @@ export default function LoginPage() {
       
       <div className="w-full max-w-md space-y-8">
         <div className="text-center">
-           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-primary/50 bg-primary/20 text-primary shadow-[0_0_20px_theme(colors.primary.DEFAULT)]">
-             <Smartphone className="h-8 w-8"/>
-           </div>
+           <Image
+                src="https://placehold.co/128x128.png"
+                width={128}
+                height={128}
+                alt="NexusServ 360 Logo"
+                className="mx-auto mb-4 rounded-2xl border border-primary/50 bg-card p-2 shadow-[0_0_20px_theme(colors.primary.DEFAULT)]"
+                data-ai-hint="isometric schematic"
+           />
           <h1 className="font-headline text-4xl font-bold tracking-tight text-primary">
             NexusServ 360
           </h1>
