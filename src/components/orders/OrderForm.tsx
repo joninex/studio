@@ -171,16 +171,16 @@ export function OrderForm({ orderId }: OrderFormProps) {
           <div className="space-y-6">
             <Card>
               <CardHeader><CardTitle className="flex items-center gap-2"><ListChecks className="text-primary"/> Checklist de Recepción</CardTitle></CardHeader>
-              <CardContent className="space-y-2">
-                <div className="grid grid-cols-2 gap-x-6 gap-y-3">
+              <CardContent>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {CHECKLIST_ITEMS.map(item => (
                   <FormField
                     key={item.id}
                     control={form.control}
                     name={`checklist.${item.id as keyof OrderFormData['checklist']}`}
                     render={({ field }) => (
-                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                        <FormLabel className="text-sm font-normal">{item.label}</FormLabel>
+                      <FormItem className="flex flex-col sm:flex-row sm:items-center justify-between rounded-lg border p-3 shadow-sm gap-2">
+                        <FormLabel className="text-sm font-normal shrink-0">{item.label}</FormLabel>
                         <FormControl>
                           {item.type === 'boolean' ? (
                             <RadioGroup onValueChange={field.onChange} defaultValue={field.value as string} className="flex space-x-2">
@@ -192,7 +192,7 @@ export function OrderForm({ orderId }: OrderFormProps) {
                               ))}
                             </RadioGroup>
                           ) : (
-                            <Input type="text" {...field} className="h-8 text-xs w-20"/>
+                            <Input type="text" {...field} className="h-8 text-xs w-full sm:w-24"/>
                           )}
                         </FormControl>
                       </FormItem>

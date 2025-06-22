@@ -118,7 +118,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <SidebarInset>
         <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b bg-background/80 px-4 shadow-sm backdrop-blur-sm sm:px-6">
           <div className="flex items-center">
-            <SidebarTrigger className="md:hidden" />
+            <SidebarTrigger />
           </div>
           <div className="flex items-center gap-4">
             <ThemeToggle />
