@@ -92,86 +92,66 @@ body {
 }
 
 @media print {
-  body {
-    background-image: none !important;
-    color: #000 !important;
-    background-color: #fff !important;
+  @page {
+    size: A4;
+    margin: 20mm;
   }
 
-  /* Hide everything except the printable area */
-  body > *:not(.printable-area) {
-    display: none;
+  body {
+    background-image: none !important;
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    font-family: Arial, sans-serif;
+    font-size: 12pt;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
-  
-  /* Make the printable area fill the page */
+
   .printable-area {
-    visibility: visible;
-    position: absolute;
-    left: 0;
-    top: 0;
+    display: block;
     width: 100%;
-    height: auto;
-    padding: 20px;
     margin: 0;
-    border: none !important;
+    padding: 0;
     box-shadow: none !important;
+    border: none !important;
   }
   
   .printable-area * {
-    visibility: visible;
-    color: #000 !important;
+    color: #000000 !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
   }
-  
+
   .no-print {
     display: none !important;
   }
   
-  .print\:block {
+  .print-only {
     display: block !important;
   }
   
-  .print\:shadow-none {
-     box-shadow: none !important;
-  }
-  
-  .print\:border-none {
-    border: none !important;
+  .page-break {
+    page-break-before: always;
   }
 
-  .print\:p-0 {
-    padding: 0 !important;
-  }
-
-  .print\:border-t {
-    border-top-width: 1px !important;
-    border-color: #e5e7eb !important; /* light gray */
-  }
-
-  .print\:pt-4 {
-    padding-top: 1rem !important;
-  }
-
-  .print\:rounded-none {
-    border-radius: 0 !important;
-  }
-
-  .print\:pt-2 {
-    padding-top: 0.5rem !important;
-  }
-
-  .print\:pb-2 {
-    padding-bottom: 0.5rem !important;
+  .section-container {
+    page-break-inside: avoid;
   }
 
   a[href]:after {
     content: none !important;
   }
 
-  /* Ensure badges and other components have a simple, printable style */
-  .badge {
-    border: 1px solid #000 !important;
-    background: transparent !important;
-    color: #000 !important;
+  /* Hide everything except the printable area when printing from the main app */
+  body > *:not(.printable-area-wrapper) {
+    display: none;
   }
 
+  .printable-area-wrapper, .printable-area {
+    visibility: visible;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
 }

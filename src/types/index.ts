@@ -156,6 +156,8 @@ export interface Order {
   clientLastName?: string;
   deviceBrand: string;
   deviceModel: string;
+  deviceColor?: string;
+  accessories?: string;
   deviceIMEI: string;
   declaredFault: string;
   checklist: Checklist;
