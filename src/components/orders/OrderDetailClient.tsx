@@ -1,7 +1,7 @@
 // src/components/orders/OrderDetailClient.tsx
 "use client";
 
-import type { Order, User, Comment as OrderComment, OrderStatus, OrderPartItem, PaymentItem } from "@/types";
+import type { Order, User, Comment as OrderComment, OrderStatus, OrderPartItem, PaymentItem, Branch } from "@/types";
 import { useState, useTransition, useRef, useEffect } from "react";
 import { format, differenceInDays, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
@@ -17,7 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/providers/AuthProvider";
 import { addOrderComment, updateOrderStatus } from "@/lib/actions/order.actions";
 import { ORDER_STATUSES } from "@/lib/constants";
-import { AlertCircle, CalendarDays, DollarSign, FileText, Info, ListChecks, MessageSquare, Printer, User as UserIcon, Wrench, Package, CreditCard, Pencil, CheckCircle } from "lucide-react";
+import { AlertCircle, CalendarDays, DollarSign, FileText, Info, ListChecks, MessageSquare, Printer, User as UserIcon, Wrench, Package, CreditCard, Pencil, CheckCircle, Clock } from "lucide-react";
 import { LoadingSpinner } from "../shared/LoadingSpinner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
@@ -25,9 +25,10 @@ const validOrderStatusOptions = ORDER_STATUSES.filter(status => status !== "") a
 
 interface OrderDetailClientProps {
   order: Order;
+  branch: Branch | null;
 }
 
-export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProps) {
+export function OrderDetailClient({ order: initialOrder, branch }: OrderDetailClientProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
@@ -65,6 +66,24 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
     });
   };
   
+  const handleWhatsAppContact = () => {
+    if (!order.clientPhone) {
+        toast({ variant: "destructive", title: "Error", description: "El cliente no tiene un número de teléfono registrado."});
+        return;
+    }
+
+    const cleanedPhone = order.clientPhone.replace(/[\s+()-]/g, '');
+    const storeName = branch?.settings?.companyName || 'el taller';
+    const userName = user?.name || 'un técnico';
+    const estimatedTime = order.estimatedCompletionTime || 'el final del día';
+    
+    const message = `Hola ${order.clientName}, te contacto desde ${storeName}. Tu orden n° ${order.orderNumber} para el equipo ${order.deviceBrand} ${order.deviceModel} tiene una hora de finalización estimada para las ${estimatedTime}. Te avisaremos en cuanto esté lista. Saludos, ${userName}.`;
+    
+    const whatsappUrl = `https://wa.me/${cleanedPhone}?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, '_blank');
+  };
+
+
   if (!order) {
     return (
       <div className="flex flex-col items-center justify-center text-center p-8 border-2 border-dashed rounded-lg">
@@ -115,12 +134,13 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
             </div>
             </CardHeader>
             <CardContent className="space-y-6">
-            <div className="grid md:grid-cols-2 gap-6">
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <Card>
                     <CardHeader><CardTitle className="text-lg flex items-center gap-2"><UserIcon/>Datos del Cliente</CardTitle></CardHeader>
                     <CardContent className="text-sm space-y-1">
                         <p><strong>Nombre:</strong> {order.clientName || 'N/A'} {order.clientLastName || ''}</p>
                         <p><strong>ID Cliente:</strong> {order.clientId || 'N/A'}</p>
+                        <p><strong>Teléfono:</strong> {order.clientPhone || 'N/A'}</p>
                     </CardContent>
                 </Card>
                 <Card>
@@ -131,6 +151,14 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
                         <p><strong>IMEI/Serial:</strong> {order.deviceIMEI || 'N/A'}</p>
                         <p><strong>Falla Declarada:</strong> {order.declaredFault || 'N/A'}</p>
                         <p><strong>Riesgos/Daños:</strong> {order.damageRisk || "Ninguno reportado."}</p>
+                    </CardContent>
+                </Card>
+                 <Card>
+                    <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Clock/>Tiempos y Plazos</CardTitle></CardHeader>
+                    <CardContent className="text-sm space-y-1">
+                        <p><strong>Finalización Estimada:</strong> {order.estimatedCompletionTime || 'No especificada'}</p>
+                         <p><strong>Listo para Retiro:</strong> {order.readyForPickupDate ? format(parseISO(order.readyForPickupDate as string), "dd MMM yyyy", { locale: es }) : 'Pendiente'}</p>
+                        <p><strong>Entregado:</strong> {order.deliveryDate ? format(parseISO(order.deliveryDate as string), "dd MMM yyyy", { locale: es }) : 'Pendiente'}</p>
                     </CardContent>
                 </Card>
             </div>
@@ -212,7 +240,7 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
         </Card>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-6 no-print">
+      <div className="grid md:grid-cols-3 gap-6 no-print">
             {/* Status Update Card */}
             <Card>
                 <CardHeader><CardTitle className="flex items-center gap-2"><CheckCircle/>Actualizar Estado</CardTitle></CardHeader>
@@ -228,8 +256,19 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
                 </div>
                 <Button onClick={handleStatusChange} disabled={isPending || newStatus === order.status || !newStatus}>
                     {isPending && <LoadingSpinner size={16} className="mr-2"/>}
-                    Actualizar Estado
+                    Actualizar
                 </Button>
+                </CardContent>
+            </Card>
+
+             {/* Communication Card */}
+            <Card>
+                <CardHeader><CardTitle className="flex items-center gap-2"><MessageSquare/>Comunicación</CardTitle></CardHeader>
+                <CardContent>
+                    <Button onClick={handleWhatsAppContact} disabled={!order.clientPhone} className="w-full">
+                        <svg className="mr-2 h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91C2.13 13.66 2.61 15.31 3.44 16.74L2.01 21.99L7.47 20.59C8.83 21.36 10.38 21.81 12.04 21.81C17.5 21.81 21.95 17.36 21.95 11.9C21.95 6.45 17.5 2 12.04 2M12.04 3.63C16.56 3.63 20.32 7.39 20.32 11.91C20.32 16.43 16.56 20.19 12.04 20.19C10.56 20.19 9.15 19.81 7.94 19.11L7.54 18.89L4.41 19.71L5.26 16.67L5.03 16.27C4.24 14.93 3.76 13.45 3.76 11.91C3.76 7.39 7.49 3.63 12.04 3.63M17.06 14.24C16.88 14.73 15.76 15.33 15.24 15.48C14.73 15.63 14.29 15.72 13.66 15.54C12.87 15.31 11.75 14.88 10.52 13.73C9.03 12.33 8.03 10.63 7.82 10.15C7.61 9.66 8.04 9.27 8.23 9.08C8.38 8.94 8.56 8.76 8.78 8.76C9 8.76 9.21 8.85 9.39 9.12C9.57 9.39 9.99 10.29 10.08 10.47C10.17 10.65 10.12 10.83 9.94 11.01C9.76 11.19 9.63 11.33 9.49 11.5C9.36 11.64 9.22 11.8 9.09 11.93C8.97 12.06 8.82 12.21 9.04 12.59C9.27 12.97 9.88 13.73 10.7 14.5C11.66 15.41 12.39 15.75 12.72 15.89C13.05 16.03 13.27 15.99 13.46 15.8C13.64 15.62 14.28 14.91 14.46 14.64C14.64 14.37 14.82 14.33 15.04 14.37C15.27 14.42 16.32 14.94 16.54 15.08C16.77 15.21 16.95 15.26 17.02 15.35C17.09 15.44 17.09 15.83 17.06 14.24Z" /></svg>
+                        Contactar por WhatsApp
+                    </Button>
                 </CardContent>
             </Card>
 

@@ -170,6 +170,7 @@ export interface Order {
   clientId: string;
   clientName?: string;
   clientLastName?: string;
+  clientPhone?: string;
   deviceBrand: string;
   deviceModel: string;
   deviceColor?: string;
@@ -184,6 +185,7 @@ export interface Order {
   status: OrderStatus;
   classification?: Classification | null;
   entryDate: string | Date | Timestamp;
+  estimatedCompletionTime?: string;
   readyForPickupDate?: string | Date | Timestamp;
   deliveryDate?: string | Date | Timestamp;
   commentsHistory: Comment[];

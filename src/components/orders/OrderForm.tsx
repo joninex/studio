@@ -20,7 +20,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/providers/AuthProvider";
 import { AISuggestion, type Order } from "@/types";
 import { CHECKLIST_ITEMS, YES_NO_OPTIONS } from "@/lib/constants";
-import { AlertCircle, Bot, DollarSign, Info, ListChecks, LucideSparkles, User, Wrench } from "lucide-react";
+import { AlertCircle, Bot, DollarSign, Info, ListChecks, LucideSparkles, User, Wrench, Clock } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 
@@ -55,6 +55,7 @@ export function OrderForm({ orderId }: OrderFormProps) {
       checklist: defaultChecklistValues,
       damageRisk: "", costSparePart: 0, costLabor: 0,
       observations: "",
+      estimatedCompletionTime: "",
     },
   });
 
@@ -205,6 +206,7 @@ export function OrderForm({ orderId }: OrderFormProps) {
               <CardContent className="space-y-4">
                 <FormField control={form.control} name="damageRisk" render={({ field }) => ( <FormItem><FormLabel>Riesgo de Rotura (Daños preexistentes)</FormLabel><FormControl><Textarea placeholder="Describa daños específicos..." {...field} /></FormControl><FormMessage /></FormItem> )} />
                 <FormField control={form.control} name="observations" render={({ field }) => ( <FormItem><FormLabel>Observaciones Adicionales</FormLabel><FormControl><Textarea placeholder="Comentarios o información relevante para la orden..." {...field} /></FormControl><FormMessage /></FormItem> )} />
+                <FormField control={form.control} name="estimatedCompletionTime" render={({ field }) => ( <FormItem><FormLabel className="flex items-center gap-1"><Clock className="h-4 w-4"/>Hora Estimada de Finalización</FormLabel><FormControl><Input placeholder="Ej: 18:00hs, Fin del día" {...field} /></FormControl><FormDescription>Esta hora se usará en las notificaciones al cliente.</FormDescription><FormMessage /></FormItem> )} />
               </CardContent>
             </Card>
 

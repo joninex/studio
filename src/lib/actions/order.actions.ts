@@ -32,6 +32,7 @@ let mockOrders: Order[] = [
     observations: "Cliente indica que se cayó de una altura considerable. Posible daño en placa base además de la pantalla.",
     status: "En Diagnóstico",
     entryDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+    estimatedCompletionTime: "18:00hs",
     commentsHistory: [
       { id: 'cmt-1', userId: 'tech123', description: 'Se confirma pantalla rota, posible daño en flex de display.', timestamp: new Date(Date.now() - 1.5 * 24 * 60 * 60 * 1000).toISOString()}
     ],
@@ -115,7 +116,7 @@ export async function getOrders(filters?: { client?: string, orderNumber?: strin
     if (filters.client) {
       // This is a simplified search. In a real app, you'd join tables or do a more complex query.
       const clientLower = filters.client.toLowerCase();
-      const matchingClientIds = clients.filter(c => c.name.toLowerCase().includes(clientLower) || c.id.toLowerCase().includes(clientLower)).map(c => c.id);
+      const matchingClientIds = clients.filter(c => `${c.name} ${c.lastName}`.toLowerCase().includes(clientLower) || c.id.toLowerCase().includes(clientLower)).map(c => c.id);
       filteredOrders = filteredOrders.filter(o => matchingClientIds.includes(o.clientId));
     }
     if (filters.orderNumber) {
@@ -136,6 +137,7 @@ export async function getOrders(filters?: { client?: string, orderNumber?: strin
       ...order,
       clientName: client?.name || 'N/D',
       clientLastName: client?.lastName || '',
+      clientPhone: client?.phone || '',
     };
   });
 
@@ -153,6 +155,7 @@ export async function getOrderById(id: string): Promise<Order | null> {
     ...order,
     clientName: client?.name || 'N/D',
     clientLastName: client?.lastName || '',
+    clientPhone: client?.phone || '',
   };
 }
 

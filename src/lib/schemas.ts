@@ -51,6 +51,7 @@ export const OrderSchema = z.object({
   costSparePart: z.number().nonnegative(),
   costLabor: z.number().nonnegative(),
   observations: z.string().optional(),
+  estimatedCompletionTime: z.string().optional().or(z.literal('')),
   status: z.enum(validOrderStatuses).optional(),
   classification: z.enum(validClassificationOptions).nullable().optional(),
 });

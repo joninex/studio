@@ -10,6 +10,8 @@ import { Suspense } from "react";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import { OrderForm } from "@/components/orders/OrderForm";
 import { Card, CardContent } from "@/components/ui/card";
+import { getBranchById } from "@/lib/actions/branch.actions";
+import type { Branch } from "@/types";
 
 export const revalidate = 0; // Revalidate on every request
 
@@ -29,6 +31,8 @@ export default async function OrderDetailPage({
     notFound();
   }
   
+  const branch = await getBranchById(order.branchId);
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -58,7 +62,7 @@ export default async function OrderDetailPage({
             </CardContent>
           </Card>
         ) : (
-          <OrderDetailClient order={order} />
+          <OrderDetailClient order={order} branch={branch as Branch | null} />
         )}
       </Suspense>
     </div>
