@@ -100,7 +100,7 @@ export function PrintableOrder({ order }: PrintableOrderProps) {
                 <p><strong>Clave / Patrón de Desbloqueo:</strong> ____________________________________________</p>
             </div>
             <div className="mt-2 p-2 border border-dashed border-red-400 rounded text-center text-[9pt] font-semibold text-red-700">
-               <p>El cliente declara conocer que, en caso de no facilitar clave o patrón de desbloqueo, el técnico solo podrá verificar la reparación superficial solicitada. No se garantiza el funcionamiento total del equipo sin acceso completo al sistema operativo. El cliente asume esta limitación.</p>
+               <p>{settings?.unlockDisclaimerText}</p>
             </div>
         </div>
         
@@ -178,7 +178,7 @@ export function PrintableOrder({ order }: PrintableOrderProps) {
                     Declaro que retiro el equipo en las condiciones detalladas, y que fui informado del tipo de reparación, garantía y observaciones. Acepto las condiciones del servicio.
                 </p>
                 <p className="mt-2">
-                    Entiendo que la garantía de la reparación es de <strong>{settings?.warrantyConditions?.match(/\d+/)?.[0] || '90'} días</strong>, cubriendo exclusivamente la falla reparada y las piezas reemplazadas, según los términos y condiciones firmados en el comprobante de ingreso. La garantía no cubre daños por mal uso, golpes, humedad o intervención de terceros.
+                    {settings?.pickupConditions}
                 </p>
             </div>
         </div>
@@ -204,5 +204,3 @@ export function PrintableOrder({ order }: PrintableOrderProps) {
     </div>
   );
 }
-
-    
