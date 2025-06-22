@@ -26,7 +26,7 @@ export function PrintableOrder({ order, branch }: PrintableOrderProps) {
       label: item.label,
       value: order.checklist?.[item.id as keyof Checklist]
     }))
-    .filter(item => item.value && (typeof item.value === 'string' ? item.value.trim() !== '' : true));
+    .filter(item => item.value && item.value !== '');
 
 
   return (
@@ -87,14 +87,14 @@ export function PrintableOrder({ order, branch }: PrintableOrderProps) {
            <div className="mt-2">
              <h4 className="font-semibold mb-1">Checklist Técnico de Ingreso:</h4>
              {checklistItems.length > 0 ? (
-                <ul className="list-none space-y-1 text-[9pt] columns-2 gap-x-6">
+                <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-[9pt]">
                     {checklistItems.map(item => (
-                        <li key={item.label} className="border-b border-dotted flex justify-between">
+                        <div key={item.label} className="border-b border-dotted flex justify-between">
                            <span>{item.label}:</span>
                            <span className="font-semibold uppercase">{typeof item.value === 'string' ? item.value.toUpperCase() : (item.value ? 'SÍ' : 'NO')}</span>
-                        </li>
+                        </div>
                     ))}
-                </ul>
+                </div>
              ) : (
                 <p className="text-gray-500">No se completó el checklist de ingreso.</p>
              )}
@@ -120,11 +120,11 @@ export function PrintableOrder({ order, branch }: PrintableOrderProps) {
         </div>
         
         {/* Terms and Conditions */}
-        <div className="mt-4 text-[9pt] leading-snug">
-           <h3 className="font-bold text-center mb-2">Términos y Condiciones del Servicio de Reparación</h3>
+        <div className="mt-4 text-[8pt] leading-tight">
+           <h3 className="font-bold text-center mb-2 text-xs">Términos y Condiciones del Servicio de Reparación</h3>
            <div className="p-2 border border-gray-300 bg-gray-50 rounded">
              <p className="font-bold mb-2 text-center">IMPORTANTE: Este documento no implica presupuesto aprobado. El costo final será notificado para su aprobación.</p>
-             <ol className="list-decimal list-inside space-y-1">
+             <ol className="list-decimal list-inside space-y-0.5">
                 <li><strong>Diagnóstico y Presupuesto:</strong> {settings?.budgetVariationText}</li>
                 <li><strong>Responsabilidad sobre Datos:</strong> {settings?.dataLossPolicyText}</li>
                 <li><strong>Equipos sin Encender/Clave:</strong> {settings?.untestedDevicePolicyText}</li>
@@ -137,7 +137,7 @@ export function PrintableOrder({ order, branch }: PrintableOrderProps) {
         </div>
 
         {/* Signature Area */}
-        <footer className="mt-12">
+        <footer className="mt-8">
           <div className="flex justify-around items-end gap-12">
             <div className="flex-1 text-center">
               <div className="border-t border-black pt-1">Firma del Cliente</div>
@@ -183,9 +183,9 @@ export function PrintableOrder({ order, branch }: PrintableOrderProps) {
         </header>
 
         {/* Content */}
-        <div className="my-8">
-            <p className="mb-4"><strong>Cliente:</strong> {order.clientName || 'N/A'} {order.clientLastName || ''}</p>
-            <p className="mb-4"><strong>Dispositivo:</strong> {order.deviceBrand} {order.deviceModel} (IMEI/Serial: {order.deviceIMEI})</p>
+        <div className="my-6">
+            <p className="mb-2"><strong>Cliente:</strong> {order.clientName || 'N/A'} {order.clientLastName || ''}</p>
+            <p className="mb-2"><strong>Dispositivo:</strong> {order.deviceBrand} {order.deviceModel} (IMEI/Serial: {order.deviceIMEI})</p>
             <p className="mb-4"><strong>Fecha de Retiro:</strong> ______ / ______ / ________</p>
             
             <div className="p-4 border border-gray-300 rounded bg-gray-50 text-justify">
@@ -199,7 +199,7 @@ export function PrintableOrder({ order, branch }: PrintableOrderProps) {
         </div>
 
         {/* Signature Area */}
-        <footer className="mt-24">
+        <footer className="mt-16">
            <div className="flex justify-around items-end gap-12">
             <div className="flex-1 text-center">
               <div className="border-t border-black pt-1">Firma del Cliente</div>

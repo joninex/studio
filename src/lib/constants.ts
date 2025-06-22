@@ -24,27 +24,38 @@ export const CLASSIFICATION_OPTIONS: Array<Classification | null> = [
 ];
 
 export const CHECKLIST_ITEMS: Array<{ id: keyof Checklist; label: string, type?: 'boolean' | 'text' }> = [
-  { id: "golpe", label: "Marcas o golpes", type: 'boolean' },
-  { id: "cristal", label: "Cristal astillado/roto", type: 'boolean' },
-  { id: "marco", label: "Marco roto/dañado", type: 'boolean' },
-  { id: "tapa", label: "Tapa trasera", type: 'boolean' },
-  { id: "enciende", label: "Enciende", type: 'boolean' },
-  { id: "tactil", label: "Táctil", type: 'boolean' },
-  { id: "imagen", label: "Imagen", type: 'boolean' },
-  { id: "botones", label: "Botones", type: 'boolean' },
+  // --- Estado Físico Externo ---
+  { id: "cristal", label: "Cristal (Vidrio)", type: 'boolean' },
+  { id: "marco", label: "Marco y Bordes", type: 'boolean' },
+  { id: "tapa", label: "Tapa Trasera", type: 'boolean' },
+  { id: "golpe", label: "Marcas o Golpes", type: 'boolean' },
+  { id: "humedad", label: "Indicador de Humedad", type: 'boolean' },
+
+  // --- Funciones Esenciales ---
+  { id: "enciende", label: "Equipo Enciende", type: 'boolean' },
+  { id: "tactil", label: "Función Táctil", type: 'boolean' },
+  { id: "imagen", label: "Imagen en Pantalla", type: 'boolean' },
+  
+  // --- Audio y Vibración ---
+  { id: "auricular", label: "Auricular (Llamadas)", type: 'boolean' },
+  { id: "parlante", label: "Altavoz (Multimedia)", type: 'boolean' },
+  { id: "microfono", label: "Micrófono", type: 'boolean' },
+  { id: "vibrador", label: "Vibrador", type: 'boolean' },
+
+  // --- Cámaras y Sensores ---
   { id: "cam_trasera", label: "Cámara Trasera", type: 'boolean' },
   { id: "cam_delantera", label: "Cámara Delantera", type: 'boolean' },
-  { id: "vibrador", label: "Vibrador", type: 'boolean' },
-  { id: "microfono", label: "Micrófono", type: 'boolean' },
-  { id: "auricular", label: "Auricular", type: 'boolean' },
-  { id: "parlante", label: "Parlante/Altavoz", type: 'boolean' },
-  { id: "sensor_huella", label: "Sensor de huella", type: 'boolean' },
+  { id: "sensor_huella", label: "Sensor Biométrico", type: 'boolean' },
+
+  // --- Conectividad y Botones ---
   { id: "pin_carga", label: "Pin de Carga", type: 'boolean' },
-  { id: "wifi_bluetooth", label: "Wi-Fi / BT", type: 'boolean' },
-  { id: "senal", label: "Señal", type: 'boolean' },
-  { id: "humedad", label: "Humedad", type: 'boolean' },
+  { id: "botones", label: "Botones Físicos", type: 'boolean' },
+  { id: "senal", label: "Señal (SIM)", type: 'boolean' },
+  { id: "wifi_bluetooth", label: "Wi-Fi / Bluetooth", type: 'boolean' },
+
+  // --- Diagnóstico Técnico (Opcional) ---
   { id: "consumoV", label: "Consumo (V)", type: 'text' },
-  { id: "mah", label: "Batería (mAh)", type: 'text' },
+  { id: "mah", label: "Capacidad Batería (mAh)", type: 'text' },
 ];
 
 export const YES_NO_OPTIONS = [
