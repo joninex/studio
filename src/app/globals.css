@@ -98,12 +98,11 @@ body {
   }
 
   body {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
     background: #fff !important;
     color: #000 !important;
     font-family: 'Helvetica Neue', Arial, sans-serif;
-    font-size: 10pt;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
   }
 
   .no-print {
@@ -127,39 +126,52 @@ body {
     color: #000 !important;
     background-color: transparent !important;
     box-shadow: none !important;
-    border-color: #ccc !important;
   }
   
   .print-page {
     width: 210mm;
     min-height: 297mm;
-    padding: 15mm;
+    padding: 2cm;
     margin: 0 auto;
     display: flex;
     flex-direction: column;
     background: white;
-    box-shadow: none;
-    border: none;
+    font-size: 12px;
+    line-height: 1.5;
   }
 
   .print-header {
-    @apply flex justify-between items-start pb-4 border-b border-gray-300;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #ccc;
   }
   
   .print-main {
-    @apply flex-grow;
+    flex-grow: 1;
   }
 
   .print-footer {
-    @apply mt-auto pt-4 border-t-2 border-dashed border-gray-400;
+    margin-top: auto;
+    padding-top: 12px;
+    border-top: 1px solid #ccc;
+    font-size: 10px;
+    color: #666;
+    text-align: center;
   }
 
   .print-section {
-    @apply mt-4;
+    margin-top: 16px;
   }
   
   .section-title {
-    @apply font-bold border-b pb-1 mb-2 text-sm text-gray-800;
+    font-size: 14px;
+    font-weight: bold;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 4px;
+    margin-bottom: 8px;
+    color: #333;
   }
   
   .page-break {

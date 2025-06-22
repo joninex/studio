@@ -28,42 +28,39 @@ export function PrintableOrder({ order, branch }: PrintableOrderProps) {
     return acc;
   }, {} as Record<string, typeof CHECKLIST_ITEMS>);
 
-
   const PageOne = () => (
     <div className="print-page">
       <header className="print-header">
-        <div className="flex items-center gap-4">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           {settings?.companyLogoUrl ? (
             <Image
               src={settings.companyLogoUrl}
               alt={`${settings.companyName || ''} Logo`}
               width={120}
               height={40}
-              className="object-contain"
+              style={{ objectFit: 'contain' }}
               data-ai-hint="company logo"
             />
           ) : (
-            <div className="w-[120px] h-[40px] flex items-center justify-center">
-              <span className="text-gray-500 text-sm font-bold">{settings.companyName}</span>
+            <div style={{ width: '120px', height: '40px' }}>
+              <h1 style={{ fontSize: '18px', fontWeight: 'bold' }}>{settings.companyName}</h1>
             </div>
           )}
           <div>
-            <h1 className="font-bold text-base">{settings.companyName}</h1>
-            <p className="text-[9pt]">{settings.companyAddress}</p>
-            <p className="text-[9pt]">{settings.companyContactDetails}</p>
-            <p className="text-[9pt]">CUIT: {settings.companyCuit || "N/A"}</p>
+            <p style={{ fontSize: '10px' }}>{settings.companyAddress}</p>
+            <p style={{ fontSize: '10px' }}>{settings.companyContactDetails}</p>
+            <p style={{ fontSize: '10px' }}>CUIT: {settings.companyCuit || "N/A"}</p>
           </div>
         </div>
-        <div className="text-right">
-          <h2 className="font-bold text-xl">Orden de Recepción Técnica</h2>
-          <p className="font-mono text-lg mt-2">N° Orden: {order.orderNumber}</p>
-          <p>Fecha: {format(parseISO(order.entryDate as string), "dd/MM/yyyy HH:mm", { locale: es })}</p>
+        <div style={{ textAlign: 'right' }}>
+          <h2 style={{ fontSize: '18px', fontWeight: 'bold' }}>Orden de Recepción Técnica</h2>
+          <p style={{ fontFamily: 'monospace', fontSize: '16px', marginTop: '8px' }}>N° Orden: {order.orderNumber}</p>
+          <p style={{ fontSize: '10px' }}>Fecha: {format(parseISO(order.entryDate as string), "dd/MM/yyyy HH:mm", { locale: es })}</p>
         </div>
       </header>
 
       <main className="print-main">
-        {/* Client & Device Data */}
-        <section className="print-section grid grid-cols-2 gap-4">
+        <section className="print-section" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
           <div>
             <h3 className="section-title">Datos del Cliente</h3>
             <p><strong>Nombre:</strong> {order.clientName || 'N/A'} {order.clientLastName || ''}</p>
@@ -78,26 +75,31 @@ export function PrintableOrder({ order, branch }: PrintableOrderProps) {
           </div>
         </section>
 
-        {/* Declared Fault */}
         <section className="print-section">
           <h3 className="section-title">Falla Declarada por el Cliente</h3>
-          <p className="p-2 min-h-[40px]">{order.declaredFault || "N/A"}</p>
+          <p style={{ border: '1px solid #eee', padding: '8px', minHeight: '40px', borderRadius: '4px' }}>{order.declaredFault || "N/A"}</p>
         </section>
+        
+        {!order.unlockPatternProvided && (
+            <section className="print-section" style={{ border: '1px solid #f00', padding: '8px', borderRadius: '4px', background: '#fff0f0' }}>
+                <h3 className="section-title" style={{ color: '#d00' }}>¡ATENCIÓN! Equipo Sin Código de Desbloqueo</h3>
+                <p style={{ fontSize: '10px', color: '#d00' }}>{DEFAULT_STORE_SETTINGS.noUnlockCodeDisclaimer}</p>
+            </section>
+        )}
 
-        {/* Intake Checklist */}
-        <section className="print-section">
+        <section className="print-section break-inside-avoid">
           <h3 className="section-title">Checklist Técnico de Ingreso</h3>
-           <div className="text-[8pt] text-gray-600 mb-2">
+           <div style={{ fontSize: '10px', color: '#666', marginBottom: '8px' }}>
             <strong>Significado:</strong> ✅ Sí (Funciona) | ❌ No (Falla) | 🟡 S/C (Sin Comprobar por falta de acceso/energía)
           </div>
           {Object.entries(checklistGroups).map(([groupName, items]) => (
-            <div key={groupName} className="mb-2 break-inside-avoid">
-              <h4 className="font-bold text-gray-700">{groupName}</h4>
-              <div className="columns-2 gap-x-6">
+            <div key={groupName} style={{ marginBottom: '8px' }}>
+              <h4 style={{ fontWeight: 'bold', fontSize: '12px', color: '#333' }}>{groupName}</h4>
+              <div style={{ columns: 2, gap: '24px' }}>
                 {items.map(item => (
-                  <div key={item.id} className="flex justify-between text-xs py-0.5 border-b border-dotted">
+                  <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', padding: '2px 0', borderBottom: '1px dotted #ccc' }}>
                     <span>{item.label}:</span>
-                    <span className="font-semibold">{getChecklistValueDisplay(order.checklist[item.id as keyof Checklist])}</span>
+                    <span style={{ fontWeight: 'bold' }}>{getChecklistValueDisplay(order.checklist[item.id as keyof Checklist])}</span>
                   </div>
                 ))}
               </div>
@@ -105,39 +107,27 @@ export function PrintableOrder({ order, branch }: PrintableOrderProps) {
           ))}
         </section>
 
-        {/* Damage & Observations */}
         <section className="print-section">
             <h3 className="section-title">Daños y Observaciones Adicionales</h3>
-            <p className="p-2 min-h-[40px]">{order.damageRisk || "Sin daños pre-existentes reportados."}</p>
+            <p style={{ border: '1px solid #eee', padding: '8px', minHeight: '40px', borderRadius: '4px' }}>{order.damageRisk || "Sin daños pre-existentes reportados."}</p>
         </section>
-
-        {/* Legal Disclaimer for Unlock */}
-        {!order.unlockPatternProvided && (
-            <section className="print-section border-2 border-red-500 p-2 text-red-700">
-                <h3 className="section-title text-red-700">¡ATENCIÓN! Equipo Sin Código de Desbloqueo</h3>
-                <p className="text-xs">{DEFAULT_STORE_SETTINGS.noUnlockCodeDisclaimer}</p>
-            </section>
-        )}
       </main>
 
-      <footer className="print-footer space-y-2">
-        <div className="text-[8pt] leading-tight text-justify">
-          <h3 className="font-bold text-center mb-1">Cláusula de Conformidad de Ingreso</h3>
+      <footer className="print-footer">
+        <div style={{ fontSize: '10px', textAlign: 'justify', border: '1px solid #ccc', padding: '8px', borderRadius: '4px', background: '#f9f9f9' }}>
+          <h3 style={{ fontWeight: 'bold', textAlign: 'center', marginBottom: '4px' }}>Cláusula de Conformidad de Ingreso</h3>
           <p>{settings.intakeConformityText}</p>
         </div>
-        <div className="flex justify-around items-end gap-12 pt-16">
-          <div className="flex-1 text-center">
-            <div className="border-t-2 border-black pt-1">Firma del Cliente</div>
+        <div style={{ display: 'flex', justifyContent: 'space-around', alignItems: 'flex-end', gap: '48px', paddingTop: '64px' }}>
+          <div style={{ flex: 1, textAlign: 'center' }}>
+            <div style={{ borderTop: '1px solid black', paddingTop: '4px' }}>Firma del Cliente</div>
           </div>
-          <div className="flex-1 text-center">
-            <div className="border-t-2 border-black pt-1">Aclaración</div>
+          <div style={{ flex: 1, textAlign: 'center' }}>
+            <div style={{ borderTop: '1px solid black', paddingTop: '4px' }}>Aclaración</div>
           </div>
-          <div className="flex-1 text-center">
-            <div className="border-t-2 border-black pt-1">DNI</div>
+          <div style={{ flex: 1, textAlign: 'center' }}>
+            <div style={{ borderTop: '1px solid black', paddingTop: '4px' }}>DNI</div>
           </div>
-        </div>
-        <div className="text-center text-gray-500 text-[7pt] pt-2">
-          Uso Interno del Taller
         </div>
       </footer>
     </div>
@@ -146,24 +136,24 @@ export function PrintableOrder({ order, branch }: PrintableOrderProps) {
   const PageTwo = () => (
      <div className="print-page">
         <header className="print-header">
-          <div className="flex items-center gap-4">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
             {settings?.companyLogoUrl ? (
-              <Image src={settings.companyLogoUrl} alt={`${settings.companyName || ''} Logo`} width={120} height={40} className="object-contain" data-ai-hint="company logo" />
+              <Image src={settings.companyLogoUrl} alt={`${settings.companyName || ''} Logo`} width={120} height={40} style={{ objectFit: 'contain' }} data-ai-hint="company logo" />
             ) : (
-              <div className="w-[120px] h-[40px] flex items-center justify-center">
-                <span className="text-gray-500 text-sm font-bold">{settings.companyName}</span>
-              </div>
+             <div style={{ width: '120px', height: '40px' }}>
+              <h1 style={{ fontSize: '18px', fontWeight: 'bold' }}>{settings.companyName}</h1>
+            </div>
             )}
           </div>
-          <div className="text-right">
-            <h2 className="font-bold text-xl">Comprobante para Cliente</h2>
-            <p className="font-mono text-lg mt-2">N° Orden: {order.orderNumber}</p>
-            <p>Fecha Ingreso: {format(parseISO(order.entryDate as string), "dd/MM/yyyy HH:mm", { locale: es })}</p>
+          <div style={{ textAlign: 'right' }}>
+            <h2 style={{ fontSize: '18px', fontWeight: 'bold' }}>Comprobante para Cliente</h2>
+            <p style={{ fontFamily: 'monospace', fontSize: '16px', marginTop: '8px' }}>N° Orden: {order.orderNumber}</p>
+            <p style={{ fontSize: '10px' }}>Fecha Ingreso: {format(parseISO(order.entryDate as string), "dd/MM/yyyy HH:mm", { locale: es })}</p>
           </div>
         </header>
 
         <main className="print-main">
-            <section className="print-section grid grid-cols-2 gap-4">
+            <section className="print-section" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <div>
                     <h3 className="section-title">Cliente</h3>
                     <p>{order.clientName || 'N/A'} {order.clientLastName || ''}</p>
@@ -177,33 +167,33 @@ export function PrintableOrder({ order, branch }: PrintableOrderProps) {
             </section>
             
             <section className="print-section">
-                <h3 className="section-title">Falla Declarada</h3>
-                <p className="p-2 min-h-[40px]">{order.declaredFault || "N/A"}</p>
+                <h3 className="section-title">Falla Declarada por el Cliente</h3>
+                <p style={{ border: '1px solid #eee', padding: '8px', minHeight: '40px', borderRadius: '4px' }}>{order.declaredFault || "N/A"}</p>
             </section>
 
              <section className="print-section">
                 <h3 className="section-title">Estado Actual de la Orden</h3>
-                <p className="text-lg font-semibold text-primary">{order.status}</p>
+                <p style={{ fontSize: '16px', fontWeight: 'bold', color: '#007bff' }}>{order.status}</p>
             </section>
         </main>
         
-        <footer className="print-footer space-y-4">
-            <div className="text-center font-bold border-2 border-black p-2 rounded-md">
-                <p>IMPORTANTE: CONSERVE ESTE COMPROBANTE PARA RETIRAR SU EQUIPO</p>
+        <footer className="print-footer">
+            <div style={{ textAlign: 'center', border: '2px solid black', padding: '8px', borderRadius: '4px', marginBottom: '16px' }}>
+                <p style={{ fontWeight: 'bold', fontSize: '12px' }}>IMPORTANTE: CONSERVE ESTE COMPROBANTE PARA RETIRAR SU EQUIPO</p>
             </div>
-            <div className="text-[8pt] leading-tight">
-                <h3 className="font-bold text-center mb-2">Términos y Condiciones de Servicio</h3>
-                <p className="text-justify">{settings.clientVoucherLegalReminder}</p>
+            <div style={{ fontSize: '10px', textAlign: 'justify', border: '1px solid #ccc', padding: '8px', borderRadius: '4px', background: '#f9f9f9' }}>
+                <h3 style={{ fontWeight: 'bold', textAlign: 'center', marginBottom: '4px' }}>Términos y Condiciones del Servicio</h3>
+                <p>{settings.clientVoucherLegalReminder}</p>
             </div>
-             <div className="flex justify-around items-end gap-12 pt-16">
-                <div className="flex-1 text-center">
-                    <div className="border-t-2 border-black pt-1">Firma al Retirar</div>
+             <div style={{ display: 'flex', justifyContent: 'space-around', alignItems: 'flex-end', gap: '48px', paddingTop: '64px' }}>
+                <div style={{ flex: 1, textAlign: 'center' }}>
+                    <div style={{ borderTop: '1px solid black', paddingTop: '4px' }}>Firma al Retirar</div>
                 </div>
-                <div className="flex-1 text-center">
-                    <div className="border-t-2 border-black pt-1">Aclaración</div>
+                <div style={{ flex: 1, textAlign: 'center' }}>
+                    <div style={{ borderTop: '1px solid black', paddingTop: '4px' }}>Aclaración</div>
                 </div>
-                <div className="flex-1 text-center">
-                    <div className="border-t-2 border-black pt-1">DNI</div>
+                <div style={{ flex: 1, textAlign: 'center' }}>
+                    <div style={{ borderTop: '1px solid black', paddingTop: '4px' }}>DNI</div>
                 </div>
             </div>
         </footer>
