@@ -329,3 +329,18 @@ export async function recordPaymentForOrder(orderId: string, payment: PaymentIte
     // In a real app, find the order and push the payment to its paymentHistory array.
     return { success: true, message: "Pago registrado (simulado)." };
 }
+
+export async function logCustomerVoucherPrint(
+  orderId: string,
+  userName: string
+): Promise<{ success: boolean; message: string; order?: Order }> {
+  const orderIndex = mockOrders.findIndex(o => o.id === orderId);
+  if (orderIndex === -1) {
+    return { success: false, message: "Orden no encontrada." };
+  }
+  
+  const logDescription = `Comprobante para cliente impreso.`;
+  mockOrders[orderIndex].auditLog.push(createAuditLogEntry(userName, userName, logDescription));
+
+  return { success: true, message: "Acción registrada en la bitácora.", order: mockOrders[orderIndex] };
+}

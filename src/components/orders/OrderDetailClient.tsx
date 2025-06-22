@@ -15,7 +15,7 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/providers/AuthProvider";
-import { addOrderComment, updateOrderStatus, updateOrderConfirmations, updateOrderImei } from "@/lib/actions/order.actions";
+import { addOrderComment, updateOrderStatus, updateOrderConfirmations, updateOrderImei, logCustomerVoucherPrint } from "@/lib/actions/order.actions";
 import { ORDER_STATUSES, CHECKLIST_ITEMS } from "@/lib/constants";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -34,7 +34,8 @@ interface OrderDetailClientProps {
 export function OrderDetailClient({ order: initialOrder, branch }: OrderDetailClientProps) {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [isPending, startTransition] = useTransition();
+  const [isTransitioning, startTransition] = useTransition();
+  const [isPrinting, setIsPrinting] = useState(false);
   const [order, setOrder] = useState<Order>(initialOrder);
   const [newComment, setNewComment] = useState("");
   const [newStatus, setNewStatus] = useState<OrderStatus>(order?.status);
@@ -100,6 +101,24 @@ export function OrderDetailClient({ order: initialOrder, branch }: OrderDetailCl
         }
     });
   };
+
+  const handlePrintCustomerVoucher = async () => {
+    if (!user) {
+        toast({ variant: "destructive", title: "Error", description: "Debe iniciar sesión." });
+        return;
+    }
+    setIsPrinting(true);
+    try {
+        await logCustomerVoucherPrint(order.id, user.name);
+        toast({ title: "Acción Registrada", description: "La impresión del comprobante de cliente ha sido registrada en la bitácora." });
+        window.open(`/print/customer/${order.id}`, '_blank');
+    } catch (error) {
+        toast({ variant: "destructive", title: "Error", description: "No se pudo registrar la acción de impresión." });
+        console.error("Failed to log customer voucher print:", error);
+    } finally {
+        setIsPrinting(false);
+    }
+  };
   
   const handleWhatsAppContact = () => {
     if (!order.clientPhone) {
@@ -147,20 +166,30 @@ export function OrderDetailClient({ order: initialOrder, branch }: OrderDetailCl
     return acc;
   }, {} as Record<string, typeof CHECKLIST_ITEMS>);
 
+  const canPrintCustomerVoucher = ["Recibido", "En Reparación", "Listo para Entrega", "Entregado"].includes(order.status);
+
 
   return (
     <div className="space-y-6">
        <Alert className="no-print">
             <Printer className="h-4 w-4" />
-            <AlertTitle>Impresión de Comprobante</AlertTitle>
-            <AlertDescription className="flex justify-between items-center">
-                Imprima el documento para que el cliente lo firme de forma manuscrita. Luego, marque la casilla de confirmación en esta pantalla.
-                 <Button asChild variant="outline">
-                    <Link href={`/print/${order.id}`} target="_blank">
-                        <Printer className="mr-2 h-4 w-4" />
-                        Imprimir / Guardar PDF
-                    </Link>
-                </Button>
+            <AlertTitle>Documentación de la Orden</AlertTitle>
+            <AlertDescription className="flex justify-between items-center flex-wrap gap-2">
+                <span>Imprima los documentos necesarios para la firma del cliente.</span>
+                 <div className="flex gap-2">
+                    <Button asChild variant="outline">
+                        <Link href={`/print/${order.id}`} target="_blank">
+                            <Printer className="mr-2 h-4 w-4" />
+                            Imprimir Contrato de Ingreso
+                        </Link>
+                    </Button>
+                    {canPrintCustomerVoucher && (
+                         <Button variant="default" onClick={handlePrintCustomerVoucher} disabled={isPrinting}>
+                            {isPrinting ? <LoadingSpinner size={16} className="mr-2"/> : <FileText className="mr-2 h-4 w-4" />}
+                            Comprobante para Cliente
+                        </Button>
+                    )}
+                 </div>
             </AlertDescription>
         </Alert>
        
@@ -262,8 +291,8 @@ export function OrderDetailClient({ order: initialOrder, branch }: OrderDetailCl
                     </SelectContent>
                     </Select>
                 </div>
-                <Button onClick={handleStatusChange} disabled={isPending || newStatus === order.status || !newStatus}>
-                    {isPending && <LoadingSpinner size={16} className="mr-2"/>}
+                <Button onClick={handleStatusChange} disabled={isTransitioning || newStatus === order.status || !newStatus}>
+                    {isTransitioning && <LoadingSpinner size={16} className="mr-2"/>}
                     Actualizar
                 </Button>
                 </CardContent>
@@ -273,13 +302,13 @@ export function OrderDetailClient({ order: initialOrder, branch }: OrderDetailCl
                 <CardHeader><CardTitle className="flex items-center gap-2"><FileSignature/>Confirmaciones Legales</CardTitle></CardHeader>
                 <CardContent className="space-y-4">
                     <div className="flex items-center space-x-2">
-                        <Checkbox id="intakeSigned" checked={order.intakeFormSigned} onCheckedChange={(checked) => handleConfirmationChange('intake', !!checked)} disabled={isPending}/>
+                        <Checkbox id="intakeSigned" checked={order.intakeFormSigned} onCheckedChange={(checked) => handleConfirmationChange('intake', !!checked)} disabled={isTransitioning}/>
                         <label htmlFor="intakeSigned" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                         Comprobante de Ingreso firmado en físico
                         </label>
                     </div>
                      <div className="flex items-center space-x-2">
-                        <Checkbox id="pickupSigned" checked={order.pickupFormSigned} onCheckedChange={(checked) => handleConfirmationChange('pickup', !!checked)} disabled={isPending}/>
+                        <Checkbox id="pickupSigned" checked={order.pickupFormSigned} onCheckedChange={(checked) => handleConfirmationChange('pickup', !!checked)} disabled={isTransitioning}/>
                         <label htmlFor="pickupSigned" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                         Comprobante de Retiro firmado en físico
                         </label>
@@ -294,8 +323,8 @@ export function OrderDetailClient({ order: initialOrder, branch }: OrderDetailCl
                     <label htmlFor="imeiInput" className="text-sm font-medium">IMEI / Número de Serie</label>
                     <Input id="imeiInput" value={newImei} onChange={(e) => setNewImei(e.target.value)} placeholder="Completar IMEI/Serie"/>
                 </div>
-                <Button onClick={handleUpdateImei} disabled={isPending || newImei === order.deviceIMEI || !newImei}>
-                    {isPending && <LoadingSpinner size={16} className="mr-2"/>}
+                <Button onClick={handleUpdateImei} disabled={isTransitioning || newImei === order.deviceIMEI || !newImei}>
+                    {isTransitioning && <LoadingSpinner size={16} className="mr-2"/>}
                     Guardar
                 </Button>
                 </CardContent>
@@ -318,8 +347,8 @@ export function OrderDetailClient({ order: initialOrder, branch }: OrderDetailCl
                 </div>
                 <div className="space-y-2">
                     <Textarea placeholder="Agregar comentario técnico..." value={newComment} onChange={(e) => setNewComment(e.target.value)} />
-                    <Button onClick={handleAddComment} disabled={isPending || !newComment.trim()}>
-                    {isPending && <LoadingSpinner size={16} className="mr-2"/>}
+                    <Button onClick={handleAddComment} disabled={isTransitioning || !newComment.trim()}>
+                    {isTransitioning && <LoadingSpinner size={16} className="mr-2"/>}
                     Agregar Comentario
                     </Button>
                 </div>
