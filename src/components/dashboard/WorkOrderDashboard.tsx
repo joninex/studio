@@ -5,11 +5,9 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { Progress } from "@/components/ui/progress"
 import {
   Table,
   TableBody,
@@ -23,9 +21,32 @@ import {
   ListChecks,
   Users,
   AlertTriangle,
+  Eye,
 } from "lucide-react"
+import Link from "next/link";
+import { OrderStatusChart } from "./OrderStatusChart";
+import type { Order } from "@/types";
+import { Button } from "../ui/button";
+import { Badge } from "../ui/badge";
 
-export function WorkOrderDashboard() {
+interface DashboardStats {
+    activeOrders: number;
+    newOrdersToday: number;
+    monthlyRevenue: number;
+    pendingAlertsCount: number;
+}
+
+interface AlertOrder extends Order {
+    alertReason: string;
+}
+
+interface WorkOrderDashboardProps {
+    stats: DashboardStats;
+    alertOrders: AlertOrder[];
+    chartData: { name: string; count: number }[];
+}
+
+export function WorkOrderDashboard({ stats, alertOrders, chartData }: WorkOrderDashboardProps) {
   return (
     <div className="space-y-6">
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -35,7 +56,7 @@ export function WorkOrderDashboard() {
             <ListChecks className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">45</div>
+            <div className="text-2xl font-bold">{stats.activeOrders}</div>
             <p className="text-xs text-muted-foreground">
               Órdenes actualmente en proceso
             </p>
@@ -43,11 +64,11 @@ export function WorkOrderDashboard() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Clientes Atendidos (Hoy)</CardTitle>
+            <CardTitle className="text-sm font-medium">Ingresos Hoy</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">+12</div>
+            <div className="text-2xl font-bold">+{stats.newOrdersToday}</div>
             <p className="text-xs text-muted-foreground">
               Nuevas órdenes registradas hoy
             </p>
@@ -55,25 +76,25 @@ export function WorkOrderDashboard() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Ingresos Estimados (Mes)</CardTitle>
+            <CardTitle className="text-sm font-medium">Ingresos (Mes)</CardTitle>
             <BarChartIcon className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">$12,234.56</div>
+            <div className="text-2xl font-bold">${stats.monthlyRevenue.toFixed(2)}</div>
             <p className="text-xs text-muted-foreground">
-              Basado en órdenes aprobadas y finalizadas
+              Basado en órdenes finalizadas este mes
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Alertas Pendientes</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+            <AlertTriangle className="h-4 w-4 text-destructive" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-destructive">5</div>
+            <div className="text-2xl font-bold text-destructive">{stats.pendingAlertsCount}</div>
             <p className="text-xs text-muted-foreground">
-              Órdenes esperando repuestos o listas para retirar
+              Órdenes que requieren acción
             </p>
           </CardContent>
         </Card>
@@ -81,60 +102,64 @@ export function WorkOrderDashboard() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
         <Card className="col-span-4">
           <CardHeader>
-            <CardTitle>Actividad Reciente</CardTitle>
+            <CardTitle>Órdenes con Alertas</CardTitle>
             <CardDescription>
-              Últimas 5 órdenes actualizadas en el sistema.
+              Listado de órdenes que requieren una acción inmediata.
             </CardDescription>
           </CardHeader>
           <CardContent>
-             <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Cliente</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead>Técnico</TableHead>
-                    <TableHead>Fecha</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  <TableRow>
-                    <TableCell>
-                      <div className="font-medium">Juan Perez</div>
-                      <div className="hidden text-sm text-muted-foreground md:inline">
-                        iPhone 13
-                      </div>
-                    </TableCell>
-                    <TableCell>En Reparación</TableCell>
-                    <TableCell>C. Técnico</TableCell>
-                    <TableCell>2024-06-21</TableCell>
-                  </TableRow>
-                   <TableRow>
-                    <TableCell>
-                      <div className="font-medium">Maria Lopez</div>
-                      <div className="hidden text-sm text-muted-foreground md:inline">
-                        MacBook Pro M2
-                      </div>
-                    </TableCell>
-                    <TableCell>Listo para Entrega</TableCell>
-                    <TableCell>A. Lopez</TableCell>
-                    <TableCell>2024-06-21</TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
+            {alertOrders.length > 0 ? (
+                <div className="overflow-x-auto">
+                    <Table>
+                        <TableHeader>
+                        <TableRow>
+                            <TableHead>Cliente</TableHead>
+                            <TableHead>Equipo</TableHead>
+                            <TableHead>Estado (Razón de Alerta)</TableHead>
+                            <TableHead className="text-right">Acción</TableHead>
+                        </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                        {alertOrders.map((order) => (
+                            <TableRow key={order.id}>
+                                <TableCell>
+                                <div className="font-medium">{order.clientName} {order.clientLastName}</div>
+                                <div className="hidden text-sm text-muted-foreground md:inline">
+                                    #{order.orderNumber}
+                                </div>
+                                </TableCell>
+                                <TableCell>{order.deviceBrand} {order.deviceModel}</TableCell>
+                                <TableCell>
+                                    <Badge variant="destructive">{order.alertReason}</Badge>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                    <Button asChild variant="ghost" size="icon" title="Ver Orden">
+                                        <Link href={`/orders/${order.id}`}>
+                                            <Eye className="h-4 w-4" />
+                                        </Link>
+                                    </Button>
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                        </TableBody>
+                    </Table>
+                </div>
+            ) : (
+                <div className="text-center text-muted-foreground py-10">
+                    <p>¡Excelente! No hay órdenes con alertas pendientes.</p>
+                </div>
+            )}
           </CardContent>
         </Card>
         <Card className="col-span-3">
           <CardHeader>
-            <CardTitle>Rendimiento del Taller</CardTitle>
+            <CardTitle>Distribución de Órdenes</CardTitle>
             <CardDescription>
-              Distribución de órdenes de servicio por estado.
+              Cantidad de órdenes de servicio por estado actual.
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            {/* Placeholder for a chart */}
-            <div className="h-[200px] w-full bg-muted rounded-md flex items-center justify-center">
-              <p className="text-muted-foreground">Chart placeholder</p>
-            </div>
+          <CardContent className="h-[300px]">
+             <OrderStatusChart data={chartData} />
           </CardContent>
         </Card>
       </div>
