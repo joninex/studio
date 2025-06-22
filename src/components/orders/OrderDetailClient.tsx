@@ -73,7 +73,12 @@ export function OrderDetailClient({ order: initialOrder, branch }: OrderDetailCl
     }
 
     const cleanedPhone = order.clientPhone.replace(/[\s+()-]/g, '');
-    const storeName = branch?.settings?.companyName || 'el taller';
+    
+    // Multi-tenant logic: Uses the specific 'branch' prop passed to the component.
+    // This ensures the message uses the correct store's name, maintaining data isolation.
+    const storeName = branch?.settings?.companyName || 'el taller'; 
+    
+    // Uses the logged-in user's name for personalization.
     const userName = user?.name || 'un técnico';
     const estimatedTime = order.estimatedCompletionTime || 'el final del día';
     
