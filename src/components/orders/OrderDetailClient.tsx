@@ -2,7 +2,7 @@
 "use client";
 
 import type { Order, User, Comment as OrderComment, OrderStatus, OrderPartItem, PaymentItem } from "@/types";
-import { useState, useTransition, useRef } from "react";
+import { useState, useTransition, useRef, useEffect } from "react";
 import { format, differenceInDays, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import Image from "next/image";
@@ -32,13 +32,30 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
   const [isPending, startTransition] = useTransition();
   const [order, setOrder] = useState<Order>(initialOrder);
   const [newComment, setNewComment] = useState("");
-  const [newStatus, setNewStatus] = useState<OrderStatus>(order.status);
+  const [newStatus, setNewStatus] = useState<OrderStatus>(order?.status);
+  const [isPrinting, setIsPrinting] = useState(false);
   
   const printRef = useRef<HTMLDivElement>(null);
 
   const handlePrint = () => {
-    window.print();
+    if (!order) {
+      toast({ variant: "destructive", title: "Error", description: "Los datos de la orden no están listos. Por favor, espere un momento." });
+      return;
+    }
+    setIsPrinting(true);
   };
+
+  useEffect(() => {
+    if (isPrinting) {
+      // A small timeout ensures the DOM is fully updated before the print dialog opens.
+      const timer = setTimeout(() => {
+        window.print();
+        setIsPrinting(false); // Reset state after printing
+      }, 100);
+
+      return () => clearTimeout(timer);
+    }
+  }, [isPrinting]);
   
   const handleStatusChange = async () => {
     if (!user || !newStatus || newStatus === order.status) return;
@@ -69,6 +86,15 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
         }
     });
   };
+  
+  if (!order) {
+    return (
+      <div className="flex flex-col items-center justify-center text-center p-8 border-2 border-dashed rounded-lg">
+        <LoadingSpinner size={48} />
+        <p className="text-muted-foreground mt-4 font-semibold">Cargando orden...</p>
+      </div>
+    );
+  }
 
   const daysSinceReady = order.readyForPickupDate
     ? differenceInDays(new Date(), parseISO(order.readyForPickupDate as string))
@@ -95,7 +121,7 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
                         {settings?.companyLogoUrl && (
                              <Image 
                                 src={settings.companyLogoUrl} 
-                                alt={`${settings.companyName} Logo`} 
+                                alt={`${settings.companyName || ''} Logo`} 
                                 width={120} 
                                 height={40}
                                 className="object-contain"
@@ -103,9 +129,9 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
                             />
                         )}
                         <div>
-                            <h1 className="font-bold text-xl">{settings?.companyName}</h1>
-                            <p className="text-xs">{settings?.companyAddress}</p>
-                            <p className="text-xs">{settings?.companyContactDetails}</p>
+                            <h1 className="font-bold text-xl">{settings?.companyName || "Nombre de la Tienda"}</h1>
+                            <p className="text-xs">{settings?.companyAddress || "Dirección no especificada"}</p>
+                            <p className="text-xs">{settings?.companyContactDetails || "Contacto no especificado"}</p>
                         </div>
                     </div>
                      <div className="text-right">
@@ -142,17 +168,17 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
                     <Card className="print:border-t print:pt-4 print:rounded-none">
                     <CardHeader className="print:p-0"><CardTitle className="text-lg flex items-center gap-2"><UserIcon/>Datos del Cliente</CardTitle></CardHeader>
                     <CardContent className="text-sm space-y-1 print:p-0 print:pt-2">
-                        <p><strong>Nombre:</strong> {order.clientName} {order.clientLastName}</p>
-                        <p><strong>ID Cliente:</strong> {order.clientId}</p>
+                        <p><strong>Nombre:</strong> {order.clientName || 'N/A'} {order.clientLastName || ''}</p>
+                        <p><strong>ID Cliente:</strong> {order.clientId || 'N/A'}</p>
                     </CardContent>
                     </Card>
                     <Card className="print:border-t print:pt-4 print:rounded-none">
                     <CardHeader className="print:p-0"><CardTitle className="text-lg flex items-center gap-2"><Wrench/>Datos del Equipo</CardTitle></CardHeader>
                     <CardContent className="text-sm space-y-1 print:p-0 print:pt-2">
-                        <p><strong>Marca:</strong> {order.deviceBrand}</p>
-                        <p><strong>Modelo:</strong> {order.deviceModel}</p>
-                        <p><strong>IMEI/Serial:</strong> {order.deviceIMEI}</p>
-                        <p><strong>Falla Declarada:</strong> {order.declaredFault}</p>
+                        <p><strong>Marca:</strong> {order.deviceBrand || 'N/A'}</p>
+                        <p><strong>Modelo:</strong> {order.deviceModel || 'N/A'}</p>
+                        <p><strong>IMEI/Serial:</strong> {order.deviceIMEI || 'N/A'}</p>
+                        <p><strong>Falla Declarada:</strong> {order.declaredFault || 'N/A'}</p>
                         <p><strong>Riesgos/Daños:</strong> {order.damageRisk || "Ninguno reportado."}</p>
                     </CardContent>
                     </Card>
@@ -174,15 +200,15 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
                 <div className="grid grid-cols-2 gap-8">
                     <div>
                         <h4 className="font-bold mb-2">Condiciones de Retiro</h4>
-                        <p>{settings?.pickupConditions}</p>
+                        <p>{settings?.pickupConditions || "Condiciones de retiro no especificadas."}</p>
                     </div>
                      <div>
                         <h4 className="font-bold mb-2">Condiciones de Garantía</h4>
-                        <p>{settings?.warrantyConditions}</p>
+                        <p>{settings?.warrantyConditions || "Condiciones de garantía no especificadas."}</p>
                     </div>
                 </div>
                 <Separator className="my-4"/>
-                <p className="mb-12">{settings?.abandonmentPolicyText}</p>
+                <p className="mb-12">{settings?.abandonmentPolicyText || "Política de abandono no especificada."}</p>
                 <div className="flex justify-around items-end">
                     <div className="text-center">
                         <hr className="border-gray-400 mb-1" />
