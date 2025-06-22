@@ -173,6 +173,7 @@ export interface Order {
   assignedTechnicianName?: string;
   partsUsed?: OrderPartItem[];
   paymentHistory?: PaymentItem[];
+  storeSettingsSnapshot?: StoreSettings;
 }
 
 export type AISuggestion = {

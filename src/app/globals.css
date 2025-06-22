@@ -90,3 +90,88 @@ body {
     background-size: 2rem 2rem;
   }
 }
+
+@media print {
+  body {
+    background-image: none !important;
+    color: #000 !important;
+    background-color: #fff !important;
+  }
+
+  /* Hide everything except the printable area */
+  body > *:not(.printable-area) {
+    display: none;
+  }
+  
+  /* Make the printable area fill the page */
+  .printable-area {
+    visibility: visible;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: auto;
+    padding: 20px;
+    margin: 0;
+    border: none !important;
+    box-shadow: none !important;
+  }
+  
+  .printable-area * {
+    visibility: visible;
+    color: #000 !important;
+  }
+  
+  .no-print {
+    display: none !important;
+  }
+  
+  .print\:block {
+    display: block !important;
+  }
+  
+  .print\:shadow-none {
+     box-shadow: none !important;
+  }
+  
+  .print\:border-none {
+    border: none !important;
+  }
+
+  .print\:p-0 {
+    padding: 0 !important;
+  }
+
+  .print\:border-t {
+    border-top-width: 1px !important;
+    border-color: #e5e7eb !important; /* light gray */
+  }
+
+  .print\:pt-4 {
+    padding-top: 1rem !important;
+  }
+
+  .print\:rounded-none {
+    border-radius: 0 !important;
+  }
+
+  .print\:pt-2 {
+    padding-top: 0.5rem !important;
+  }
+
+  .print\:pb-2 {
+    padding-bottom: 0.5rem !important;
+  }
+
+  a[href]:after {
+    content: none !important;
+  }
+
+  /* Ensure badges and other components have a simple, printable style */
+  .badge {
+    border: 1px solid #000 !important;
+    background: transparent !important;
+    color: #000 !important;
+  }
+
+}

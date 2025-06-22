@@ -40,9 +40,12 @@ export default async function OrderDetailPage({
               <Button variant="outline"><ArrowLeft className="mr-2 h-4 w-4" /> Volver al Listado</Button>
             </Link>
             {!isEditMode && (
-              <Link href={`/orders/${orderId}?edit=true`}>
-                <Button><Edit className="mr-2 h-4 w-4" /> Editar Orden</Button>
-              </Link>
+              <>
+                <Link href={`/orders/${orderId}?edit=true`}>
+                  <Button><Edit className="mr-2 h-4 w-4" /> Editar Orden</Button>
+                </Link>
+                {/* The print button will be rendered inside OrderDetailClient to have access to its print handler */}
+              </>
             )}
           </div>
         }

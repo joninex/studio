@@ -1,11 +1,13 @@
 // src/lib/actions/order.actions.ts
 "use server";
 
-import type { Order, User, Comment as OrderCommentType, OrderStatus } from "@/types";
+import type { Order, User, Comment as OrderCommentType, OrderStatus, OrderPartItem, PaymentItem } from "@/types";
 import { OrderSchema } from "@/lib/schemas";
 import type { z } from "zod";
 import { suggestRepairSolutions } from "@/ai/flows/suggest-repair-solutions";
 import { getMockClients } from "./client.actions";
+import { getStoreSettingsForUser } from "./settings.actions";
+import { DEFAULT_STORE_SETTINGS } from "../constants";
 
 let mockOrders: Order[] = [
   {
@@ -20,7 +22,6 @@ let mockOrders: Order[] = [
       enciende: 'si',
       tactil: 'no',
       imagen: 'si',
-      // ... other checklist items
     },
     damageRisk: "Cristal trizado en esquina superior.",
     costSparePart: 150.00,
@@ -30,7 +31,15 @@ let mockOrders: Order[] = [
     entryDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
     commentsHistory: [
       { id: 'cmt-1', userId: 'tech123', description: 'Se confirma pantalla rota, posible daño en flex de display.', timestamp: new Date(Date.now() - 1.5 * 24 * 60 * 60 * 1000).toISOString()}
-    ]
+    ],
+    partsUsed: [
+      { partId: "PART001", partName: "Pantalla iPhone 12 Original", quantity: 1, unitPrice: 150.00 }
+    ],
+    paymentHistory: [
+      { id: "PAY001", amount: 100, method: 'efectivo', date: new Date().toISOString() },
+      { id: "PAY002", amount: 100, method: 'tarjeta', date: new Date().toISOString() }
+    ],
+    storeSettingsSnapshot: DEFAULT_STORE_SETTINGS
   },
   {
     id: "ORD002",
@@ -42,7 +51,6 @@ let mockOrders: Order[] = [
     declaredFault: "No carga la batería",
     checklist: {
       enciende: 'no',
-      // ... other checklist items
     },
     damageRisk: "",
     costSparePart: 80.00,
@@ -51,7 +59,12 @@ let mockOrders: Order[] = [
     status: "Listo para Entrega",
     readyForPickupDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
     entryDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-    commentsHistory: []
+    commentsHistory: [],
+    storeSettingsSnapshot: {
+      ...DEFAULT_STORE_SETTINGS,
+      companyName: "Tech Repair Plus",
+      companyAddress: "Avenida Siempreviva 742"
+    }
   },
 ];
 let orderCounter = mockOrders.length;
@@ -73,6 +86,10 @@ export async function createOrder(
   }
   
   const data = validatedFields.data;
+  
+  // Snapshot the store settings at the time of order creation
+  const storeSettingsSnapshot = await getStoreSettingsForUser(userId);
+
   const newOrderNumber = generateOrderNumber();
   const newOrder: Order = {
     id: newOrderNumber,
@@ -81,6 +98,7 @@ export async function createOrder(
     entryDate: new Date().toISOString(),
     commentsHistory: [],
     status: "Recibido",
+    storeSettingsSnapshot, // Attach the settings snapshot
   };
 
   mockOrders.push(newOrder);
@@ -127,8 +145,17 @@ export async function getOrders(filters?: { client?: string, orderNumber?: strin
 export async function getOrderById(id: string): Promise<Order | null> {
   await new Promise(resolve => setTimeout(resolve, 300));
   const order = mockOrders.find(o => o.id === id);
-  return order || null;
+  if (!order) return null;
+
+  // Add client name for display purposes
+  const client = await getMockClients().then(clients => clients.find(c => c.id === order.clientId));
+  return {
+    ...order,
+    clientName: client?.name || 'N/D',
+    clientLastName: client?.lastName || '',
+  };
 }
+
 
 export async function updateOrder(
   orderId: string,
@@ -166,6 +193,8 @@ export async function updateOrderStatus(
   mockOrders[orderIndex].status = status;
   if (status === "Listo para Entrega") {
     mockOrders[orderIndex].readyForPickupDate = new Date().toISOString();
+  } else if (status === "Entregado") {
+    mockOrders[orderIndex].deliveryDate = new Date().toISOString();
   }
 
   return { success: true, message: "Estado de la orden actualizado.", order: mockOrders[orderIndex] };
@@ -204,4 +233,16 @@ export async function getRepairSuggestions(
     console.error("Error getting AI suggestions:", error);
     return { success: false, message: "Error al obtener sugerencias de la IA." };
   }
+}
+
+export async function addPartToOrder(orderId: string, part: OrderPartItem): Promise<{ success: boolean; message: string }> {
+    console.log(`Simulating adding part ${part.partId} to order ${orderId}`);
+    // In a real app, find the order and push the part to its partsUsed array.
+    return { success: true, message: "Parte agregada (simulado)." };
+}
+
+export async function recordPaymentForOrder(orderId: string, payment: PaymentItem): Promise<{ success: boolean; message: string }> {
+    console.log(`Simulating recording payment of ${payment.amount} for order ${orderId}`);
+    // In a real app, find the order and push the payment to its paymentHistory array.
+    return { success: true, message: "Pago registrado (simulado)." };
 }
