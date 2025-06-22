@@ -42,7 +42,6 @@ export function ResetPasswordForm() {
       setMessage(result.message);
       if (result.success) {
         toast({ title: "Solicitud Enviada", description: result.message });
-        form.reset();
       } else {
         toast({ variant: "destructive", title: "Error", description: result.message });
       }
@@ -50,7 +49,7 @@ export function ResetPasswordForm() {
   };
 
   return (
-    <Card className="w-full shadow-xl">
+    <Card className="w-full">
       <CardHeader>
         <CardTitle className="font-headline text-2xl text-center">Restablecer</CardTitle>
       </CardHeader>

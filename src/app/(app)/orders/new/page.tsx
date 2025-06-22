@@ -10,7 +10,7 @@ export default function NewOrderPage() {
         title="Nueva Orden de Servicio"
         description="Complete los detalles para registrar un nuevo equipo en el taller."
       />
-      <Card className="shadow-xl">
+      <Card>
         <CardContent className="p-6">
           <OrderForm />
         </CardContent>

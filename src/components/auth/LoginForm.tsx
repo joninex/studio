@@ -57,7 +57,7 @@ export function LoginForm() {
   };
 
   return (
-    <Card className="w-full shadow-xl">
+    <Card className="w-full">
       <CardHeader>
         <CardTitle className="font-headline text-2xl text-center">Iniciar Sesión</CardTitle>
       </CardHeader>
@@ -101,7 +101,6 @@ export function LoginForm() {
                         size="icon"
                         className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
                         onClick={() => setShowPassword(!showPassword)}
-                        aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
                       >
                         {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </Button>
@@ -124,7 +123,6 @@ export function LoginForm() {
           <Link href="/reset-password" className="text-sm text-primary hover:underline">
             ¿Olvidó su contraseña?
           </Link>
-          {/* Link to Register Page will be added in login/page.tsx for better structure */}
       </CardFooter>
     </Card>
   );

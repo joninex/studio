@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Eye, FilterX, Search, Trash2, Edit } from "lucide-react";
+import { Eye, FilterX, Search, Edit } from "lucide-react";
 import { ORDER_STATUSES } from "@/lib/constants";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import { Badge } from "@/components/ui/badge";
@@ -82,7 +82,6 @@ export function OrderListClient({ initialOrders, initialFilters }: OrderListClie
       if (filters.imei) params.set('imei', filters.imei);
       if (filters.status) params.set('status', filters.status);
       router.push(`${pathname}?${params.toString()}`);
-      // fetchOrders will be triggered by useEffect watching searchParams
     });
   };
 
@@ -90,11 +89,9 @@ export function OrderListClient({ initialOrders, initialFilters }: OrderListClie
     startTransition(() => {
       setFilters({ client: "", orderNumber: "", imei: "", status: "" });
       router.push(pathname);
-      // fetchOrders will be triggered by useEffect watching searchParams
     });
   };
 
-  // Fetch orders when filters derived from searchParams change
   useEffect(() => {
     const currentFilters = {
         client: searchParams.get('client') || '',
@@ -106,37 +103,13 @@ export function OrderListClient({ initialOrders, initialFilters }: OrderListClie
   }, [searchParams, fetchOrders]);
 
 
-  const getStatusBadgeVariant = (status: OrderStatus): "default" | "secondary" | "destructive" | "outline" => {
-    switch (status) {
-      case "Presupuesto Aprobado":
-      case "En Espera de Repuestos":
-      case "En Reparación":
-      case "Reparado":
-      case "En Control de Calidad":
-      case "Listo para Entrega":
-        return "default"; 
-      case "Entregado":
-        return "secondary";
-      case "Recibido":
-      case "En Diagnóstico":
-      case "Presupuestado":
-        return "outline"; 
-      case "Presupuesto Rechazado":
-      case "Sin Reparación":
-        return "destructive";
-      default:
-        return "outline";
-    }
-  };
-
-
   return (
-    <Card className="shadow-xl">
+    <Card>
       <CardHeader>
         <CardTitle>Filtros de Búsqueda</CardTitle>
         <div className="grid grid-cols-1 gap-4 pt-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
           <Input
-            placeholder="Cliente (Nombre/Apellido)"
+            placeholder="Cliente (Nombre/ID)"
             value={filters.client}
             onChange={(e) => handleFilterChange("client", e.target.value)}
           />
@@ -162,10 +135,10 @@ export function OrderListClient({ initialOrders, initialFilters }: OrderListClie
             </SelectContent>
           </Select>
           <div className="flex gap-2">
-            <Button onClick={applyFilters} disabled={isPending || isLoading} className="w-full sm:w-auto">
+            <Button onClick={applyFilters} disabled={isPending || isLoading}>
               <Search className="mr-2 h-4 w-4" /> Buscar
             </Button>
-            <Button onClick={clearFilters} variant="outline" disabled={isPending || isLoading} className="w-full sm:w-auto">
+            <Button onClick={clearFilters} variant="outline" disabled={isPending || isLoading}>
               <FilterX className="mr-2 h-4 w-4" /> Limpiar
             </Button>
           </div>
@@ -205,22 +178,20 @@ export function OrderListClient({ initialOrders, initialFilters }: OrderListClie
                     <TableCell>{order.deviceBrand} {order.deviceModel}</TableCell>
                     <TableCell className="max-w-xs truncate">{order.declaredFault}</TableCell>
                     <TableCell>
-                      <Badge variant={getStatusBadgeVariant(order.status)}>{order.status || "N/A"}</Badge>
+                      <Badge variant={order.status === 'Listo para Entrega' ? 'default' : 'secondary'}>{order.status}</Badge>
                     </TableCell>
                     <TableCell>
-                      {order.entryDate ? format(new Date(order.entryDate as string), "dd MMM yyyy, HH:mm", { locale: es }) : 'N/A'}
+                      {format(new Date(order.entryDate), "dd MMM yyyy, HH:mm", { locale: es })}
                     </TableCell>
                     <TableCell className="text-right">
                       <Button asChild variant="ghost" size="icon">
                         <Link href={`/orders/${order.id}`}>
                           <Eye className="h-4 w-4" />
-                          <span className="sr-only">Ver Orden</span>
                         </Link>
                       </Button>
                        <Button asChild variant="ghost" size="icon">
                         <Link href={`/orders/${order.id}?edit=true`}>
                           <Edit className="h-4 w-4" />
-                           <span className="sr-only">Editar Orden</span>
                         </Link>
                       </Button>
                     </TableCell>

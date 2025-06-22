@@ -51,8 +51,7 @@ export function RegisterForm() {
       if (result.success) {
         toast({ title: "Registro Enviado", description: result.message });
         setSuccessMessage(result.message + " Puede cerrar esta ventana o será redirigido.");
-        form.reset();
-        // Optionally redirect after a delay or let user close
+        // Optionally redirect after a delay
         setTimeout(() => router.push("/login"), 5000);
       } else {
         setError(result.message);
@@ -63,25 +62,19 @@ export function RegisterForm() {
 
   if (successMessage) {
     return (
-      <Card className="w-full shadow-xl">
+      <Card className="w-full">
         <CardHeader>
-          <CardTitle className="font-headline text-2xl text-center flex items-center justify-center">
-            <CheckCircle className="h-7 w-7 text-green-500 mr-2"/> Registro Enviado
-          </CardTitle>
+          <CardTitle className="font-headline text-2xl text-center">Registro Enviado</CardTitle>
         </CardHeader>
         <CardContent className="text-center">
           <p>{successMessage}</p>
-          <Button onClick={() => router.push("/login")} className="mt-4">
-            Ir a Iniciar Sesión
-          </Button>
         </CardContent>
       </Card>
     );
   }
 
-
   return (
-    <Card className="w-full shadow-xl">
+    <Card className="w-full">
       <CardHeader>
         <CardTitle className="font-headline text-2xl text-center">Crear Cuenta</CardTitle>
       </CardHeader>
@@ -141,7 +134,6 @@ export function RegisterForm() {
                         size="icon"
                         className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
                         onClick={() => setShowPassword(!showPassword)}
-                        aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
                       >
                         {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </Button>
@@ -172,7 +164,6 @@ export function RegisterForm() {
                         size="icon"
                         className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        aria-label={showConfirmPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
                       >
                         {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </Button>
@@ -195,6 +186,3 @@ export function RegisterForm() {
     </Card>
   );
 }
-
-// Need to add CheckCircle to lucide imports if not already there globally
-import { CheckCircle } from "lucide-react";

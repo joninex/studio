@@ -2,29 +2,22 @@
 import { LoginForm } from "@/components/auth/LoginForm";
 import Image from "next/image";
 import Link from "next/link"; // Import Link for Register button
-import { DEFAULT_STORE_SETTINGS } from "@/lib/constants";
 
-
-export default async function LoginPage() {
-  const companyName = DEFAULT_STORE_SETTINGS.companyName || "JO-SERVICE Tech Manager";
-  const logoUrl = DEFAULT_STORE_SETTINGS.companyLogoUrl || "https://placehold.co/150x50.png?text=Logo";
-
-
+export default function LoginPage() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
       <div className="w-full max-w-md space-y-8">
         <div className="text-center">
            <Image 
-            src={logoUrl}
-            alt={`${companyName} Logo`}
+            src="https://placehold.co/150x50.png?text=NexusServ+360"
+            alt="NexusServ 360 Logo"
             width={150} 
             height={50}
-            className="mx-auto mb-6 object-contain"
+            className="mx-auto mb-6"
             data-ai-hint="company logo"
-            priority
           />
           <h1 className="font-headline text-3xl font-bold tracking-tight text-primary">
-            {companyName}
+            NexusServ 360
           </h1>
           <p className="mt-2 text-muted-foreground">
             Bienvenido. Por favor, inicie sesión.

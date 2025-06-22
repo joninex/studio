@@ -4,8 +4,8 @@ import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/providers/AuthProvider';
 
 export const metadata: Metadata = {
-  title: 'JO-SERVICE Tech Manager',
-  description: 'Gestión de Taller para JO-SERVICE',
+  title: 'NexusServ 360',
+  description: 'Gestión Integral de Órdenes de Reparación',
 };
 
 export default function RootLayout({

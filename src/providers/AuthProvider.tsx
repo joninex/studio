@@ -12,7 +12,6 @@ interface AuthContextType {
   loading: boolean;
   isLoggedIn: boolean;
   logout: () => Promise<void>;
-  // login function will be handled by a server action + local state update
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -42,25 +41,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const isAuthPage = pathname?.startsWith("/login") || pathname?.startsWith("/reset-password");
       if (!user && !isAuthPage) {
         router.push("/login");
-      } else if (user && isAuthPage) {
-        router.push("/dashboard");
       }
     }
   }, [user, loading, pathname, router]);
 
 
   const logout = async () => {
-    setLoading(true);
     // In a real app, call Firebase signOut
-    // await signOut(mockFirebaseAuth);
     localStorage.removeItem('authUser'); // Mock logout
     setUser(null);
-    setLoading(false);
     router.push('/login');
   };
   
   // This effect is to manually trigger re-check when local storage changes
-  // (e.g. after login action updates it)
   useEffect(() => {
     const handleStorageChange = () => {
       try {
@@ -74,9 +67,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUser(null);
       }
     };
-    window.addEventListener('storage', handleStorageChange); // For changes in other tabs
-    // Custom event for same-tab changes, as 'storage' event doesn't fire for same tab.
-    window.addEventListener('authChange', handleStorageChange); 
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('authChange', handleStorageChange); // Custom event for same-tab changes
     
     return () => {
       window.removeEventListener('storage', handleStorageChange);
@@ -85,7 +77,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
 
-  if (loading && !(pathname?.startsWith("/login") || pathname?.startsWith("/reset-password"))) {
+  if (loading) {
     return <div className="flex h-screen items-center justify-center"><LoadingSpinner size={48} /></div>;
   }
   
