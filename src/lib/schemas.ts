@@ -145,3 +145,10 @@ export const StoreSettingsSchema = z.object({
     warrantyConditions: z.string().min(1, "El texto es requerido."),
     pickupConditions: z.string().min(1, "El texto es requerido."),
 });
+
+export const BranchSchema = z.object({
+  name: z.string().min(3, "El nombre de la sucursal es requerido."),
+  address: z.string().min(5, "La dirección es requerida."),
+  status: z.enum(['active', 'inactive']).default('active'),
+});
+export type BranchFormData = z.infer<typeof BranchSchema>;

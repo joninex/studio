@@ -42,6 +42,7 @@ import {
   Package,
   TrendingUp,
   ArrowRightLeft,
+  Building,
 } from "lucide-react";
 import { useAuth } from "@/providers/AuthProvider";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -58,6 +59,7 @@ const navItems = [
   { href: "/finance/cashflow", label: "Flujo de Caja", icon: ArrowRightLeft },
   { href: "/users", label: "Usuarios", icon: Users, adminOnly: true },
   { href: "/settings", label: "Configuración", icon: Settings },
+  { href: "/settings/branches", label: "Sucursales", icon: Building, adminOnly: true },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
