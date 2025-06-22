@@ -99,12 +99,19 @@ export function OrderDetailClient({ order: initialOrder, branch }: OrderDetailCl
 
   const totalCost = (order.costLabor || 0) + (order.costSparePart || 0);
 
-  const relevantChecklistItems = CHECKLIST_ITEMS
-    .map(item => ({
-      label: item.label,
-      value: order.checklist?.[item.id as keyof Checklist]
-    }))
-    .filter(item => item.value && (typeof item.value === 'string' ? item.value.trim() !== '' && item.value !== 'no' : false) || (typeof item.value === 'boolean' && item.value === true) || item.value === 'si');
+  const getChecklistValueDisplay = (value: 'si' | 'no' | 'sc' | string | undefined) => {
+    if (value === 'si') return <span className="font-bold text-green-600">SÍ</span>;
+    if (value === 'no') return <span className="font-bold text-red-600">NO</span>;
+    if (value === 'sc') return <span className="font-bold text-yellow-600">S/C</span>;
+    if (value) return <span className="font-bold">{value}</span>;
+    return 'N/A';
+  }
+
+  const checklistGroups = CHECKLIST_ITEMS.reduce((acc, item) => {
+    (acc[item.group] = acc[item.group] || []).push(item);
+    return acc;
+  }, {} as Record<string, typeof CHECKLIST_ITEMS>);
+
 
   return (
     <div className="space-y-6">
@@ -182,17 +189,20 @@ export function OrderDetailClient({ order: initialOrder, branch }: OrderDetailCl
                 <Card>
                     <CardHeader><CardTitle className="text-lg flex items-center gap-2"><ListChecks/>Checklist de Recepción</CardTitle></CardHeader>
                     <CardContent>
-                        {relevantChecklistItems.length > 0 ? (
-                            <ul className="list-disc list-inside columns-2 text-sm">
-                                {relevantChecklistItems.map((item, index) => (
-                                    <li key={index}>
-                                        {item.label}: <strong className="uppercase">{typeof item.value === 'string' ? item.value : 'Sí'}</strong>
-                                    </li>
-                                ))}
-                            </ul>
-                        ) : (
-                            <p className="text-sm text-muted-foreground">No se marcaron items relevantes en el checklist.</p>
-                        )}
+                        <div className="space-y-3">
+                            {Object.entries(checklistGroups).map(([groupName, items]) => (
+                                <div key={groupName}>
+                                <h4 className="font-semibold text-primary/90">{groupName}</h4>
+                                <ul className="list-disc list-inside columns-2 text-sm text-muted-foreground">
+                                    {items.map(item => (
+                                        <li key={item.id}>
+                                            {item.label}: {getChecklistValueDisplay(order.checklist[item.id as keyof Checklist])}
+                                        </li>
+                                    ))}
+                                </ul>
+                                </div>
+                            ))}
+                        </div>
                     </CardContent>
                 </Card>
             </div>

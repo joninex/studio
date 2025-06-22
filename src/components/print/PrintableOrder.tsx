@@ -21,13 +21,21 @@ export function PrintableOrder({ order, branch }: PrintableOrderProps) {
 
   const totalCost = (order.costLabor || 0) + (order.costSparePart || 0);
 
-  const checklistItems = CHECKLIST_ITEMS
-    .map(item => ({
-      label: item.label,
-      value: order.checklist?.[item.id as keyof Checklist]
-    }))
-    .filter(item => item.value && item.value !== '');
+  const checklistGroups = CHECKLIST_ITEMS.reduce((acc, item) => {
+    const value = order.checklist?.[item.id as keyof Checklist];
+    if (value) {
+        (acc[item.group] = acc[item.group] || []).push({ ...item, value });
+    }
+    return acc;
+  }, {} as Record<string, (typeof CHECKLIST_ITEMS[0] & { value: any })[]>);
 
+  const getChecklistValueDisplay = (value: 'si' | 'no' | 'sc' | string | undefined) => {
+    if (value === 'si') return "Sí";
+    if (value === 'no') return "No";
+    if (value === 'sc') return "S/C"; // Sin Comprobar
+    if (value) return value;
+    return 'N/A';
+  }
 
   return (
     <div className="font-sans text-xs text-black bg-white p-8">
@@ -80,73 +88,61 @@ export function PrintableOrder({ order, branch }: PrintableOrderProps) {
         
         {/* Fault and Observations */}
         <div className="border border-gray-200 p-3 rounded mb-4">
-           <h3 className="font-bold border-b border-gray-200 pb-1 mb-2">Falla Reportada y Checklist de Recepción</h3>
+           <h3 className="font-bold border-b border-gray-200 pb-1 mb-2">Falla Reportada y Estado Inicial</h3>
            <p className="mb-2"><strong>Falla Reportada por el Cliente:</strong> {order.declaredFault || "No especificada"}</p>
            <p className="mb-2"><strong>Observaciones (Daños Visibles):</strong> {order.damageRisk || "Sin daños visibles reportados."}</p>
            
-           <div className="mt-2">
-             <h4 className="font-semibold mb-1">Checklist Técnico de Ingreso:</h4>
-             {checklistItems.length > 0 ? (
-                <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-[9pt]">
-                    {checklistItems.map(item => (
-                        <div key={item.label} className="border-b border-dotted flex justify-between">
-                           <span>{item.label}:</span>
-                           <span className="font-semibold uppercase">{typeof item.value === 'string' ? item.value.toUpperCase() : (item.value ? 'SÍ' : 'NO')}</span>
+           <div className="mt-2 text-[8pt] p-2 bg-gray-50 rounded border border-gray-200">
+            <p className="font-bold text-center mb-1">CHECKLIST TÉCNICO DE INGRESO - Estado Inicial</p>
+            <p className="text-[7pt] text-center italic mb-2">Significado: ✅ "Sí" (Funciona/Presente), ❌ "No" (Falla/Ausente), 🟡 "S/C" (Sin Comprobar)</p>
+             {Object.keys(checklistGroups).length > 0 ? (
+                <div className="space-y-1">
+                    {Object.entries(checklistGroups).map(([groupName, items]) => (
+                        <div key={groupName}>
+                            <p className="font-semibold text-[7pt] underline">{groupName}:</p>
+                            <div className="grid grid-cols-2 gap-x-4">
+                                {items.map(item => (
+                                    <div key={item.id} className="border-b border-dotted flex justify-between">
+                                        <span>{item.label}:</span>
+                                        <span className="font-semibold">{getChecklistValueDisplay(item.value)}</span>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     ))}
                 </div>
              ) : (
-                <p className="text-gray-500">No se completó el checklist de ingreso.</p>
+                <p className="text-gray-500 text-center">No se completó el checklist de ingreso.</p>
              )}
            </div>
 
-           <div className="mt-3 p-2 bg-gray-100 rounded text-center">
-                <h4 className="font-bold mb-2">Clave / Patrón de Desbloqueo</h4>
-                <div className="flex justify-center items-center gap-4">
-                    <Image
-                        src="https://static.vecteezy.com/system/resources/previews/005/148/464/non_2x/lock-screen-pattern-icon-in-flat-style-vector.jpg"
-                        alt="Patrón de desbloqueo"
-                        width={80}
-                        height={80}
-                        className="object-contain"
-                        data-ai-hint="unlock pattern"
-                    />
-                    <div className="border-b-2 border-dotted border-gray-400 w-48 h-1 self-end mb-4"></div>
-                </div>
-            </div>
-            <div className="mt-2 p-2 border border-dashed border-red-400 rounded text-center text-[9pt] font-semibold text-red-700">
-               <p>{settings?.unlockDisclaimerText}</p>
-            </div>
+           <div className="mt-3 p-2 border border-dashed border-red-400 rounded text-center text-[9pt] font-semibold text-red-700">
+               <p>El presente checklist documenta el estado observable sin intervención técnica interna. El cliente declara haber sido informado y acepta que componentes marcados como "No" o "S/C" pueden requerir diagnóstico adicional.</p>
+           </div>
         </div>
         
         {/* Terms and Conditions */}
-        <div className="mt-4 text-[8pt] leading-tight">
-           <h3 className="font-bold text-center mb-2 text-xs">Términos y Condiciones del Servicio de Reparación</h3>
-           <div className="p-2 border border-gray-300 bg-gray-50 rounded">
-             <p className="font-bold mb-2 text-center">IMPORTANTE: Este documento no implica presupuesto aprobado. El costo final será notificado para su aprobación.</p>
-             <ol className="list-decimal list-inside space-y-0.5">
+        <div className="mt-4 text-[7pt] leading-tight">
+           <h3 className="font-bold text-center mb-2 text-xs">Términos y Condiciones del Servicio</h3>
+           <ol className="list-decimal list-inside space-y-0.5 border border-gray-200 p-2 rounded">
                 <li><strong>Diagnóstico y Presupuesto:</strong> {settings?.budgetVariationText}</li>
                 <li><strong>Responsabilidad sobre Datos:</strong> {settings?.dataLossPolicyText}</li>
                 <li><strong>Equipos sin Encender/Clave:</strong> {settings?.untestedDevicePolicyText}</li>
-                <li><strong>Riesgos Especiales:</strong> {settings?.highRiskDeviceText}</li>
                 <li><strong>Garantía:</strong> {settings?.warrantyConditions}</li>
                 <li><strong>Anulación de Garantía:</strong> {settings?.warrantyVoidConditionsText}</li>
                 <li><strong>Política de Abandono:</strong> {settings?.abandonmentPolicyText}</li>
-             </ol>
-           </div>
+           </ol>
         </div>
 
         {/* Signature Area */}
-        <footer className="mt-8">
+        <footer className="mt-6">
+          <p className="text-center text-[9pt] font-bold mb-6">Declaro conformidad con el estado inicial del equipo y acepto los términos y condiciones del servicio.</p>
           <div className="flex justify-around items-end gap-12">
             <div className="flex-1 text-center">
               <div className="border-t border-black pt-1">Firma del Cliente</div>
             </div>
             <div className="flex-1 text-center">
               <div className="border-t border-black pt-1">Aclaración y DNI</div>
-            </div>
-            <div className="flex-1 text-center">
-              <div className="border-t border-black pt-1">Firma del Técnico Responsable</div>
             </div>
           </div>
           <div className="text-center text-[8pt] mt-4 text-gray-500">
@@ -195,6 +191,22 @@ export function PrintableOrder({ order, branch }: PrintableOrderProps) {
                 <p className="mt-2">
                     {settings?.pickupConditions}
                 </p>
+            </div>
+        </div>
+        
+         {/* Unlock Pattern Section */}
+        <div className="mt-4 p-2 bg-gray-100 rounded text-center">
+            <h4 className="font-bold mb-2">Clave / Patrón de Desbloqueo informado por el Cliente</h4>
+            <div className="flex justify-center items-center gap-4">
+                <Image
+                    src="https://static.vecteezy.com/system/resources/previews/005/148/464/non_2x/lock-screen-pattern-icon-in-flat-style-vector.jpg"
+                    alt="Patrón de desbloqueo"
+                    width={80}
+                    height={80}
+                    className="object-contain"
+                    data-ai-hint="unlock pattern"
+                />
+                <div className="border-b-2 border-dotted border-gray-400 w-48 h-1 self-end mb-4"></div>
             </div>
         </div>
 

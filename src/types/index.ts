@@ -68,27 +68,27 @@ export interface Client {
 }
 
 export interface Checklist {
-  golpe?: 'si' | 'no';
-  cristal?: 'si' | 'no';
-  marco?: 'si' | 'no';
-  tapa?: 'si' | 'no';
-  enciende: 'si' | 'no';
-  tactil: 'si' | 'no';
-  imagen: 'si' | 'no';
-  botones?: 'si' | 'no';
-  cam_trasera?: 'si' | 'no';
-  cam_delantera?: 'si' | 'no';
-  vibrador?: 'si' | 'no';
-  microfono?: 'si' | 'no';
-  auricular?: 'si' | 'no';
-  parlante?: 'si' | 'no';
-  sensor_huella?: 'si' | 'no';
-  senal?: 'si' | 'no';
-  wifi_bluetooth?: 'si' | 'no';
-  pin_carga?: 'si' | 'no';
-  humedad?: 'si' | 'no';
+  golpe?: 'si' | 'no' | 'sc';
+  cristal?: 'si' | 'no' | 'sc';
+  marco?: 'si' | 'no' | 'sc';
+  tapa?: 'si' | 'no' | 'sc';
+  humedad?: 'si' | 'no' | 'sc';
+  enciende: 'si' | 'no' | 'sc';
   consumoV?: string;
   mah?: string;
+  imagen: 'si' | 'no' | 'sc';
+  tactil: 'si' | 'no' | 'sc';
+  botones?: 'si' | 'no' | 'sc';
+  sensor_huella?: 'si' | 'no' | 'sc';
+  cam_trasera?: 'si' | 'no' | 'sc';
+  cam_delantera?: 'si' | 'no' | 'sc';
+  microfono?: 'si' | 'no' | 'sc';
+  auricular?: 'si' | 'no' | 'sc';
+  parlante?: 'si' | 'no' | 'sc';
+  vibrador?: 'si' | 'no' | 'sc';
+  pin_carga?: 'si' | 'no' | 'sc';
+  wifi_bluetooth?: 'si' | 'no' | 'sc';
+  senal?: 'si' | 'no' | 'sc';
 }
 
 export type Classification = "rojo" | "verde" | "sin stock";

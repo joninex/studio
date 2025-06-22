@@ -20,7 +20,7 @@ export const RegisterSchema = z.object({
 const checklistShapeObject = CHECKLIST_ITEMS.reduce((acc, item) => {
   if (item.type === 'boolean') {
     // @ts-ignore
-    acc[item.id] = z.enum(['si', 'no']);
+    acc[item.id] = z.enum(['si', 'no', 'sc']);
   } else {
     // @ts-ignore
     acc[item.id] = z.string().optional().or(z.literal(''));

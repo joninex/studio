@@ -41,7 +41,7 @@ export function OrderForm({ orderId }: OrderFormProps) {
   const currentBranchId = user?.role === 'admin' ? 'B001' : user?.assignments?.[0]?.branchId;
 
   const defaultChecklistValues = CHECKLIST_ITEMS.reduce((acc, item) => {
-    (acc as any)[item.id] = item.type === 'boolean' ? 'no' : '';
+    (acc as any)[item.id] = item.type === 'boolean' ? 'sc' : ''; // Default to 'Sin Comprobar'
     return acc;
   }, {} as OrderFormData['checklist']);
 
@@ -124,6 +124,12 @@ export function OrderForm({ orderId }: OrderFormProps) {
   if (isLoading) {
     return <div className="flex justify-center items-center h-64"><LoadingSpinner size={48}/> <p className="ml-4">Cargando orden...</p></div>;
   }
+  
+  const checklistGroups = CHECKLIST_ITEMS.reduce((acc, item) => {
+    (acc[item.group] = acc[item.group] || []).push(item);
+    return acc;
+  }, {} as Record<string, typeof CHECKLIST_ITEMS>);
+
 
   return (
     <Form {...form}>
@@ -171,35 +177,40 @@ export function OrderForm({ orderId }: OrderFormProps) {
           <div className="space-y-6">
             <Card>
               <CardHeader><CardTitle className="flex items-center gap-2"><ListChecks className="text-primary"/> Checklist de Recepción</CardTitle></CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {CHECKLIST_ITEMS.map(item => (
-                  <FormField
-                    key={item.id}
-                    control={form.control}
-                    name={`checklist.${item.id as keyof OrderFormData['checklist']}`}
-                    render={({ field }) => (
-                      <FormItem className="flex flex-col sm:flex-row sm:items-center justify-between rounded-lg border p-3 shadow-sm gap-2">
-                        <FormLabel className="text-sm font-normal shrink-0">{item.label}</FormLabel>
-                        <FormControl>
-                          {item.type === 'boolean' ? (
-                            <RadioGroup onValueChange={field.onChange} defaultValue={field.value as string} className="flex space-x-2">
-                              {YES_NO_OPTIONS.map(opt => (
-                                <FormItem key={opt.value} className="flex items-center space-x-1 space-y-0">
-                                  <FormControl><RadioGroupItem value={opt.value} /></FormControl>
-                                  <FormLabel className="font-normal text-xs">{opt.label}</FormLabel>
+              <CardContent className="space-y-4">
+                 {Object.entries(checklistGroups).map(([groupName, items]) => (
+                    <div key={groupName}>
+                        <h4 className="font-semibold mb-2 text-md text-primary/90">{groupName}</h4>
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-6 gap-y-4">
+                            {items.map(item => (
+                            <FormField
+                                key={item.id}
+                                control={form.control}
+                                name={`checklist.${item.id as keyof OrderFormData['checklist']}`}
+                                render={({ field }) => (
+                                <FormItem className="flex flex-col sm:flex-row sm:items-center justify-between rounded-lg border p-2 shadow-sm gap-2">
+                                    <FormLabel className="text-sm font-normal shrink-0">{item.label}</FormLabel>
+                                    <FormControl>
+                                    {item.type === 'boolean' ? (
+                                        <RadioGroup onValueChange={field.onChange} value={field.value as string} defaultValue="sc" className="flex space-x-2">
+                                        {YES_NO_OPTIONS.map(opt => (
+                                            <FormItem key={opt.value} className="flex items-center space-x-1 space-y-0">
+                                            <FormControl><RadioGroupItem value={opt.value} /></FormControl>
+                                            <FormLabel className="font-normal text-xs">{opt.label}</FormLabel>
+                                            </FormItem>
+                                        ))}
+                                        </RadioGroup>
+                                    ) : (
+                                        <Input type="text" {...field} className="h-8 text-xs w-full sm:w-24"/>
+                                    )}
+                                    </FormControl>
                                 </FormItem>
-                              ))}
-                            </RadioGroup>
-                          ) : (
-                            <Input type="text" {...field} className="h-8 text-xs w-full sm:w-24"/>
-                          )}
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
+                                )}
+                            />
+                            ))}
+                        </div>
+                    </div>
                 ))}
-                </div>
               </CardContent>
             </Card>
 

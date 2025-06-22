@@ -23,44 +23,48 @@ export const CLASSIFICATION_OPTIONS: Array<Classification | null> = [
   null,
 ];
 
-export const CHECKLIST_ITEMS: Array<{ id: keyof Checklist; label: string, type?: 'boolean' | 'text' }> = [
-  // --- Estado Físico Externo ---
-  { id: "cristal", label: "Cristal (Vidrio)", type: 'boolean' },
-  { id: "marco", label: "Marco y Bordes", type: 'boolean' },
-  { id: "tapa", label: "Tapa Trasera", type: 'boolean' },
-  { id: "golpe", label: "Marcas o Golpes", type: 'boolean' },
-  { id: "humedad", label: "Indicador de Humedad", type: 'boolean' },
-
-  // --- Funciones Esenciales ---
-  { id: "enciende", label: "Equipo Enciende", type: 'boolean' },
-  { id: "tactil", label: "Función Táctil", type: 'boolean' },
-  { id: "imagen", label: "Imagen en Pantalla", type: 'boolean' },
+// Re-structured checklist based on user's legal and logical grouping
+export const CHECKLIST_ITEMS: Array<{ id: keyof Checklist; label: string, group: string, type?: 'boolean' | 'text' }> = [
+  // Condiciones Físicas
+  { id: "golpe", label: "Marcas o golpes visibles", group: "Condiciones Físicas", type: 'boolean' },
+  { id: "cristal", label: "Cristal astillado o roto", group: "Condiciones Físicas", type: 'boolean' },
+  { id: "marco", label: "Marco roto o dañado", group: "Condiciones Físicas", type: 'boolean' },
+  { id: "tapa", label: "Tapa trasera rota o floja", group: "Condiciones Físicas", type: 'boolean' },
+  { id: "humedad", label: "Señales de humedad interna", group: "Condiciones Físicas", type: 'boolean' },
   
-  // --- Audio y Vibración ---
-  { id: "auricular", label: "Auricular (Llamadas)", type: 'boolean' },
-  { id: "parlante", label: "Altavoz (Multimedia)", type: 'boolean' },
-  { id: "microfono", label: "Micrófono", type: 'boolean' },
-  { id: "vibrador", label: "Vibrador", type: 'boolean' },
+  // Encendido y Energía
+  { id: "enciende", label: "Enciende", group: "Encendido y Energía", type: 'boolean' },
+  { id: "consumoV", label: "Consumo (Voltios)", group: "Encendido y Energía", type: 'text' },
+  { id: "mah", label: "Carga en batería (estimado)", group: "Encendido y Energía", type: 'text' },
+  
+  // Pantalla y Táctil
+  { id: "imagen", label: "Imagen en pantalla", group: "Pantalla y Táctil", type: 'boolean' },
+  { id: "tactil", label: "Respuesta táctil", group: "Pantalla y Táctil", type: 'boolean' },
 
-  // --- Cámaras y Sensores ---
-  { id: "cam_trasera", label: "Cámara Trasera", type: 'boolean' },
-  { id: "cam_delantera", label: "Cámara Delantera", type: 'boolean' },
-  { id: "sensor_huella", label: "Sensor Biométrico", type: 'boolean' },
+  // Botones y Sensores
+  { id: "botones", label: "Botones físicos", group: "Botones y Sensores", type: 'boolean' },
+  { id: "sensor_huella", label: "Sensor de huella", group: "Botones y Sensores", type: 'boolean' },
 
-  // --- Conectividad y Botones ---
-  { id: "pin_carga", label: "Pin de Carga", type: 'boolean' },
-  { id: "botones", label: "Botones Físicos", type: 'boolean' },
-  { id: "senal", label: "Señal (SIM)", type: 'boolean' },
-  { id: "wifi_bluetooth", label: "Wi-Fi / Bluetooth", type: 'boolean' },
+  // Cámaras
+  { id: "cam_trasera", label: "Cámara trasera", group: "Cámaras", type: 'boolean' },
+  { id: "cam_delantera", label: "Cámara delantera", group: "Cámaras", type: 'boolean' },
 
-  // --- Diagnóstico Técnico (Opcional) ---
-  { id: "consumoV", label: "Consumo (V)", type: 'text' },
-  { id: "mah", label: "Capacidad Batería (mAh)", type: 'text' },
+  // Audio y Vibración
+  { id: "microfono", label: "Micrófono", group: "Audio y Vibración", type: 'boolean' },
+  { id: "auricular", label: "Auricular", group: "Audio y Vibración", type: 'boolean' },
+  { id: "parlante", label: "Altavoz / Parlante externo", group: "Audio y Vibración", type: 'boolean' },
+  { id: "vibrador", label: "Vibrador", group: "Audio y Vibración", type: 'boolean' },
+
+  // Conectividad y Carga
+  { id: "pin_carga", label: "Pin de carga (puerto físico)", group: "Conectividad y Carga", type: 'boolean' },
+  { id: "wifi_bluetooth", label: "Conexión Wi-Fi / Bluetooth", group: "Conectividad y Carga", type: 'boolean' },
+  { id: "senal", label: "Señal de red móvil (SIM)", group: "Conectividad y Carga", type: 'boolean' },
 ];
 
 export const YES_NO_OPTIONS = [
   { label: "Sí", value: "si" },
   { label: "No", value: "no" },
+  { label: "S/C", value: "sc" },
 ];
 
 export const PART_CATEGORIES: Array<PartCategory | ""> = ["", "Pantalla", "Batería", "Flex", "Cámara", "Placa", "Componente", "Carcasa", "Otro"];
