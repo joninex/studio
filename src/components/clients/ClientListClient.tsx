@@ -1,18 +1,19 @@
 // src/components/clients/ClientListClient.tsx
 "use client";
 
-import { useState, useEffect, useTransition, useCallback } from "react";
+import { useState, useEffect, useTransition, useCallback, ChangeEvent } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import Link from "next/link";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { useDebounce } from "use-debounce";
 
 import type { Client } from "@/types";
 import { getClients } from "@/lib/actions/client.actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Eye, FilterX, Search, Edit, Trash2 } from "lucide-react";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import { Badge } from "@/components/ui/badge";
@@ -20,27 +21,24 @@ import { useToast } from "@/hooks/use-toast";
 
 interface ClientListClientProps {
   initialClients: Client[]; 
-  initialFilters: { name?: string, dni?: string };
+  initialFilters: { search?: string };
 }
 
 export function ClientListClient({ initialClients, initialFilters }: ClientListClientProps) {
   const [clients, setClients] = useState<Client[]>(initialClients);
   const [isLoading, setIsLoading] = useState(false);
-  const [isPending, startTransition] = useTransition();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { toast } = useToast();
 
-  const [filters, setFilters] = useState({
-    name: initialFilters.name || "", 
-    dni: initialFilters.dni || "",
-  });
+  const [searchTerm, setSearchTerm] = useState(initialFilters.search || "");
+  const [debouncedSearchTerm] = useDebounce(searchTerm, 500);
 
-  const fetchClientsInternal = useCallback(async (currentFilters: typeof filters) => {
+  const fetchClientsInternal = useCallback(async (searchQuery: string) => {
     setIsLoading(true);
     try {
-      const fetchedClients = await getClients(currentFilters);
+      const fetchedClients = await getClients({ search: searchQuery });
       setClients(fetchedClients);
     } catch (error) {
       console.error("Error fetching clients:", error);
@@ -49,93 +47,59 @@ export function ClientListClient({ initialClients, initialFilters }: ClientListC
       setIsLoading(false);
     }
   }, [toast]);
-  
+
   useEffect(() => {
     const params = new URLSearchParams(searchParams.toString());
-    setFilters({
-      name: params.get('name') || '',
-      dni: params.get('dni') || '',
-    });
-  }, [searchParams]);
-
-
-  const handleFilterChange = (filterName: keyof typeof filters, value: string) => {
-    setFilters(prev => ({ ...prev, [filterName]: value }));
-  };
-
-  const applyFilters = () => {
-    startTransition(() => {
-      const params = new URLSearchParams();
-      if (filters.name) params.set('name', filters.name);
-      if (filters.dni) params.set('dni', filters.dni);
-      router.push(`${pathname}?${params.toString()}`);
-    });
-  };
-
-  const clearFilters = () => {
-    startTransition(() => {
-      setFilters({ name: "", dni: "" });
-      router.push(pathname);
-    });
-  };
-
-  useEffect(() => {
-    const currentFilters = {
-        name: searchParams.get('name') || '',
-        dni: searchParams.get('dni') || '',
-    };
-    fetchClientsInternal(currentFilters);
+    const currentSearch = params.get('search') || '';
+    setSearchTerm(currentSearch);
+    fetchClientsInternal(currentSearch);
   }, [searchParams, fetchClientsInternal]);
 
-  // Placeholder for delete functionality
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (debouncedSearchTerm) {
+        params.set('search', debouncedSearchTerm);
+    } else {
+        params.delete('search');
+    }
+    router.replace(`${pathname}?${params.toString()}`);
+  }, [debouncedSearchTerm, pathname, router, searchParams]);
+
+
+  const clearFilters = () => {
+    setSearchTerm("");
+  };
+
   const handleDeleteClient = async (clientId: string) => {
     toast({ title: "Info", description: `Funcionalidad de eliminar cliente (ID: ${clientId}) no implementada.`});
-    // Implement actual deletion logic here
-    // Example:
-    // if (confirm("¿Está seguro de que desea eliminar este cliente?")) {
-    //   startTransition(async () => {
-    //     const result = await deleteClientAction(clientId); // Assuming deleteClientAction exists
-    //     if (result.success) {
-    //       toast({ title: "Éxito", description: "Cliente eliminado." });
-    //       fetchClientsInternal(filters); // Refresh list
-    //     } else {
-    //       toast({ variant: "destructive", title: "Error", description: result.message });
-    //     }
-    //   });
-    // }
   };
 
 
   return (
     <Card className="shadow-xl">
       <CardHeader>
-        <CardTitle>Filtros de Búsqueda de Clientes</CardTitle>
-        <div className="grid grid-cols-1 gap-4 pt-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Input
-            placeholder="Nombre o Apellido"
-            value={filters.name}
-            onChange={(e) => handleFilterChange("name", e.target.value)}
-          />
-          <Input
-            placeholder="DNI"
-            value={filters.dni}
-            onChange={(e) => handleFilterChange("dni", e.target.value)}
-          />
-          <div className="flex gap-2 lg:col-start-4">
-            <Button onClick={applyFilters} disabled={isPending || isLoading} className="w-full sm:w-auto">
-              <Search className="mr-2 h-4 w-4" /> Buscar
-            </Button>
-            <Button onClick={clearFilters} variant="outline" disabled={isPending || isLoading} className="w-full sm:w-auto">
+        <CardTitle>Búsqueda de Clientes</CardTitle>
+        <CardDescription>Busque por nombre, apellido, DNI, teléfono o email.</CardDescription>
+        <div className="flex gap-4 pt-4">
+            <div className="relative w-full">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                <Input
+                    placeholder="Buscar cliente..."
+                    value={searchTerm}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                />
+            </div>
+            <Button onClick={clearFilters} variant="outline" disabled={isLoading || !searchTerm}>
               <FilterX className="mr-2 h-4 w-4" /> Limpiar
             </Button>
-          </div>
         </div>
       </CardHeader>
       <CardContent>
         {isLoading && (
           <div className="flex justify-center items-center py-10">
             <LoadingSpinner size={32}/>
-            <p className="ml-2">Cargando clientes...</p>
+            <p className="ml-2">Buscando clientes...</p>
           </div>
         )}
         {!isLoading && clients.length === 0 && (

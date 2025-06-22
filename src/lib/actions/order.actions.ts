@@ -1,7 +1,7 @@
 // src/lib/actions/order.actions.ts
 "use server";
 
-import type { Order, User, Comment as OrderCommentType, OrderStatus, OrderPartItem, PaymentItem } from "@/types";
+import type { Order, AuditLogEntry, Comment as OrderCommentType, OrderStatus, OrderPartItem, PaymentItem } from "@/types";
 import { OrderSchema } from "@/lib/schemas";
 import type { z } from "zod";
 import { suggestRepairSolutions } from "@/ai/flows/suggest-repair-solutions";
@@ -19,7 +19,9 @@ let mockOrders: Order[] = [
     deviceColor: "Phantom Black",
     accessories: "Cargador original y cable",
     deviceIMEI: "123456789012345",
+    imeiNotVisible: false,
     declaredFault: "Pantalla rota, no enciende después de caída.",
+    unlockPatternProvided: true,
     checklist: {
       enciende: 'no',
       tactil: 'no',
@@ -33,8 +35,14 @@ let mockOrders: Order[] = [
     status: "En Diagnóstico",
     entryDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
     estimatedCompletionTime: "18:00hs",
+    intakeFormSigned: true,
+    pickupFormSigned: false,
+    auditLog: [
+       { id: 'log-1', userId: 'tech123', userName: 'Tech User', description: 'Orden creada.', timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()},
+       { id: 'log-2', userId: 'tech123', userName: 'Tech User', description: 'Confirmado: Comprobante de Ingreso firmado.', timestamp: new Date(Date.now() - 1.9 * 24 * 60 * 60 * 1000).toISOString()},
+    ],
     commentsHistory: [
-      { id: 'cmt-1', userId: 'tech123', description: 'Se confirma pantalla rota, posible daño en flex de display.', timestamp: new Date(Date.now() - 1.5 * 24 * 60 * 60 * 1000).toISOString()}
+      { id: 'cmt-1', userId: 'tech123', userName: 'Tech User', description: 'Se confirma pantalla rota, posible daño en flex de display.', timestamp: new Date(Date.now() - 1.5 * 24 * 60 * 60 * 1000).toISOString()}
     ],
     partsUsed: [
       { partId: "PART001", partName: "Pantalla iPhone 12 Original", quantity: 1, unitPrice: 150.00 }
@@ -54,11 +62,13 @@ let mockOrders: Order[] = [
     deviceColor: "Azul",
     accessories: "Sin accesorios",
     deviceIMEI: "987654321098765",
+    imeiNotVisible: false,
     declaredFault: "No carga la batería",
+    unlockPatternProvided: false,
     checklist: {
       enciende: 'no',
-      tactil: 'si',
-      imagen: 'si'
+      tactil: 'sc',
+      imagen: 'sc'
     },
     damageRisk: "",
     costSparePart: 80.00,
@@ -67,6 +77,9 @@ let mockOrders: Order[] = [
     status: "Listo para Entrega",
     readyForPickupDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
     entryDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+    intakeFormSigned: false,
+    pickupFormSigned: false,
+    auditLog: [],
     commentsHistory: [],
   },
 ];
@@ -77,9 +90,20 @@ function generateOrderNumber(): string {
   return `ORD${String(orderCounter).padStart(3, '0')}`;
 }
 
+function createAuditLogEntry(userId: string, userName: string, description: string): AuditLogEntry {
+    return {
+        id: `log-${Date.now()}`,
+        userId,
+        userName,
+        description,
+        timestamp: new Date().toISOString(),
+    };
+}
+
+
 export async function createOrder(
   values: z.infer<typeof OrderSchema>,
-  userId: string,
+  userName: string,
   branchId: string, // Branch context is now required
 ): Promise<{ success: boolean; message: string; order?: Order }> {
   const validatedFields = OrderSchema.safeParse(values);
@@ -103,8 +127,11 @@ export async function createOrder(
     ...data,
     branchId: branchId, // Assign to the correct branch
     entryDate: new Date().toISOString(),
-    commentsHistory: [],
     status: "Recibido",
+    intakeFormSigned: false,
+    pickupFormSigned: false,
+    auditLog: [createAuditLogEntry(userName, userName, 'Orden creada en el sistema.')],
+    commentsHistory: [],
   };
 
   mockOrders.push(newOrder);
@@ -128,7 +155,7 @@ export async function getOrders(filters?: { client?: string, orderNumber?: strin
       filteredOrders = filteredOrders.filter(o => o.orderNumber.toLowerCase().includes(filters.orderNumber!.toLowerCase()));
     }
     if (filters.imei) {
-      filteredOrders = filteredOrders.filter(o => o.deviceIMEI.includes(filters.imei!));
+      filteredOrders = filteredOrders.filter(o => o.deviceIMEI && o.deviceIMEI.includes(filters.imei!));
     }
     if (filters.status) {
       filteredOrders = filteredOrders.filter(o => o.status === filters.status);
@@ -168,7 +195,7 @@ export async function getOrderById(id: string): Promise<Order | null> {
 export async function updateOrder(
   orderId: string,
   values: z.infer<typeof OrderSchema>,
-  userId: string
+  userName: string
 ): Promise<{ success: boolean; message: string; order?: Order }> {
   const validatedFields = OrderSchema.safeParse(values);
   if (!validatedFields.success) {
@@ -179,11 +206,16 @@ export async function updateOrder(
   if (orderIndex === -1) {
     return { success: false, message: "Orden no encontrada." };
   }
+  
+  const originalOrder = mockOrders[orderIndex];
 
   mockOrders[orderIndex] = {
-    ...mockOrders[orderIndex],
+    ...originalOrder,
     ...validatedFields.data,
   };
+  
+  mockOrders[orderIndex].auditLog.push(createAuditLogEntry(userName, userName, 'Datos de la orden actualizados.'));
+
 
   return { success: true, message: "Orden actualizada.", order: mockOrders[orderIndex] };
 }
@@ -191,7 +223,7 @@ export async function updateOrder(
 export async function updateOrderStatus(
   orderId: string,
   status: OrderStatus,
-  userId: string
+  userName: string
 ): Promise<{ success: boolean; message: string; order?: Order }> {
   const orderIndex = mockOrders.findIndex(o => o.id === orderId);
   if (orderIndex === -1) {
@@ -205,14 +237,54 @@ export async function updateOrderStatus(
     mockOrders[orderIndex].deliveryDate = new Date().toISOString();
   }
 
+  mockOrders[orderIndex].auditLog.push(createAuditLogEntry(userName, userName, `Estado cambiado a: ${status}.`));
+
   return { success: true, message: "Estado de la orden actualizado.", order: mockOrders[orderIndex] };
 }
+
+export async function updateOrderConfirmations(
+  orderId: string,
+  confirmationType: 'intake' | 'pickup',
+  isChecked: boolean,
+  userName: string
+): Promise<{ success: boolean; message: string; order?: Order }> {
+    const orderIndex = mockOrders.findIndex(o => o.id === orderId);
+    if (orderIndex === -1) {
+        return { success: false, message: "Orden no encontrada." };
+    }
+
+    const fieldToUpdate = confirmationType === 'intake' ? 'intakeFormSigned' : 'pickupFormSigned';
+    const logMessage = confirmationType === 'intake' 
+        ? `Confirmado: Comprobante de Ingreso ${isChecked ? 'firmado' : 'no firmado'}.`
+        : `Confirmado: Comprobante de Retiro ${isChecked ? 'firmado' : 'no firmado'}.`;
+        
+    mockOrders[orderIndex][fieldToUpdate] = isChecked;
+    mockOrders[orderIndex].auditLog.push(createAuditLogEntry(userName, userName, logMessage));
+
+    return { success: true, message: "Confirmación actualizada.", order: mockOrders[orderIndex] };
+}
+
+export async function updateOrderImei(
+    orderId: string,
+    imei: string,
+    userName: string
+): Promise<{ success: boolean; message: string; order?: Order }> {
+    const orderIndex = mockOrders.findIndex(o => o.id === orderId);
+    if (orderIndex === -1) {
+        return { success: false, message: "Orden no encontrada." };
+    }
+    mockOrders[orderIndex].deviceIMEI = imei;
+    mockOrders[orderIndex].imeiNotVisible = false; // It's visible now
+    mockOrders[orderIndex].auditLog.push(createAuditLogEntry(userName, userName, `IMEI/Serie actualizado a: ${imei}.`));
+    return { success: true, message: "IMEI actualizado.", order: mockOrders[orderIndex] };
+}
+
 
 export async function addOrderComment(
   orderId: string,
   commentText: string,
-  userId: string
-): Promise<{ success: boolean; message: string; comment?: OrderCommentType }> {
+  userName: string
+): Promise<{ success: boolean; message: string; comment?: OrderCommentType; order?: Order }> {
   const orderIndex = mockOrders.findIndex(o => o.id === orderId);
   if (orderIndex === -1) {
     return { success: false, message: "Orden no encontrada." };
@@ -222,11 +294,14 @@ export async function addOrderComment(
     id: commentId,
     description: commentText,
     timestamp: new Date().toISOString(),
-    userId,
+    userId: userName, // Use name for simplicity in mock
+    userName: userName,
   };
 
   mockOrders[orderIndex].commentsHistory.push(newComment);
-  return { success: true, message: "Comentario agregado.", comment: newComment };
+  mockOrders[orderIndex].auditLog.push(createAuditLogEntry(userName, userName, `Comentario agregado: "${commentText.substring(0, 30)}..."`));
+
+  return { success: true, message: "Comentario agregado.", comment: newComment, order: mockOrders[orderIndex] };
 }
 
 

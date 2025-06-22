@@ -121,8 +121,17 @@ export type OrderStatus =
 export interface Comment {
   id: string;
   userId: string;
+  userName: string;
   description: string;
   timestamp: string | Date | Timestamp;
+}
+
+export interface AuditLogEntry {
+    id: string;
+    userId: string;
+    userName: string;
+    description: string;
+    timestamp: string | Date | Timestamp;
 }
 
 export type PartCategory = "Pantalla" | "Batería" | "Flex" | "Cámara" | "Placa" | "Componente" | "Carcasa" | "Otro" | "";
@@ -186,7 +195,8 @@ export interface Order {
   deviceModel: string;
   deviceColor?: string;
   accessories?: string;
-  deviceIMEI: string;
+  deviceIMEI?: string;
+  imeiNotVisible: boolean; // NEW: Track if IMEI was not visible at intake
   declaredFault: string;
   unlockPatternProvided: boolean; // NEW: Track if unlock code is given
   checklist: Checklist;
@@ -201,6 +211,9 @@ export interface Order {
   readyForPickupDate?: string | Date | Timestamp;
   deliveryDate?: string | Date | Timestamp;
   commentsHistory: Comment[];
+  auditLog: AuditLogEntry[];
+  intakeFormSigned: boolean;
+  pickupFormSigned: boolean;
   assignedTechnicianId?: string;
   assignedTechnicianName?: string;
   partsUsed?: OrderPartItem[];

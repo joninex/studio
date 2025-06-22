@@ -15,10 +15,9 @@ export default async function ClientsPage({
 }: {
   searchParams?: { [key: string]: string | string[] | undefined };
 }) {
-  const name = typeof searchParams?.name === 'string' ? searchParams.name : undefined;
-  const dni = typeof searchParams?.dni === 'string' ? searchParams.dni : undefined;
+  const search = typeof searchParams?.search === 'string' ? searchParams.search : undefined;
   
-  const initialFilters = { name, dni };
+  const initialFilters = { search };
   const initialClients = await getClients(initialFilters);
 
   return (

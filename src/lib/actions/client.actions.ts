@@ -50,20 +50,19 @@ function generateClientId(): string {
   return `CLI${String(clientCounter).padStart(3, '0')}`;
 }
 
-export async function getClients(filters?: { name?: string; dni?: string }): Promise<Client[]> {
+export async function getClients(filters?: { search?: string }): Promise<Client[]> {
   await new Promise(resolve => setTimeout(resolve, 300));
   let filteredClients = [...mockClients];
 
-  if (filters) {
-    if (filters.name) {
-      const nameLower = filters.name.toLowerCase();
+  if (filters?.search) {
+      const searchLower = filters.search.toLowerCase();
       filteredClients = filteredClients.filter(c =>
-        `${c.name} ${c.lastName}`.toLowerCase().includes(nameLower)
+        c.name.toLowerCase().includes(searchLower) ||
+        c.lastName.toLowerCase().includes(searchLower) ||
+        c.dni.includes(searchLower) ||
+        (c.email && c.email.toLowerCase().includes(searchLower)) ||
+        c.phone.includes(searchLower)
       );
-    }
-    if (filters.dni) {
-      filteredClients = filteredClients.filter(c => c.dni.includes(filters.dni!));
-    }
   }
 
   return filteredClients.sort((a, b) => new Date(b.createdAt as string).getTime() - new Date(a.createdAt as string).getTime());

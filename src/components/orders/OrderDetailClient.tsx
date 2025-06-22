@@ -1,7 +1,7 @@
 // src/components/orders/OrderDetailClient.tsx
 "use client";
 
-import type { Order, User, Comment as OrderComment, OrderStatus, OrderPartItem, PaymentItem, Branch, Checklist } from "@/types";
+import type { Order, User, Comment as OrderComment, OrderStatus, OrderPartItem, PaymentItem, Branch, Checklist, AuditLogEntry } from "@/types";
 import { useState, useTransition, useRef, useEffect } from "react";
 import { format, differenceInDays, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
@@ -15,9 +15,12 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/providers/AuthProvider";
-import { addOrderComment, updateOrderStatus } from "@/lib/actions/order.actions";
+import { addOrderComment, updateOrderStatus, updateOrderConfirmations, updateOrderImei } from "@/lib/actions/order.actions";
 import { ORDER_STATUSES, CHECKLIST_ITEMS } from "@/lib/constants";
-import { AlertCircle, CalendarDays, DollarSign, FileText, Info, ListChecks, MessageSquare, Printer, User as UserIcon, Wrench, Package, CreditCard, Pencil, CheckCircle, Clock } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { AlertCircle, CalendarDays, DollarSign, FileText, Info, ListChecks, MessageSquare, Printer, User as UserIcon, Wrench, Package, CreditCard, Pencil, CheckCircle, Clock, ShieldCheck, FileSignature, History } from "lucide-react";
 import { LoadingSpinner } from "../shared/LoadingSpinner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
@@ -35,11 +38,12 @@ export function OrderDetailClient({ order: initialOrder, branch }: OrderDetailCl
   const [order, setOrder] = useState<Order>(initialOrder);
   const [newComment, setNewComment] = useState("");
   const [newStatus, setNewStatus] = useState<OrderStatus>(order?.status);
-  
+  const [newImei, setNewImei] = useState(order?.deviceIMEI || "");
+
   const handleStatusChange = async () => {
     if (!user || !newStatus || newStatus === order.status) return;
     startTransition(async () => {
-      const result = await updateOrderStatus(order.id, newStatus, user.uid);
+      const result = await updateOrderStatus(order.id, newStatus, user.name);
       if (result.success && result.order) {
         setOrder(result.order);
         toast({ title: "Éxito", description: "Estado de la orden actualizado." });
@@ -49,14 +53,45 @@ export function OrderDetailClient({ order: initialOrder, branch }: OrderDetailCl
     });
   };
 
+  const handleUpdateImei = async () => {
+    if (!user || !newImei || newImei === order.deviceIMEI) return;
+     if (newImei.length < 14 || newImei.length > 16) {
+        toast({ variant: "destructive", title: "Error", description: "El IMEI/Serie debe tener entre 14 y 16 caracteres."});
+        return;
+    }
+    startTransition(async () => {
+        const result = await updateOrderImei(order.id, newImei, user.name);
+        if (result.success && result.order) {
+            setOrder(result.order);
+            toast({ title: "Éxito", description: "IMEI/Serie actualizado."});
+        } else {
+            toast({ variant: "destructive", title: "Error", description: result.message });
+        }
+    });
+  };
+
+  const handleConfirmationChange = async (confirmationType: 'intake' | 'pickup', isChecked: boolean) => {
+    if (!user) return;
+    startTransition(async () => {
+        const result = await updateOrderConfirmations(order.id, confirmationType, isChecked, user.name);
+        if (result.success && result.order) {
+            setOrder(result.order);
+            toast({ title: "Éxito", description: "Confirmación actualizada."});
+        } else {
+            toast({ variant: "destructive", title: "Error", description: result.message });
+        }
+    });
+  };
+
   const handleAddComment = async () => {
     if (!user || !newComment.trim()) return;
     startTransition(async () => {
-        const result = await addOrderComment(order.id, newComment, user.uid);
+        const result = await addOrderComment(order.id, newComment, user.name);
         if (result.success && result.comment) {
             setOrder(prevOrder => ({
                 ...prevOrder,
                 commentsHistory: [...prevOrder.commentsHistory, result.comment!],
+                auditLog: result.order?.auditLog || prevOrder.auditLog,
             }));
             setNewComment("");
             toast({ title: "Éxito", description: "Comentario agregado."});
@@ -115,14 +150,19 @@ export function OrderDetailClient({ order: initialOrder, branch }: OrderDetailCl
 
   return (
     <div className="space-y-6">
-       <div className="flex justify-end no-print">
-            <Button asChild variant="outline">
-                <Link href={`/print/${order.id}`} target="_blank">
-                    <Printer className="mr-2 h-4 w-4" />
-                    Imprimir / Guardar PDF
-                </Link>
-            </Button>
-       </div>
+       <Alert className="no-print">
+            <Printer className="h-4 w-4" />
+            <AlertTitle>Impresión de Comprobante</AlertTitle>
+            <AlertDescription className="flex justify-between items-center">
+                Imprima el documento para que el cliente lo firme de forma manuscrita. Luego, marque la casilla de confirmación en esta pantalla.
+                 <Button asChild variant="outline">
+                    <Link href={`/print/${order.id}`} target="_blank">
+                        <Printer className="mr-2 h-4 w-4" />
+                        Imprimir / Guardar PDF
+                    </Link>
+                </Button>
+            </AlertDescription>
+        </Alert>
        
         <Card>
             <CardHeader>
@@ -161,7 +201,7 @@ export function OrderDetailClient({ order: initialOrder, branch }: OrderDetailCl
                     <CardContent className="text-sm space-y-1">
                         <p><strong>Marca:</strong> {order.deviceBrand || 'N/A'}</p>
                         <p><strong>Modelo:</strong> {order.deviceModel || 'N/A'}</p>
-                        <p><strong>IMEI/Serial:</strong> {order.deviceIMEI || 'N/A'}</p>
+                        <p><strong>IMEI/Serial:</strong> {order.deviceIMEI || 'No visible al ingreso'}</p>
                         <p><strong>Falla Declarada:</strong> {order.declaredFault || 'N/A'}</p>
                         <p><strong>Riesgos/Daños:</strong> {order.damageRisk || "Ninguno reportado."}</p>
                     </CardContent>
@@ -209,71 +249,7 @@ export function OrderDetailClient({ order: initialOrder, branch }: OrderDetailCl
             </CardContent>
         </Card>
 
-      <div className="grid md:grid-cols-2 gap-6 no-print">
-        <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="flex items-center gap-2"><Package/>Piezas Utilizadas</CardTitle>
-                <Button variant="outline" size="sm"><Pencil className="mr-2 h-4 w-4"/>Agregar Pieza</Button>
-            </CardHeader>
-            <CardContent>
-                {order.partsUsed && order.partsUsed.length > 0 ? (
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Nombre</TableHead>
-                                <TableHead>Cant.</TableHead>
-                                <TableHead className="text-right">Precio</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {order.partsUsed.map((part) => (
-                                <TableRow key={part.partId}>
-                                    <TableCell className="font-medium">{part.partName}</TableCell>
-                                    <TableCell>{part.quantity}</TableCell>
-                                    <TableCell className="text-right">${part.unitPrice.toFixed(2)}</TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                ) : (
-                    <p className="text-sm text-muted-foreground text-center py-4">No se han registrado piezas.</p>
-                )}
-            </CardContent>
-        </Card>
-
-        <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="flex items-center gap-2"><CreditCard/>Historial de Pagos</CardTitle>
-                <Button variant="outline" size="sm"><DollarSign className="mr-2 h-4 w-4"/>Registrar Pago</Button>
-            </CardHeader>
-            <CardContent>
-                {order.paymentHistory && order.paymentHistory.length > 0 ? (
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Fecha</TableHead>
-                                <TableHead>Método</TableHead>
-                                <TableHead className="text-right">Monto</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {order.paymentHistory.map((payment) => (
-                                <TableRow key={payment.id}>
-                                    <TableCell>{format(parseISO(payment.date as string), "dd MMM yyyy", { locale: es })}</TableCell>
-                                    <TableCell className="capitalize">{payment.method}</TableCell>
-                                    <TableCell className="text-right font-semibold">${(payment.amount).toFixed(2)}</TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                ) : (
-                    <p className="text-sm text-muted-foreground text-center py-4">No se han registrado pagos.</p>
-                )}
-            </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid md:grid-cols-3 gap-6 no-print">
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 no-print">
             <Card>
                 <CardHeader><CardTitle className="flex items-center gap-2"><CheckCircle/>Actualizar Estado</CardTitle></CardHeader>
                 <CardContent className="flex flex-col sm:flex-row gap-4 items-end">
@@ -294,22 +270,46 @@ export function OrderDetailClient({ order: initialOrder, branch }: OrderDetailCl
             </Card>
 
             <Card>
-                <CardHeader><CardTitle className="flex items-center gap-2"><MessageSquare/>Comunicación</CardTitle></CardHeader>
-                <CardContent>
-                    <Button onClick={handleWhatsAppContact} disabled={!order.clientPhone} className="w-full">
-                        <svg className="mr-2 h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91C2.13 13.66 2.61 15.31 3.44 16.74L2.01 21.99L7.47 20.59C8.83 21.36 10.38 21.81 12.04 21.81C17.5 21.81 21.95 17.36 21.95 11.9C21.95 6.45 17.5 2 12.04 2M12.04 3.63C16.56 3.63 20.32 7.39 20.32 11.91C20.32 16.43 16.56 20.19 12.04 20.19C10.56 20.19 9.15 19.81 7.94 19.11L7.54 18.89L4.41 19.71L5.26 16.67L5.03 16.27C4.24 14.93 3.76 13.45 3.76 11.91C3.76 7.39 7.49 3.63 12.04 3.63M17.06 14.24C16.88 14.73 15.76 15.33 15.24 15.48C14.73 15.63 14.29 15.72 13.66 15.54C12.87 15.31 11.75 14.88 10.52 13.73C9.03 12.33 8.03 10.63 7.82 10.15C7.61 9.66 8.04 9.27 8.23 9.08C8.38 8.94 8.56 8.76 8.78 8.76C9 8.76 9.21 8.85 9.39 9.12C9.57 9.39 9.99 10.29 10.08 10.47C10.17 10.65 10.12 10.83 9.94 11.01C9.76 11.19 9.63 11.33 9.49 11.5C9.36 11.64 9.22 11.8 9.09 11.93C8.97 12.06 8.82 12.21 9.04 12.59C9.27 12.97 9.88 13.73 10.7 14.5C11.66 15.41 12.39 15.75 12.72 15.89C13.05 16.03 13.27 15.99 13.46 15.8C13.64 15.62 14.28 14.91 14.46 14.64C14.64 14.37 14.82 14.33 15.04 14.37C15.27 14.42 16.32 14.94 16.54 15.08C16.77 15.21 16.95 15.26 17.02 15.35C17.09 15.44 17.09 15.83 17.06 14.24Z" /></svg>
-                        Contactar por WhatsApp
-                    </Button>
+                <CardHeader><CardTitle className="flex items-center gap-2"><FileSignature/>Confirmaciones Legales</CardTitle></CardHeader>
+                <CardContent className="space-y-4">
+                    <div className="flex items-center space-x-2">
+                        <Checkbox id="intakeSigned" checked={order.intakeFormSigned} onCheckedChange={(checked) => handleConfirmationChange('intake', !!checked)} disabled={isPending}/>
+                        <label htmlFor="intakeSigned" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                        Comprobante de Ingreso firmado en físico
+                        </label>
+                    </div>
+                     <div className="flex items-center space-x-2">
+                        <Checkbox id="pickupSigned" checked={order.pickupFormSigned} onCheckedChange={(checked) => handleConfirmationChange('pickup', !!checked)} disabled={isPending}/>
+                        <label htmlFor="pickupSigned" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                        Comprobante de Retiro firmado en físico
+                        </label>
+                    </div>
                 </CardContent>
             </Card>
 
+             <Card>
+                <CardHeader><CardTitle className="flex items-center gap-2"><Wrench/>Actualizar IMEI/Serie</CardTitle></CardHeader>
+                <CardContent className="flex flex-col sm:flex-row gap-4 items-end">
+                <div className="flex-grow">
+                    <label htmlFor="imeiInput" className="text-sm font-medium">IMEI / Número de Serie</label>
+                    <Input id="imeiInput" value={newImei} onChange={(e) => setNewImei(e.target.value)} placeholder="Completar IMEI/Serie"/>
+                </div>
+                <Button onClick={handleUpdateImei} disabled={isPending || newImei === order.deviceIMEI || !newImei}>
+                    {isPending && <LoadingSpinner size={16} className="mr-2"/>}
+                    Guardar
+                </Button>
+                </CardContent>
+            </Card>
+      </div>
+
+       <div className="grid md:grid-cols-2 gap-6 no-print">
             <Card>
                 <CardHeader><CardTitle className="flex items-center gap-2"><MessageSquare/>Comentarios Internos</CardTitle></CardHeader>
                 <CardContent>
                 <div className="space-y-4 mb-4 max-h-48 overflow-y-auto">
                     {order.commentsHistory && order.commentsHistory.length > 0 ? order.commentsHistory.map((comment, index) => (
                     <div key={index} className="text-sm p-3 bg-muted rounded-md">
-                        <p className="font-semibold">{comment.userId} <span className="text-xs text-muted-foreground">- {format(parseISO(comment.timestamp as string), "dd MMM yyyy, HH:mm", { locale: es })}</span></p>
+                        <p className="font-semibold">{comment.userName} <span className="text-xs text-muted-foreground">- {format(parseISO(comment.timestamp as string), "dd MMM yyyy, HH:mm", { locale: es })}</span></p>
                         <p>{comment.description}</p>
                     </div>
                     )) : (
@@ -325,7 +325,31 @@ export function OrderDetailClient({ order: initialOrder, branch }: OrderDetailCl
                 </div>
                 </CardContent>
             </Card>
+
+            <Card>
+                <CardHeader><CardTitle className="flex items-center gap-2"><History/>Bitácora de la Orden</CardTitle></CardHeader>
+                <CardContent className="max-h-80 overflow-y-auto">
+                    {order.auditLog && order.auditLog.length > 0 ? (
+                        <ul className="space-y-3">
+                            {order.auditLog.map((log) => (
+                                <li key={log.id} className="flex items-start text-sm">
+                                    <CheckCircle className="h-4 w-4 text-primary mr-2 mt-0.5 shrink-0"/>
+                                    <div>
+                                        <p className="text-muted-foreground">{log.description}</p>
+                                        <p className="text-xs text-muted-foreground/70">
+                                            Por <span className="font-semibold">{log.userName}</span> el {format(parseISO(log.timestamp as string), "dd MMM yyyy, HH:mm", { locale: es })}
+                                        </p>
+                                    </div>
+                                </li>
+                            ))}
+                        </ul>
+                    ) : (
+                        <p className="text-sm text-muted-foreground text-center py-4">No hay historial de auditoría.</p>
+                    )}
+                </CardContent>
+            </Card>
       </div>
+
     </div>
   );
 }

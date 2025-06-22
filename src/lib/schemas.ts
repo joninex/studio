@@ -43,7 +43,8 @@ export const OrderSchema = z.object({
   deviceBrand: z.string().min(1, "Marca del equipo es requerida."),
   deviceModel: z.string().min(1, "Modelo del equipo es requerida."),
   deviceColor: z.string().optional(),
-  deviceIMEI: z.string().min(14, "IMEI debe tener al menos 14 caracteres.").max(16, "IMEI no puede exceder 16 caracteres."),
+  deviceIMEI: z.string().max(16, "IMEI no puede exceder 16 caracteres.").optional().or(z.literal('')),
+  imeiNotVisible: z.boolean().default(false),
   accessories: z.string().optional(),
   declaredFault: z.string().min(1, "Falla declarada es requerida."),
   unlockPatternProvided: z.boolean().default(false),
@@ -55,7 +56,13 @@ export const OrderSchema = z.object({
   estimatedCompletionTime: z.string().optional().or(z.literal('')),
   status: z.enum(validOrderStatuses).optional(),
   classification: z.enum(validClassificationOptions).nullable().optional(),
+  intakeFormSigned: z.boolean().optional(),
+  pickupFormSigned: z.boolean().optional(),
+}).refine(data => data.imeiNotVisible || (data.deviceIMEI && data.deviceIMEI.length > 0), {
+    message: "El IMEI/Serie es requerido si no está marcado como 'no visible'.",
+    path: ["deviceIMEI"],
 });
+
 
 export type OrderFormData = z.infer<typeof OrderSchema>;
 

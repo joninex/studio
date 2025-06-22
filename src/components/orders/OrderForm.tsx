@@ -21,7 +21,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/providers/AuthProvider";
 import { AISuggestion, type Order, type Checklist } from "@/types";
 import { CHECKLIST_ITEMS, YES_NO_OPTIONS, LEGAL_TEXTS } from "@/lib/constants";
-import { AlertCircle, Bot, DollarSign, Info, ListChecks, LucideSparkles, User, Wrench, Clock, Lock, LockOpen } from "lucide-react";
+import { AlertCircle, Bot, DollarSign, Info, ListChecks, LucideSparkles, User, Wrench, Clock, Lock, LockOpen, InfoIcon } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 
@@ -54,6 +54,7 @@ export function OrderForm({ orderId }: OrderFormProps) {
     defaultValues: {
       branchId: currentBranchId || "",
       clientId: "", deviceBrand: "", deviceModel: "", deviceIMEI: "", declaredFault: "",
+      imeiNotVisible: false,
       unlockPatternProvided: true, // Default to true for convenience
       checklist: defaultChecklistValues,
       damageRisk: "", costSparePart: 0, costLabor: 0,
@@ -63,6 +64,7 @@ export function OrderForm({ orderId }: OrderFormProps) {
   });
   
   const unlockPatternProvided = form.watch("unlockPatternProvided");
+  const imeiNotVisible = form.watch("imeiNotVisible");
 
   useEffect(() => {
     if (!unlockPatternProvided) {
@@ -104,9 +106,9 @@ export function OrderForm({ orderId }: OrderFormProps) {
     startTransition(async () => {
       let result;
       if (orderId) {
-        result = await updateOrder(orderId, values, user.uid);
+        result = await updateOrder(orderId, values, user.name);
       } else {
-        result = await createOrder(values, user.uid, userBranchContext);
+        result = await createOrder(values, user.name, userBranchContext);
       }
 
       if (result.success && result.order?.id) {
@@ -157,7 +159,7 @@ export function OrderForm({ orderId }: OrderFormProps) {
             <Card>
               <CardHeader><CardTitle className="flex items-center gap-2"><User className="text-primary"/> Datos del Cliente</CardTitle></CardHeader>
               <CardContent className="space-y-4">
-                 <FormField control={form.control} name="clientId" render={({ field }) => ( <FormItem><FormLabel>ID del Cliente</FormLabel><FormControl><Input placeholder="Ej: CLI001" {...field} /></FormControl><FormDescription>Ingrese el ID de un cliente existente.</FormDescription><FormMessage /></FormItem> )} />
+                 <FormField control={form.control} name="clientId" render={({ field }) => ( <FormItem><FormLabel>ID del Cliente</FormLabel><FormControl><Input placeholder="Buscar por Nombre, DNI, Email..." {...field} /></FormControl><FormDescription>Ingrese el ID de un cliente existente.</FormDescription><FormMessage /></FormItem> )} />
               </CardContent>
             </Card>
 
@@ -166,7 +168,24 @@ export function OrderForm({ orderId }: OrderFormProps) {
               <CardContent className="space-y-4">
                 <FormField control={form.control} name="deviceBrand" render={({ field }) => ( <FormItem><FormLabel>Marca</FormLabel><FormControl><Input placeholder="Ej: Samsung, Apple" {...field} /></FormControl><FormMessage /></FormItem> )} />
                 <FormField control={form.control} name="deviceModel" render={({ field }) => ( <FormItem><FormLabel>Modelo</FormLabel><FormControl><Input placeholder="Ej: Galaxy S21, iPhone 13" {...field} /></FormControl><FormMessage /></FormItem> )} />
-                <FormField control={form.control} name="deviceIMEI" render={({ field }) => ( <FormItem><FormLabel>IMEI/Serial</FormLabel><FormControl><Input placeholder="IMEI o N° Serie del equipo" {...field} /></FormControl><FormMessage /></FormItem> )} />
+                <FormField control={form.control} name="deviceIMEI" render={({ field }) => ( <FormItem><FormLabel>IMEI/Serial</FormLabel><FormControl><Input placeholder="IMEI o N° Serie del equipo" {...field} disabled={imeiNotVisible} /></FormControl><FormMessage /></FormItem> )} />
+                <FormField
+                    control={form.control}
+                    name="imeiNotVisible"
+                    render={({ field }) => (
+                        <FormItem className="flex flex-row items-center gap-2 space-y-0">
+                        <FormControl>
+                            <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            />
+                        </FormControl>
+                         <FormLabel className="font-normal text-sm">
+                            IMEI/Serie no visible/accesible al ingreso
+                        </FormLabel>
+                        </FormItem>
+                    )}
+                />
                 <FormField control={form.control} name="declaredFault" render={({ field }) => ( <FormItem><FormLabel>Falla Declarada por el Cliente</FormLabel><FormControl><Textarea placeholder="Descripción de la falla" {...field} /></FormControl><FormMessage /></FormItem> )} />
               </CardContent>
             </Card>
@@ -180,6 +199,7 @@ export function OrderForm({ orderId }: OrderFormProps) {
                 </Button>
               </CardHeader>
               <CardContent>
+                 <p className="text-sm text-muted-foreground mb-4">Obtenga posibles causas y soluciones para la falla declarada, basadas en el modelo del equipo.</p>
                 {aiSuggestion && (
                   <div className="space-y-4 text-sm p-4 bg-accent/20 rounded-md border border-accent">
                     <div><h4 className="font-semibold text-primary">Posibles Causas:</h4><p className="text-muted-foreground">{aiSuggestion.possibleCauses}</p></div>
@@ -194,7 +214,10 @@ export function OrderForm({ orderId }: OrderFormProps) {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2"><ListChecks className="text-primary"/> Checklist de Recepción</CardTitle>
-                <CardDescription>{LEGAL_TEXTS.checklistDisclaimer}</CardDescription>
+                <CardDescription>
+                    <InfoIcon className="inline h-4 w-4 mr-1"/>
+                    {LEGAL_TEXTS.checklistDisclaimer}
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <FormField
@@ -205,10 +228,10 @@ export function OrderForm({ orderId }: OrderFormProps) {
                         <div className="space-y-0.5">
                             <FormLabel className="text-base flex items-center gap-2">
                                 {field.value ? <LockOpen className="text-green-600"/> : <Lock className="text-destructive"/>}
-                                ¿El cliente deja código/patrón de desbloqueo?
+                                ¿Autoriza acceso al sistema con clave/patrón?
                             </FormLabel>
                             <FormDescription>
-                                Determina si se pueden probar todas las funciones.
+                                Requerido para probar todas las funciones internas.
                             </FormDescription>
                         </div>
                         <FormControl>
@@ -279,8 +302,8 @@ export function OrderForm({ orderId }: OrderFormProps) {
             <Card>
               <CardHeader><CardTitle className="flex items-center gap-2"><AlertCircle className="text-primary"/> Riesgos y Observaciones</CardTitle></CardHeader>
               <CardContent className="space-y-4">
-                <FormField control={form.control} name="damageRisk" render={({ field }) => ( <FormItem><FormLabel>Riesgo de Rotura (Daños preexistentes)</FormLabel><FormControl><Textarea placeholder="Describa daños específicos..." {...field} /></FormControl><FormMessage /></FormItem> )} />
-                <FormField control={form.control} name="observations" render={({ field }) => ( <FormItem><FormLabel>Observaciones Adicionales</FormLabel><FormControl><Textarea placeholder="Comentarios o información relevante para la orden..." {...field} /></FormControl><FormMessage /></FormItem> )} />
+                <FormField control={form.control} name="damageRisk" render={({ field }) => ( <FormItem><FormLabel>Daños físicos preexistentes</FormLabel><FormControl><Textarea placeholder="Describa daños específicos: marco, pantalla, tapa, etc." {...field} /></FormControl><FormMessage /></FormItem> )} />
+                <FormField control={form.control} name="observations" render={({ field }) => ( <FormItem><FormLabel>Accesorios y Observaciones Adicionales</FormLabel><FormControl><Textarea placeholder="Ej: Se entrega con cargador y cable. Cliente menciona que se mojó." {...field} /></FormControl><FormMessage /></FormItem> )} />
                 <FormField control={form.control} name="estimatedCompletionTime" render={({ field }) => ( <FormItem><FormLabel className="flex items-center gap-1"><Clock className="h-4 w-4"/>Hora Estimada de Finalización</FormLabel><FormControl><Input placeholder="Ej: 18:00hs, Fin del día" {...field} /></FormControl><FormDescription>Esta hora se usará en las notificaciones al cliente.</FormDescription><FormMessage /></FormItem> )} />
               </CardContent>
             </Card>

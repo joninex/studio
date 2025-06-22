@@ -94,7 +94,7 @@ body {
 @media print {
   @page {
     size: A4;
-    margin: 15mm;
+    margin: 1cm;
   }
 
   body {
@@ -102,7 +102,7 @@ body {
     background-color: #ffffff !important;
     color: #000000 !important;
     font-family: 'Helvetica Neue', Arial, sans-serif;
-    font-size: 10pt;
+    font-size: 9pt;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
@@ -132,7 +132,7 @@ body {
   }
   
   .page-break {
-    page-break-before: always;
+    page-break-before: always !important;
   }
   
   .break-inside-avoid {
