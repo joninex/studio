@@ -24,6 +24,7 @@ import { CHECKLIST_ITEMS, YES_NO_OPTIONS, LEGAL_TEXTS } from "@/lib/constants";
 import { AlertCircle, Bot, DollarSign, Info, ListChecks, LucideSparkles, User, Wrench, Clock, Lock, LockOpen, InfoIcon } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
+import { DeclaredFaultInput } from "./DeclaredFaultInput";
 
 const FUNCTIONAL_CHECKLIST_IDS = CHECKLIST_ITEMS
     .filter(item => item.group !== 'Estado Físico' && item.type === 'boolean')
@@ -186,7 +187,19 @@ export function OrderForm({ orderId }: OrderFormProps) {
                         </FormItem>
                     )}
                 />
-                <FormField control={form.control} name="declaredFault" render={({ field }) => ( <FormItem><FormLabel>Falla Declarada por el Cliente</FormLabel><FormControl><Textarea placeholder="Descripción de la falla" {...field} /></FormControl><FormMessage /></FormItem> )} />
+                <FormField
+                  control={form.control}
+                  name="declaredFault"
+                  render={() => (
+                    <FormItem>
+                      <FormLabel>Falla Declarada por el Cliente</FormLabel>
+                      <FormControl>
+                        <DeclaredFaultInput />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </CardContent>
             </Card>
 

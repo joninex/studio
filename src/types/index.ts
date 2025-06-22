@@ -224,3 +224,11 @@ export type AISuggestion = {
   possibleCauses: string;
   suggestedSolutions: string;
 };
+
+export interface CommonFault {
+  id: string;
+  activator: string; // e.g., "@noenciende"
+  category: string;
+  fullText: string;
+  keywords: string[];
+}
