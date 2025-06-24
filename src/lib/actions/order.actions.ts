@@ -1,14 +1,13 @@
 // src/lib/actions/order.actions.ts
 "use server";
 
-import type { Order, AuditLogEntry, Comment as OrderCommentType, OrderStatus, OrderPartItem, PaymentItem, UserRole, MessageTemplateKey, Branch } from "@/types";
+import type { Order, AuditLogEntry, Comment as OrderCommentType, OrderStatus, OrderPartItem, PaymentItem, UserRole, MessageTemplateKey, Branch, User } from "@/types";
 import { OrderSchema } from "@/lib/schemas";
 import type { z } from "zod";
 import { getClientById } from "./client.actions";
 import { DEFAULT_STORE_SETTINGS } from "../constants";
 import { updatePartStock } from "./part.actions";
-import { getUsersByRole } from './user.actions';
-import { getUserById, getAllMockUsers } from './auth.actions';
+import { getUsersByRole, getUserById, getUsers } from './user.actions';
 import { createNotification } from './notification.actions';
 import { PackageCheck, PackageSearch, Briefcase, MessageCircle } from 'lucide-react';
 import { getBranchById } from "./branch.actions";
@@ -46,14 +45,14 @@ let mockOrders: Order[] = [
     estimatedCompletionTime: "18:00hs",
     intakeFormSigned: true,
     pickupFormSigned: false,
-    assignedTechnicianId: "juan.perez.techhwcen",
+    assignedTechnicianId: "gori-user-uuid-003",
     assignedTechnicianName: "Juan Pérez",
     auditLog: [
-       { id: 'log-1', userId: 'tech123', userName: 'Tech User', description: 'Orden creada.', timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()},
-       { id: 'log-2', userId: 'tech123', userName: 'Tech User', description: 'Confirmado: Comprobante de Ingreso firmado.', timestamp: new Date(Date.now() - 1.9 * 24 * 60 * 60 * 1000).toISOString()},
+       { id: 'log-1', userId: 'gori-user-uuid-003', userName: 'Juan Pérez', description: 'Orden creada.', timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()},
+       { id: 'log-2', userId: 'gori-user-uuid-003', userName: 'Juan Pérez', description: 'Confirmado: Comprobante de Ingreso firmado.', timestamp: new Date(Date.now() - 1.9 * 24 * 60 * 60 * 1000).toISOString()},
     ],
     commentsHistory: [
-      { id: 'cmt-1', userId: 'tech123', userName: 'Tech User', description: 'Se confirma pantalla rota, posible daño en flex de display.', timestamp: new Date(Date.now() - 1.5 * 24 * 60 * 60 * 1000).toISOString()}
+      { id: 'cmt-1', userId: 'gori-user-uuid-003', userName: 'Juan Pérez', description: 'Se confirma pantalla rota, posible daño en flex de display.', timestamp: new Date(Date.now() - 1.5 * 24 * 60 * 60 * 1000).toISOString()}
     ],
     partsUsed: [
       { partId: "PART001", partName: "Pantalla iPhone 12 Original", quantity: 1, unitPrice: 150.00, costPrice: 80.00 }
@@ -466,11 +465,11 @@ export async function generateWhatsAppLink(
   userName: string,
 ): Promise<{ success: boolean, message?: string, url?: string, order?: Order }> {
     const order = await getOrderById(orderId);
-    const user = (await getAllMockUsers()).find(u => u.name === userName);
+    const allUsers = await getUsers();
+    const user = allUsers.find(u => u.name === userName);
 
     if (!order) return { success: false, message: "Orden no encontrada." };
     if (!user) return { success: false, message: "Usuario no encontrado." };
-    if (!order.clientPhone) return { success: false, message: "El cliente no tiene un teléfono registrado." };
 
     const branch = await getBranchById(order.branchId);
     const message = await getWhatsAppMessage(templateKey, order, branch, user);
@@ -480,7 +479,7 @@ export async function generateWhatsAppLink(
       return { success: false, message: logResult.message };
     }
     
-    const cleanedPhone = order.clientPhone.replace(/[\s+()-]/g, '');
+    const cleanedPhone = (order.clientPhone || '').replace(/[\s+()-]/g, '');
     const whatsappUrl = `https://wa.me/${cleanedPhone}?text=${encodeURIComponent(message)}`;
     
     return { success: true, url: whatsappUrl, order: logResult.order };
