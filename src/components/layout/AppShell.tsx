@@ -43,6 +43,7 @@ import {
   CalendarDays,
   PenTool,
   ExternalLink,
+  Bot
 } from "lucide-react";
 import { useAuth } from "@/providers/AuthProvider";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -64,6 +65,7 @@ const mainNavItems: NavItem[] = [
     { href: "/orders", label: "Órdenes", icon: FileText },
     { href: "/clients", label: "Clientes", icon: Contact },
     { href: "/schedule", label: "Calendario", icon: CalendarDays },
+    { href: "/ai-guides", label: "Guías IA", icon: Bot },
 ];
 
 const inventoryNavItems: NavItem[] = [

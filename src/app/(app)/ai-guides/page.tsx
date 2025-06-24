@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
-import { Bot, Lightbulb, Wrench, CheckSquare, AlertTriangle, List } from "lucide-react";
+import { Bot, Lightbulb, Wrench, AlertTriangle, List } from "lucide-react";
 
 const FormSchema = z.object({
   procedureName: z.string().min(5, {
