@@ -21,6 +21,7 @@ import { useToast } from "@/hooks/use-toast";
 import { PART_CATEGORIES } from "@/lib/constants";
 
 const validCategoryOptions = PART_CATEGORIES;
+const ALL_CATEGORIES_VALUE = "__ALL__";
 
 interface PartListClientProps {
   initialParts: Part[]; 
@@ -67,7 +68,11 @@ export function PartListClient({ initialParts, initialFilters }: PartListClientP
 
 
   const handleFilterChange = (filterName: keyof typeof filters, value: string) => {
-      setFilters(prev => ({ ...prev, [filterName]: value }));
+      if (filterName === 'category' && value === ALL_CATEGORIES_VALUE) {
+        setFilters(prev => ({ ...prev, category: "" }));
+      } else {
+        setFilters(prev => ({ ...prev, [filterName]: value }));
+      }
   };
 
   const applyFilters = () => {
@@ -123,12 +128,12 @@ export function PartListClient({ initialParts, initialFilters }: PartListClientP
               value={filters.sku}
               onChange={(e) => handleFilterChange("sku", e.target.value)}
             />
-            <Select value={filters.category ?? ""} onValueChange={(value) => handleFilterChange("category", value)}>
+            <Select value={filters.category || ALL_CATEGORIES_VALUE} onValueChange={(value) => handleFilterChange("category", value)}>
                 <SelectTrigger>
                 <SelectValue placeholder="Todas las Categorías" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todas las Categorías</SelectItem>
+                  <SelectItem value={ALL_CATEGORIES_VALUE}>Todas las Categorías</SelectItem>
                   {validCategoryOptions.map(cat => (
                       <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                   ))}
