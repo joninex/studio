@@ -8,8 +8,8 @@ body {
 
 @layer base {
   :root {
-    /* Neo-Tech Light Mode (Optional Fallback) */
-    --background: 220 29% 95%;
+    /* G.O.R.I Light Mode */
+    --background: 220 29% 95%; /* #F0F2F5 */
     --foreground: 220 20% 10%;
 
     --card: 220 29% 98%;
@@ -18,7 +18,7 @@ body {
     --popover: 220 29% 98%;
     --popover-foreground: 220 20% 10%;
 
-    --primary: 199 92% 50%; /* Brighter Blue */
+    --primary: 231 48% 48%; /* #3F51B5 - Deep Blue */
     --primary-foreground: 0 0% 100%;
 
     --secondary: 215 25% 90%;
@@ -27,7 +27,7 @@ body {
     --muted: 215 25% 90%;
     --muted-foreground: 220 20% 40%;
     
-    --accent: 256 92% 70%; /* Brighter Violet */
+    --accent: 38 100% 63%; /* #FFAB40 - Soft Orange */
     --accent-foreground: 220 20% 10%;
 
     --destructive: 0 84% 60%;
@@ -35,13 +35,13 @@ body {
 
     --border: 215 20% 85%;
     --input: 215 20% 90%;
-    --ring: 199 92% 50%;
+    --ring: 231 48% 48%; /* Deep Blue */
 
     --radius: 1rem; /* rounded-2xl */
   }
 
   .dark {
-    /* Neo-Tech Dark Mode (Default) */
+    /* G.O.R.I Dark Mode */
     --background: 221 39% 11%; /* #0F172A */
     --foreground: 210 40% 96%; /* #F1F5F9 */
 
@@ -51,7 +51,7 @@ body {
     --popover: 221 39% 11%;
     --popover-foreground: 210 40% 96%;
 
-    --primary: 199 92% 60%; /* #38BDF8 */
+    --primary: 231 48% 58%; /* Brighter Deep Blue */
     --primary-foreground: 221 39% 11%;
 
     --secondary: 217 33% 25%; /* #293548 */
@@ -60,7 +60,7 @@ body {
     --muted: 215 28% 28%; /* #334155 */
     --muted-foreground: 215 25% 65%; /* #94A3B8 */
 
-    --accent: 256 92% 77%; /* #A78BFA */
+    --accent: 38 100% 70%; /* Brighter Soft Orange */
     --accent-foreground: 221 39% 11%;
 
     --destructive: 0 72% 51%; /* A slightly deeper red for dark mode */
@@ -68,10 +68,10 @@ body {
 
     --border: 217 33% 25%; /* #293548 */
     --input: 217 27% 20%; /* #26324a */
-    --ring: 199 92% 60%; /* #38BDF8 */
+    --ring: 231 48% 58%; /* Brighter Deep Blue */
     
-    --chart-1: 199 92% 60%;
-    --chart-2: 256 92% 77%;
+    --chart-1: 231 48% 58%; /* Corresponds to primary */
+    --chart-2: 38 100% 70%; /* Corresponds to accent */
     --chart-3: 159 64% 52%;
     --chart-4: 48 96% 53%;
     --chart-5: 0 91% 71%;

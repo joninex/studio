@@ -15,10 +15,10 @@ let mockBranches: Branch[] = [
         settings: {
             ...DEFAULT_STORE_SETTINGS,
             id: "settings_b001",
-            companyName: "NexusServ 360 - Central",
+            companyName: "G.O.R.I - Central",
             companyCuit: "30-11223344-5",
             companyAddress: "Av. Corrientes 1234, CABA",
-            companyContactDetails: "Tel: (011) 4123-5678 | central@nexus-serv.com",
+            companyContactDetails: "Tel: (011) 4123-5678 | central@gori-serv.com",
             branchInfo: "Taller Central",
         },
         createdAt: new Date().toISOString(),
@@ -32,10 +32,10 @@ let mockBranches: Branch[] = [
         settings: {
             ...DEFAULT_STORE_SETTINGS,
             id: "settings_b002",
-            companyName: "NexusServ 360 - Suc. Norte",
+            companyName: "G.O.R.I - Suc. Norte",
             companyCuit: "30-55667788-9",
             companyAddress: "Av. Maipú 500, Vicente López",
-            companyContactDetails: "Tel: (011) 4798-1234 | norte@nexus-serv.com",
+            companyContactDetails: "Tel: (011) 4798-1234 | norte@gori-serv.com",
             branchInfo: "Sucursal Zona Norte",
         },
         createdAt: new Date().toISOString(),
@@ -49,10 +49,10 @@ let mockBranches: Branch[] = [
         settings: {
             ...DEFAULT_STORE_SETTINGS,
             id: "settings_b003",
-            companyName: "NexusServ 360 - Depósito",
+            companyName: "G.O.R.I - Depósito",
             companyCuit: "30-99887766-5",
             companyAddress: "Parque Industrial, Lote 15",
-            companyContactDetails: "interno@nexus-serv.com",
+            companyContactDetails: "interno@gori-serv.com",
             branchInfo: "Depósito y Taller Avanzado",
         },
         createdAt: new Date().toISOString(),
@@ -136,7 +136,7 @@ export async function createBranch(data: z.infer<typeof BranchSchema>): Promise<
     settings: {
         ...DEFAULT_STORE_SETTINGS,
         id: `settings_${newId.toLowerCase()}`,
-        companyName: `NexusServ 360 - ${validatedFields.data.name}`,
+        companyName: `G.O.R.I - ${validatedFields.data.name}`,
         companyAddress: validatedFields.data.address,
         branchInfo: validatedFields.data.name,
     },
@@ -167,7 +167,7 @@ export async function updateBranch(branchId: string, data: z.infer<typeof Branch
     updatedAt: new Date().toISOString(),
   };
   
-  updatedBranch.settings.companyName = `NexusServ 360 - ${validatedFields.data.name}`;
+  updatedBranch.settings.companyName = `G.O.R.I - ${validatedFields.data.name}`;
   updatedBranch.settings.branchInfo = validatedFields.data.name;
   updatedBranch.settings.companyAddress = validatedFields.data.address;
 

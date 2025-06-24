@@ -14,15 +14,15 @@ export default function LoginPage() {
                 src="https://placehold.co/128x128.png"
                 width={128}
                 height={128}
-                alt="NexusServ 360 Logo"
+                alt="G.O.R.I Logo"
                 className="mx-auto mb-4 rounded-2xl border border-primary/50 bg-card p-2 shadow-[0_0_20px_theme(colors.primary.DEFAULT)]"
                 data-ai-hint="isometric schematic"
            />
           <h1 className="font-headline text-4xl font-bold tracking-tight text-primary">
-            NexusServ 360
+            G.O.R.I
           </h1>
           <p className="mt-2 text-muted-foreground">
-            Bienvenido al Centro de Comando de Reparaciones
+            Gestión de Órdenes de Reparación Inteligente
           </p>
         </div>
         <LoginForm />

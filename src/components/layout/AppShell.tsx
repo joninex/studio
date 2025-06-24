@@ -81,7 +81,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
            <Link href="/dashboard" className="flex items-center gap-2 p-2 hover:no-underline">
             <Smartphone className="h-8 w-8 text-primary transition-all duration-300 group-hover:animate-pulse" />
             <h1 className="font-headline text-xl font-bold text-primary group-data-[collapsible=icon]:hidden">
-              NexusServ 360
+              G.O.R.I
             </h1>
           </Link>
         </SidebarHeader>

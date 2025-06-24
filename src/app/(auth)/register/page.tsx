@@ -8,19 +8,19 @@ export default function RegisterPage() {
     <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
       <div className="w-full max-w-md space-y-8">
         <div className="text-center">
-          <Image 
-            src="https://placehold.co/150x50.png?text=NexusServ+360" 
-            alt="NexusServ 360 Logo" 
-            width={150} 
-            height={50}
-            className="mx-auto mb-6"
-            data-ai-hint="company logo"
+          <Image
+              src="https://placehold.co/128x128.png"
+              width={128}
+              height={128}
+              alt="G.O.R.I Logo"
+              className="mx-auto mb-4 rounded-2xl border border-primary/50 bg-card p-2 shadow-[0_0_20px_theme(colors.primary.DEFAULT)]"
+              data-ai-hint="isometric schematic"
           />
           <h1 className="font-headline text-3xl font-bold tracking-tight text-primary">
             Registro de Usuario
           </h1>
           <p className="mt-2 text-muted-foreground">
-            Cree una cuenta para acceder al sistema.
+            Cree una cuenta para acceder al sistema G.O.R.I.
           </p>
         </div>
         <RegisterForm />
