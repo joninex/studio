@@ -1,4 +1,4 @@
-import type { OrderStatus, Classification, Checklist, PartCategory, PartUnit, UserRole } from '@/types';
+import type { OrderStatus, Classification, Checklist, PartCategory, PartUnit, UserRole, FiscalCondition } from '@/types';
 
 export const ORDER_STATUSES: Array<OrderStatus | ""> = [
   "Recibido",
@@ -75,6 +75,8 @@ export const PART_CATEGORIES: Array<PartCategory | ""> = ["", "Pantalla", "Bater
 export const PART_UNITS: PartUnit[] = ["unidad", "metro", "kit"];
 
 export const USER_ROLES_VALUES: UserRole[] = ["admin", "tecnico", "recepcionista"];
+
+export const FISCAL_CONDITIONS: Array<FiscalCondition> = ["Consumidor Final", "Monotributista", "Responsable Inscripto", "Exento", ""];
 
 
 export const DEFAULT_STORE_SETTINGS = {

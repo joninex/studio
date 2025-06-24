@@ -15,12 +15,18 @@ import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
-import { UserCircle, Phone, Mail, Home, Edit3, FileText } from "lucide-react";
+import { UserCircle, Phone, Mail, Home, Edit3, FileText, Building, Info } from "lucide-react";
+import { Separator } from "../ui/separator";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+import { FISCAL_CONDITIONS } from "@/lib/constants";
+import type { FiscalCondition } from "@/types";
 
 interface ClientFormProps {
   clientId?: string;
   initialData?: Partial<ClientFormData>;
 }
+
+const NONE_FISCAL_CONDITION_VALUE = "";
 
 export function ClientForm({ clientId, initialData }: ClientFormProps) {
   const router = useRouter();
@@ -35,8 +41,12 @@ export function ClientForm({ clientId, initialData }: ClientFormProps) {
       lastName: "",
       dni: "",
       phone: "",
+      phone2: "",
       email: "",
       address: "",
+      businessName: "",
+      cuit: "",
+      fiscalCondition: "Consumidor Final",
       notes: "",
     },
   });
@@ -66,8 +76,8 @@ export function ClientForm({ clientId, initialData }: ClientFormProps) {
         const result = await updateClient(clientId, values);
         if (result.success) {
           toast({ title: "Éxito", description: "Cliente actualizado correctamente." });
-          router.push("/clients"); // Or to /clients/${clientId} when detail page exists
-          router.refresh(); // Ensure the list is updated
+          router.push("/clients");
+          router.refresh(); 
         } else {
           toast({ variant: "destructive", title: "Error", description: result.message });
         }
@@ -96,103 +106,51 @@ export function ClientForm({ clientId, initialData }: ClientFormProps) {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        
+        <h3 className="text-lg font-medium flex items-center gap-2"><UserCircle className="text-primary"/>Datos Personales</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <FormField
-            control={form.control}
-            name="name"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="flex items-center gap-1"><UserCircle className="h-4 w-4" />Nombre</FormLabel>
-                <FormControl>
-                  <Input placeholder="Nombre del cliente" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="lastName"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="flex items-center gap-1"><UserCircle className="h-4 w-4" />Apellido</FormLabel>
-                <FormControl>
-                  <Input placeholder="Apellido del cliente" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          <FormField control={form.control} name="name" render={({ field }) => ( <FormItem><FormLabel>Nombre</FormLabel><FormControl><Input placeholder="Nombre del cliente" {...field} /></FormControl><FormMessage /></FormItem> )} />
+          <FormField control={form.control} name="lastName" render={({ field }) => ( <FormItem><FormLabel>Apellido</FormLabel><FormControl><Input placeholder="Apellido del cliente" {...field} /></FormControl><FormMessage /></FormItem> )} />
         </div>
+        <FormField control={form.control} name="dni" render={({ field }) => ( <FormItem><FormLabel>DNI/Documento</FormLabel><FormControl><Input placeholder="Número de DNI o documento" {...field} /></FormControl><FormMessage /></FormItem> )} />
+        
+        <Separator className="my-6"/>
 
+        <h3 className="text-lg font-medium flex items-center gap-2"><Phone className="text-primary"/>Datos de Contacto</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <FormField
-            control={form.control}
-            name="dni"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="flex items-center gap-1"><FileText className="h-4 w-4" />DNI/Documento</FormLabel>
-                <FormControl>
-                  <Input placeholder="Número de DNI o documento" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="phone"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="flex items-center gap-1"><Phone className="h-4 w-4" />Teléfono Principal</FormLabel>
-                <FormControl>
-                  <Input placeholder="Número de teléfono" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          <FormField control={form.control} name="phone" render={({ field }) => ( <FormItem><FormLabel>Teléfono Principal</FormLabel><FormControl><Input placeholder="Número de teléfono principal" {...field} /></FormControl><FormMessage /></FormItem> )} />
+          <FormField control={form.control} name="phone2" render={({ field }) => ( <FormItem><FormLabel>Teléfono Alternativo (Opcional)</FormLabel><FormControl><Input placeholder="Otro número de contacto" {...field} /></FormControl><FormMessage /></FormItem> )} />
         </div>
+        <FormField control={form.control} name="email" render={({ field }) => ( <FormItem><FormLabel>Email (Opcional)</FormLabel><FormControl><Input type="email" placeholder="correo@ejemplo.com" {...field} /></FormControl><FormMessage /></FormItem> )} />
+        <FormField control={form.control} name="address" render={({ field }) => ( <FormItem><FormLabel>Dirección (Opcional)</FormLabel><FormControl><Textarea placeholder="Calle, número, ciudad, etc." {...field} /></FormControl><FormMessage /></FormItem> )} />
 
-        <FormField
-          control={form.control}
-          name="email"
-          render={({ field }) => (
+        <Separator className="my-6" />
+
+        <h3 className="text-lg font-medium flex items-center gap-2"><Building className="text-primary"/>Información Fiscal (Opcional)</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FormField control={form.control} name="businessName" render={({ field }) => ( <FormItem><FormLabel>Razón Social</FormLabel><FormControl><Input placeholder="Nombre de la empresa o negocio" {...field} /></FormControl><FormMessage /></FormItem> )} />
+            <FormField control={form.control} name="cuit" render={({ field }) => ( <FormItem><FormLabel>CUIT</FormLabel><FormControl><Input placeholder="Número de CUIT" {...field} /></FormControl><FormMessage /></FormItem> )} />
+        </div>
+        <FormField control={form.control} name="fiscalCondition" render={({ field }) => ( 
             <FormItem>
-              <FormLabel className="flex items-center gap-1"><Mail className="h-4 w-4" />Email (Opcional)</FormLabel>
-              <FormControl>
-                <Input type="email" placeholder="correo@ejemplo.com" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="address"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="flex items-center gap-1"><Home className="h-4 w-4" />Dirección (Opcional)</FormLabel>
-              <FormControl>
-                <Textarea placeholder="Calle, número, ciudad, etc." {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="notes"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="flex items-center gap-1"><Edit3 className="h-4 w-4" />Notas Internas (Opcional)</FormLabel>
-              <FormControl>
-                <Textarea placeholder="Cualquier información adicional relevante sobre el cliente." {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+                <FormLabel>Condición Fiscal</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value || NONE_FISCAL_CONDITION_VALUE}>
+                    <FormControl><SelectTrigger><SelectValue placeholder="Seleccione condición fiscal..." /></SelectTrigger></FormControl>
+                    <SelectContent>
+                        <SelectItem value={NONE_FISCAL_CONDITION_VALUE}>Consumidor Final</SelectItem>
+                        {FISCAL_CONDITIONS.filter(fc => fc !== "" && fc !== "Consumidor Final").map(fc => (
+                            <SelectItem key={fc} value={fc as FiscalCondition}>{fc}</SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+                <FormMessage />
+            </FormItem> 
+        )} />
+
+        <Separator className="my-6" />
+        
+        <h3 className="text-lg font-medium flex items-center gap-2"><Info className="text-primary"/>Información Adicional</h3>
+        <FormField control={form.control} name="notes" render={({ field }) => ( <FormItem><FormLabel>Notas Internas (Opcional)</FormLabel><FormControl><Textarea placeholder="Cualquier información adicional relevante sobre el cliente." {...field} /></FormControl><FormMessage /></FormItem> )} />
 
         <div className="flex justify-end pt-4">
           <Button type="submit" disabled={isPending || isLoadingData} className="w-full sm:w-auto">

@@ -79,7 +79,7 @@ export function ClientListClient({ initialClients, initialFilters }: ClientListC
     <Card className="shadow-xl">
       <CardHeader>
         <CardTitle>Búsqueda de Clientes</CardTitle>
-        <CardDescription>Busque por nombre, apellido, DNI, teléfono o email.</CardDescription>
+        <CardDescription>Busque por nombre, apellido, DNI, CUIT, teléfono o email.</CardDescription>
         <div className="flex gap-4 pt-4">
             <div className="relative w-full">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
@@ -113,7 +113,7 @@ export function ClientListClient({ initialClients, initialFilters }: ClientListC
               <TableHeader>
                 <TableRow>
                   <TableHead>Nombre Completo</TableHead>
-                  <TableHead>DNI</TableHead>
+                  <TableHead>DNI / CUIT</TableHead>
                   <TableHead>Teléfono</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Registrado</TableHead>
@@ -124,7 +124,10 @@ export function ClientListClient({ initialClients, initialFilters }: ClientListC
                 {clients.map((client) => (
                   <TableRow key={client.id}>
                     <TableCell className="font-medium">{client.name} {client.lastName}</TableCell>
-                    <TableCell>{client.dni}</TableCell>
+                    <TableCell>
+                      <div>{client.dni}</div>
+                      {client.cuit && <div className="text-xs text-muted-foreground">{client.cuit}</div>}
+                    </TableCell>
                     <TableCell>{client.phone}</TableCell>
                     <TableCell>{client.email || "N/A"}</TableCell>
                     <TableCell>

@@ -54,14 +54,21 @@ export interface User {
   updatedAt?: string | Date;
 }
 
+export type FiscalCondition = 'Consumidor Final' | 'Monotributista' | 'Responsable Inscripto' | 'Exento' | '';
+
+
 export interface Client {
   id: string;
   name: string;
   lastName: string;
   dni: string;
   phone: string;
+  phone2?: string;
   email?: string;
   address?: string;
+  businessName?: string;
+  cuit?: string;
+  fiscalCondition?: FiscalCondition;
   notes?: string;
   createdAt?: string | Date;
   updatedAt?: string | Date;

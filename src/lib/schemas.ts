@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { CLASSIFICATION_OPTIONS, ORDER_STATUSES, CHECKLIST_ITEMS, PART_CATEGORIES, PART_UNITS, USER_ROLES_VALUES } from './constants';
-import type { OrderStatus, Classification, Checklist, PartCategory, PartUnit, UserRole, StoreSettings } from '@/types';
+import { CLASSIFICATION_OPTIONS, ORDER_STATUSES, CHECKLIST_ITEMS, PART_CATEGORIES, PART_UNITS, USER_ROLES_VALUES, FISCAL_CONDITIONS } from './constants';
+import type { OrderStatus, Classification, Checklist, PartCategory, PartUnit, UserRole, FiscalCondition } from '@/types';
 
 export const LoginSchema = z.object({
   email: z.string().email({ message: "Por favor ingrese un email válido." }),
@@ -114,13 +114,19 @@ export const ResetPasswordSchema = z.object({
   email: z.string().email({ message: "Por favor ingrese un email válido." }),
 });
 
+const validFiscalConditions = FISCAL_CONDITIONS.filter(fc => fc !== "") as [FiscalCondition, ...FiscalCondition[]];
+
 export const ClientSchema = z.object({
     name: z.string().min(2, "El nombre es requerido."),
     lastName: z.string().min(2, "El apellido es requerido."),
     dni: z.string().min(7, "El DNI debe tener al menos 7 dígitos.").max(9, "El DNI no puede exceder los 9 dígitos."),
     phone: z.string().min(8, "El teléfono es requerido."),
+    phone2: z.string().optional().or(z.literal('')),
     email: z.string().email("Email inválido.").optional().or(z.literal('')),
     address: z.string().optional().or(z.literal('')),
+    businessName: z.string().optional().or(z.literal('')),
+    cuit: z.string().optional().or(z.literal('')),
+    fiscalCondition: z.enum(validFiscalConditions).optional(),
     notes: z.string().optional().or(z.literal('')),
 });
 export type ClientFormData = z.infer<typeof ClientSchema>;

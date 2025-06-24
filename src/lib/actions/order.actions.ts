@@ -5,7 +5,7 @@ import type { Order, AuditLogEntry, Comment as OrderCommentType, OrderStatus, Or
 import { OrderSchema } from "@/lib/schemas";
 import type { z } from "zod";
 import { suggestRepairSolutions } from "@/ai/flows/suggest-repair-solutions";
-import { getMockClients } from "./client.actions";
+import { getMockClients, getClientById } from "./client.actions";
 import { DEFAULT_STORE_SETTINGS } from "../constants";
 import { updatePartStock } from "./part.actions";
 
@@ -14,7 +14,9 @@ let mockOrders: Order[] = [
     id: "ORD001",
     orderNumber: "ORD001",
     branchId: "B001", // Belongs to Taller Central
-    clientId: "CLI001",
+    clientId: "1001",
+    clientName: "Juan",
+    clientLastName: "Perez",
     deviceBrand: "Samsung",
     deviceModel: "Galaxy S21",
     deviceColor: "Phantom Black",
@@ -25,9 +27,9 @@ let mockOrders: Order[] = [
     unlockPatternProvided: true,
     checklist: {
       enciende: 'no',
-      tactil: 'no',
-      imagen: 'no',
-      cristal: 'si'
+      imagen_pantalla: 'no',
+      respuesta_tactil: 'no',
+      cristal_roto: 'si'
     },
     damageRisk: "Cristal trizado en esquina superior derecha. Marco con rayones visibles.",
     costSparePart: 150.00,
@@ -57,7 +59,9 @@ let mockOrders: Order[] = [
     id: "ORD002",
     orderNumber: "ORD002",
     branchId: "B002", // Belongs to Sucursal Norte
-    clientId: "CLI002",
+    clientId: "1002",
+    clientName: "Maria",
+    clientLastName: "Lopez",
     deviceBrand: "Apple",
     deviceModel: "iPhone 12",
     deviceColor: "Azul",
@@ -68,8 +72,8 @@ let mockOrders: Order[] = [
     unlockPatternProvided: false,
     checklist: {
       enciende: 'no',
-      tactil: 'sc',
-      imagen: 'sc'
+      imagen_pantalla: 'sc',
+      respuesta_tactil: 'sc'
     },
     damageRisk: "",
     costSparePart: 80.00,
@@ -117,9 +121,13 @@ export async function createOrder(
   
   const data = validatedFields.data;
 
-  // Ensure the branchId from the form matches the user's context (security check)
   if (data.branchId !== branchId) {
       return { success: false, message: "Error de permisos: La sucursal no coincide." };
+  }
+
+  const client = await getClientById(data.clientId);
+  if (!client) {
+      return { success: false, message: "El cliente seleccionado no es válido." };
   }
 
   const newOrderNumber = generateOrderNumber();
@@ -127,7 +135,9 @@ export async function createOrder(
     id: newOrderNumber,
     orderNumber: newOrderNumber,
     ...data,
-    branchId: branchId, // Assign to the correct branch
+    clientName: client.name,
+    clientLastName: client.lastName,
+    branchId: branchId,
     entryDate: new Date().toISOString(),
     status: "Recibido",
     intakeFormSigned: false,
@@ -158,7 +168,6 @@ export async function getOrders(filters?: { client?: string, orderNumber?: strin
 
   if (filters) {
     if (filters.client) {
-      // This is a simplified search. In a real app, you'd join tables or do a more complex query.
       const clientLower = filters.client.toLowerCase();
       const matchingClientIds = clients.filter(c => `${c.name} ${c.lastName}`.toLowerCase().includes(clientLower) || c.id.toLowerCase().includes(clientLower)).map(c => c.id);
       filteredOrders = filteredOrders.filter(o => matchingClientIds.includes(o.clientId));
@@ -174,7 +183,6 @@ export async function getOrders(filters?: { client?: string, orderNumber?: strin
     }
   }
 
-  // Add client name to orders for easy display
   const ordersWithClientNames = filteredOrders.map(order => {
     const client = clients.find(c => c.id === order.clientId);
     return {
@@ -193,8 +201,7 @@ export async function getOrderById(id: string): Promise<Order | null> {
   const order = mockOrders.find(o => o.id === id);
   if (!order) return null;
 
-  // Add client name for display purposes
-  const client = await getMockClients().then(clients => clients.find(c => c.id === order.clientId));
+  const client = await getClientById(order.clientId);
   return {
     ...order,
     clientName: client?.name || 'N/D',
@@ -221,9 +228,23 @@ export async function updateOrder(
   }
   
   const originalOrder = mockOrders[orderIndex];
+  const data = validatedFields.data;
+  
+  let clientName = originalOrder.clientName;
+  let clientLastName = originalOrder.clientLastName;
+
+  if (data.clientId && data.clientId !== originalOrder.clientId) {
+    const client = await getClientById(data.clientId);
+    if (!client) {
+        return { success: false, message: "El nuevo cliente seleccionado no es válido." };
+    }
+    clientName = client.name;
+    clientLastName = client.lastName;
+    originalOrder.auditLog.push(createAuditLogEntry(userName, userName, `Cliente cambiado a: ${client.name} ${client.lastName}.`));
+  }
   
   const originalParts = originalOrder.partsUsed || [];
-  const newParts = validatedFields.data.partsUsed || [];
+  const newParts = data.partsUsed || [];
 
   const stockAdjustments = new Map<string, number>();
 
@@ -237,7 +258,6 @@ export async function updateOrder(
 
   for (const [partId, quantityDelta] of stockAdjustments.entries()) {
     if (quantityDelta !== 0) {
-        // Here, a negative delta means we are consuming stock, so we pass it as is.
         const stockResult = await updatePartStock(partId, -quantityDelta);
         if (!stockResult.success) {
             return { success: false, message: `Error de stock al actualizar: ${stockResult.message}` };
@@ -247,7 +267,9 @@ export async function updateOrder(
 
   mockOrders[orderIndex] = {
     ...originalOrder,
-    ...validatedFields.data,
+    ...data,
+    clientName,
+    clientLastName,
     auditLog: [...originalOrder.auditLog, createAuditLogEntry(userName, userName, 'Datos de la orden y repuestos actualizados.')],
   };
 

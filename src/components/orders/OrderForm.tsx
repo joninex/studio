@@ -9,6 +9,7 @@ import type { z } from "zod";
 
 import { OrderSchema, type OrderFormData } from "@/lib/schemas";
 import { createOrder, getRepairSuggestions, updateOrder, getOrderById } from "@/lib/actions/order.actions";
+import { getClientById } from "@/lib/actions/client.actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -19,13 +20,14 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/providers/AuthProvider";
-import { AISuggestion, type Order, type Checklist, Part } from "@/types";
+import { AISuggestion, type Order, type Checklist, Part, Client } from "@/types";
 import { CHECKLIST_ITEMS, YES_NO_OPTIONS, LEGAL_TEXTS } from "@/lib/constants";
 import { AlertCircle, Bot, DollarSign, Info, ListChecks, LucideSparkles, User, Wrench, Clock, Lock, LockOpen, InfoIcon, Package, PackagePlus, Trash2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import { DeclaredFaultInput } from "./DeclaredFaultInput";
 import { PartSelector } from "./PartSelector";
+import { ClientSelector } from "./ClientSelector";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 
@@ -46,6 +48,8 @@ export function OrderForm({ orderId }: OrderFormProps) {
   const [aiSuggestion, setAiSuggestion] = useState<AISuggestion | null>(null);
   const [isLoading, setIsLoading] = useState(!!orderId);
   const [isPartSelectorOpen, setIsPartSelectorOpen] = useState(false);
+  const [isClientSelectorOpen, setIsClientSelectorOpen] = useState(false);
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
 
   const currentBranchId = user?.role === 'admin' ? 'B001' : user?.assignments?.[0]?.branchId;
 
@@ -98,9 +102,13 @@ export function OrderForm({ orderId }: OrderFormProps) {
     if (orderId) {
       setIsLoading(true);
       getOrderById(orderId)
-        .then(data => {
+        .then(async (data) => {
           if (data) {
             form.reset(data);
+             if (data.clientId) { // if order has a client, fetch and set it
+              const clientData = await getClientById(data.clientId);
+              if (clientData) setSelectedClient(clientData);
+            }
           }
         })
         .finally(() => setIsLoading(false));
@@ -168,6 +176,11 @@ export function OrderForm({ orderId }: OrderFormProps) {
     });
   };
 
+  const handleSelectClient = (client: Client) => {
+    form.setValue("clientId", client.id, { shouldValidate: true });
+    setSelectedClient(client);
+  };
+
 
   if (isLoading) {
     return <div className="flex justify-center items-center h-64"><LoadingSpinner size={48}/> <p className="ml-4">Cargando orden...</p></div>;
@@ -189,7 +202,29 @@ export function OrderForm({ orderId }: OrderFormProps) {
             <Card>
               <CardHeader><CardTitle className="flex items-center gap-2"><User className="text-primary"/> Datos del Cliente</CardTitle></CardHeader>
               <CardContent className="space-y-4">
-                 <FormField control={form.control} name="clientId" render={({ field }) => ( <FormItem><FormLabel>ID del Cliente</FormLabel><FormControl><Input placeholder="Buscar por Nombre, DNI, Email..." {...field} /></FormControl><FormDescription>Ingrese el ID de un cliente existente.</FormDescription><FormMessage /></FormItem> )} />
+                 <FormField control={form.control} name="clientId" render={({ field }) => ( 
+                    <FormItem>
+                       <FormLabel>Cliente Seleccionado</FormLabel>
+                       <FormControl>
+                            <Input type="hidden" {...field} />
+                       </FormControl>
+                       <div className="p-4 border rounded-md min-h-[80px] bg-muted/30 flex items-center justify-between">
+                            {selectedClient ? (
+                                <div>
+                                    <p className="font-semibold">{selectedClient.name} {selectedClient.lastName}</p>
+                                    <p className="text-sm text-muted-foreground">DNI: {selectedClient.dni}</p>
+                                    <p className="text-sm text-muted-foreground">Tel: {selectedClient.phone}</p>
+                                </div>
+                            ) : (
+                                <p className="text-muted-foreground">Ningún cliente seleccionado.</p>
+                            )}
+                            <Button type="button" variant="outline" onClick={() => setIsClientSelectorOpen(true)}>
+                                {selectedClient ? "Cambiar" : "Seleccionar"} Cliente
+                            </Button>
+                       </div>
+                       <FormMessage />
+                    </FormItem> 
+                 )} />
               </CardContent>
             </Card>
 
@@ -440,6 +475,11 @@ export function OrderForm({ orderId }: OrderFormProps) {
         onOpenChange={setIsPartSelectorOpen}
         onSelectPart={handleSelectPart}
         currentParts={fields.map(f => f.partId)}
+      />
+      <ClientSelector
+        isOpen={isClientSelectorOpen}
+        onOpenChange={setIsClientSelectorOpen}
+        onSelectClient={handleSelectClient}
       />
     </Form>
   );
