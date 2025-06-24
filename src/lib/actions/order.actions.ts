@@ -4,7 +4,6 @@
 import type { Order, AuditLogEntry, Comment as OrderCommentType, OrderStatus, OrderPartItem, PaymentItem, UserRole, MessageTemplateKey, Branch } from "@/types";
 import { OrderSchema } from "@/lib/schemas";
 import type { z } from "zod";
-import { suggestRepairSolutions } from "@/ai/flows/suggest-repair-solutions";
 import { getClientById } from "./client.actions";
 import { DEFAULT_STORE_SETTINGS } from "../constants";
 import { updatePartStock } from "./part.actions";
@@ -400,20 +399,6 @@ export async function addOrderComment(
   mockOrders[orderIndex].auditLog.push(createAuditLogEntry(userName, userName, `Comentario agregado: "${commentText.substring(0, 30)}..."`));
 
   return { success: true, message: "Comentario agregado.", comment: newComment, order: mockOrders[orderIndex] };
-}
-
-
-export async function getRepairSuggestions(
-  deviceModel: string,
-  faultDescription: string
-): Promise<{ success: boolean; message?: string; suggestion?: any }> {
-  try {
-    const result = await suggestRepairSolutions({ deviceModel, faultDescription });
-    return { success: true, suggestion: result };
-  } catch (error) {
-    console.error("Error getting AI suggestions:", error);
-    return { success: false, message: "Error al obtener sugerencias de la IA." };
-  }
 }
 
 export async function addPartToOrder(orderId: string, part: OrderPartItem): Promise<{ success: boolean; message: string }> {

@@ -8,7 +8,7 @@ import { useState, useTransition, useEffect } from "react";
 import type { z } from "zod";
 
 import { OrderSchema, type OrderFormData } from "@/lib/schemas";
-import { createOrder, getRepairSuggestions, updateOrder, getOrderById } from "@/lib/actions/order.actions";
+import { createOrder, updateOrder, getOrderById } from "@/lib/actions/order.actions";
 import { getClientById } from "@/lib/actions/client.actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,7 +20,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/providers/AuthProvider";
-import { AISuggestion, type Order, type Checklist, Part, Client } from "@/types";
+import { type Order, type Checklist, Part, Client } from "@/types";
 import { CHECKLIST_ITEMS, YES_NO_OPTIONS, LEGAL_TEXTS } from "@/lib/constants";
 import { AlertCircle, Bot, DollarSign, Info, ListChecks, LucideSparkles, User, Wrench, Clock, Lock, LockOpen, InfoIcon, Package, PackagePlus, Trash2, Edit } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
@@ -45,8 +45,6 @@ export function OrderForm({ orderId }: OrderFormProps) {
   const router = useRouter();
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
-  const [isAiLoading, setIsAiLoading] = useState(false);
-  const [aiSuggestion, setAiSuggestion] = useState<AISuggestion | null>(null);
   const [isLoading, setIsLoading] = useState(!!orderId);
   const [isPartSelectorOpen, setIsPartSelectorOpen] = useState(false);
   const [isClientSelectorOpen, setIsClientSelectorOpen] = useState(false);
@@ -147,25 +145,6 @@ export function OrderForm({ orderId }: OrderFormProps) {
         toast({ variant: "destructive", title: "Error", description: result.message || "Ocurrió un error." });
       }
     });
-  };
-
-  const handleGetAiSuggestions = async () => {
-    const deviceModel = form.getValues("deviceModel");
-    const faultDescription = form.getValues("declaredFault");
-
-    if (!deviceModel || !faultDescription) {
-      toast({ variant: "destructive", title: "Faltan datos", description: "Ingrese marca/modelo y descripción de la falla para obtener sugerencias." });
-      return;
-    }
-    setIsAiLoading(true);
-    setAiSuggestion(null);
-    const result = await getRepairSuggestions(deviceModel, faultDescription);
-    if (result.success && result.suggestion) {
-      setAiSuggestion(result.suggestion);
-    } else {
-      toast({ variant: "destructive", title: "Error IA", description: result.message });
-    }
-    setIsAiLoading(false);
   };
 
   const handleSelectPart = (part: Part) => {
@@ -280,24 +259,6 @@ export function OrderForm({ orderId }: OrderFormProps) {
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="flex items-center gap-2"><LucideSparkles className="text-primary"/> Asistente IA de Diagnóstico</CardTitle>
-                 <Button type="button" size="sm" onClick={handleGetAiSuggestions} disabled={isAiLoading}>
-                  {isAiLoading && <LoadingSpinner size={16} className="mr-2"/>}
-                  <Bot className="mr-2 h-4 w-4" /> Sugerir
-                </Button>
-              </CardHeader>
-              <CardContent>
-                 <p className="text-sm text-muted-foreground mb-4">Obtenga posibles causas y soluciones para la falla declarada, basadas en el modelo del equipo.</p>
-                {aiSuggestion && (
-                  <div className="space-y-4 text-sm p-4 bg-accent/20 rounded-md border border-accent">
-                    <div><h4 className="font-semibold text-primary">Posibles Causas:</h4><p className="text-muted-foreground">{aiSuggestion.possibleCauses}</p></div>
-                    <div><h4 className="font-semibold text-primary">Soluciones Sugeridas:</h4><p className="text-muted-foreground">{aiSuggestion.suggestedSolutions}</p></div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
           </div>
 
           <div className="space-y-6">
@@ -476,7 +437,7 @@ export function OrderForm({ orderId }: OrderFormProps) {
         <Separator />
         
         <div className="flex justify-end">
-          <Button type="submit" className="w-full sm:w-auto" disabled={isPending || isAiLoading || isLoading}>
+          <Button type="submit" className="w-full sm:w-auto" disabled={isPending || isLoading}>
             {(isPending || isLoading) && <LoadingSpinner size={16} className="mr-2"/>}
             {orderId ? "Actualizar Orden" : "Crear Orden de Servicio"}
           </Button>

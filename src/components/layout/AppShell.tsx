@@ -67,7 +67,6 @@ const financeNavItems = [
 
 const toolsNavItems = [
     { href: "/schedule", label: "Calendario", icon: CalendarDays },
-    { href: "/ai-guides", label: "Guías IA", icon: Lightbulb },
     { href: "/reports", label: "Reportes", icon: BarChart },
 ];
 
@@ -249,6 +248,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
           {children}
         </main>
+        <div className="fixed bottom-4 right-4 z-50 text-xs text-muted-foreground/50 pointer-events-none">
+            Desarrollado por Yonathan Jesus Ocampo | +541130165093
+        </div>
       </SidebarInset>
     </SidebarProvider>
   );
