@@ -1,4 +1,5 @@
 import type { Timestamp } from 'firebase/firestore'; // Using type for Firebase Timestamp
+import type { LucideIcon } from 'lucide-react';
 
 export type UserStatus = 'pending' | 'active' | 'denied';
 
@@ -239,4 +240,14 @@ export interface CommonFault {
   category: string;
   fullText: string;
   keywords: string[];
+}
+
+export interface Notification {
+  id: string;
+  userId: string; // The user who should receive the notification
+  message: string;
+  link: string; // The URL to navigate to when clicked
+  read: boolean;
+  createdAt: string | Date;
+  icon?: LucideIcon; // Optional icon for visual distinction
 }

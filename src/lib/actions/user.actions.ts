@@ -26,6 +26,15 @@ export async function getTechnicians(): Promise<User[]> {
   return allUsers.filter(user => user.role === 'tecnico' && user.status === 'active');
 }
 
+// New function to get users by a specific role
+export async function getUsersByRole(role: UserRole): Promise<User[]> {
+    await new Promise(resolve => setTimeout(resolve, 50));
+    const allUsers = await getAllMockUsers();
+    // This is a simplified check. A real app would check assignments for multi-branch roles.
+    return allUsers.filter(user => user.role === role && user.status === 'active');
+}
+
+
 export async function createUser(data: z.infer<typeof UserSchema>): Promise<{ success: boolean; message: string; user?: User }> {
   const validatedFields = UserSchema.safeParse(data);
   if (!validatedFields.success) {

@@ -1,13 +1,16 @@
 // src/lib/actions/order.actions.ts
 "use server";
 
-import type { Order, AuditLogEntry, Comment as OrderCommentType, OrderStatus, OrderPartItem, PaymentItem } from "@/types";
+import type { Order, AuditLogEntry, Comment as OrderCommentType, OrderStatus, OrderPartItem, PaymentItem, UserRole } from "@/types";
 import { OrderSchema } from "@/lib/schemas";
 import type { z } from "zod";
 import { suggestRepairSolutions } from "@/ai/flows/suggest-repair-solutions";
 import { getMockClients, getClientById } from "./client.actions";
 import { DEFAULT_STORE_SETTINGS } from "../constants";
 import { updatePartStock } from "./part.actions";
+import { getUsersByRole } from './user.actions';
+import { createNotification } from './notification.actions';
+import { PackageCheck, PackageSearch } from 'lucide-react';
 
 let mockOrders: Order[] = [
   {
@@ -283,6 +286,15 @@ export async function updateOrder(
   return { success: true, message: "Orden actualizada.", order: mockOrders[orderIndex] };
 }
 
+// Helper to notify all users of a certain role
+async function notifyRole(role: UserRole, message: string, link: string, icon: any) {
+    const usersToNotify = await getUsersByRole(role);
+    for (const user of usersToNotify) {
+        await createNotification({ userId: user.uid, message, link, icon });
+    }
+}
+
+
 export async function updateOrderStatus(
   orderId: string,
   status: OrderStatus,
@@ -293,16 +305,40 @@ export async function updateOrderStatus(
     return { success: false, message: "Orden no encontrada." };
   }
 
-  mockOrders[orderIndex].status = status;
-  if (status === "Listo para Entrega") {
-    mockOrders[orderIndex].readyForPickupDate = new Date().toISOString();
-  } else if (status === "Entregado") {
-    mockOrders[orderIndex].deliveryDate = new Date().toISOString();
+  const order = mockOrders[orderIndex];
+  order.status = status;
+  order.auditLog.push(createAuditLogEntry(userName, userName, `Estado cambiado a: ${status}.`));
+
+  // --- Notification Logic ---
+  const notificationLink = `/orders/${order.id}`;
+  
+  switch(status) {
+    case "Listo para Entrega":
+      order.readyForPickupDate = new Date().toISOString();
+      await notifyRole(
+        'recepcionista', 
+        `Orden ${order.orderNumber} (${order.deviceModel}) lista para entregar.`, 
+        notificationLink,
+        PackageCheck
+      );
+      break;
+    
+    case "Entregado":
+      order.deliveryDate = new Date().toISOString();
+      break;
+
+    case "En Espera de Repuestos":
+      await notifyRole(
+        'admin', 
+        `Orden ${order.orderNumber} (${order.deviceModel}) necesita repuestos.`, 
+        notificationLink,
+        PackageSearch
+      );
+      break;
   }
+  // --- End Notification Logic ---
 
-  mockOrders[orderIndex].auditLog.push(createAuditLogEntry(userName, userName, `Estado cambiado a: ${status}.`));
-
-  return { success: true, message: "Estado de la orden actualizado.", order: mockOrders[orderIndex] };
+  return { success: true, message: "Estado de la orden actualizado.", order: order };
 }
 
 export async function updateOrderConfirmations(

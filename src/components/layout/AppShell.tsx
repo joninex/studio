@@ -45,21 +45,34 @@ import {
 import { useAuth } from "@/providers/AuthProvider";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ThemeToggle } from "@/components/shared/ThemeToggle";
+import { NotificationBell } from "./NotificationBell"; // Import the new component
 import { cn } from "@/lib/utils";
 
-const navItems = [
+const mainNavItems = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/orders", label: "Órdenes", icon: FileText },
     { href: "/clients", label: "Clientes", icon: Contact },
+];
+
+const inventoryNavItems = [
     { href: "/inventory/parts", label: "Repuestos", icon: Package },
     { href: "/inventory/suppliers", label: "Proveedores", icon: Truck },
-    { href: "/finance/income-report", label: "Reporte Ingresos", icon: TrendingUp },
+];
+
+const financeNavItems = [
+     { href: "/finance/income-report", label: "Reporte Ingresos", icon: TrendingUp },
     { href: "/finance/cashflow", label: "Flujo de Caja", icon: ArrowRightLeft },
+];
+
+const toolsNavItems = [
     { href: "/ai-guides", label: "Guías IA", icon: Lightbulb },
     { href: "/reports", label: "Reportes", icon: BarChart },
+];
+
+const adminNavItems = [
     { href: "/users", label: "Usuarios", icon: Users, adminOnly: true },
     { href: "/settings/branches", label: "Sucursales", icon: Building, adminOnly: true },
-];
+]
 
 const accountItems = [
     { href: "/settings", label: "Configuración", icon: Settings },
@@ -92,12 +105,40 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     }
     return pathname.startsWith(href);
   };
+  
+  const renderNavSection = (items: typeof mainNavItems, title?: string) => (
+    <>
+      {title && <span className="flex font-medium text-sm text-gray-400 px-4 my-2 uppercase group-data-[collapsible=icon]:hidden">{title}</span>}
+      {items.filter(item => !item.adminOnly || user?.role === 'admin').map(item => {
+          const Icon = item.icon;
+          const active = isActive(item.href);
+          return (
+              <SidebarMenuItem key={item.href}>
+                  <Link href={item.href} className="w-full block">
+                      <SidebarMenuButton
+                          variant="ghost"
+                          className={cn(
+                              "w-full justify-start space-x-4 px-4 py-3 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground",
+                              active && "bg-gradient-to-r from-primary/10 to-primary/20 text-primary hover:text-primary font-semibold border-l-2 border-primary"
+                          )}
+                          tooltip={{ children: item.label }}
+                      >
+                          <Icon className="h-5 w-5" />
+                          <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
+                      </SidebarMenuButton>
+                  </Link>
+              </SidebarMenuItem>
+          );
+      })}
+    </>
+  );
+
 
   return (
     <SidebarProvider defaultOpen={!isMobile}>
       <Sidebar side="left" variant="sidebar" collapsible="icon">
-        <SidebarHeader className="flex-col items-center justify-center p-6 text-center group-data-[collapsible=icon]:hidden">
-            <Link href="/dashboard" className="mb-6 block" title="home">
+        <SidebarHeader className="flex-col items-center justify-center p-4 text-center group-data-[collapsible=icon]:hidden">
+            <Link href="/dashboard" className="mb-4 block" title="home">
                  <Smartphone className="h-10 w-10 mx-auto text-primary" />
             </Link>
             <Avatar className="w-24 h-24 m-auto">
@@ -107,30 +148,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <h5 className="mt-4 text-xl font-semibold text-foreground">{user?.name}</h5>
             <span className="text-sm text-muted-foreground">{getRoleDisplayName(user?.role)}</span>
         </SidebarHeader>
+        
+        {/* Collapsed view header */}
+        <SidebarHeader className="items-center justify-center p-4 hidden group-data-[collapsible=icon]:flex">
+            <Link href="/dashboard" className="block" title="home">
+                <Smartphone className="h-8 w-8 text-primary" />
+            </Link>
+        </SidebarHeader>
+
 
         <SidebarContent>
-            <SidebarMenu className="space-y-2 tracking-wide mt-2">
-             {navItems.filter(item => !item.adminOnly || user?.role === 'admin').map(item => {
-                const Icon = item.icon;
-                const active = isActive(item.href);
-                return (
-                    <SidebarMenuItem key={item.href}>
-                        <Link href={item.href} className="w-full block">
-                            <SidebarMenuButton
-                                variant="ghost"
-                                className={cn(
-                                    "w-full justify-start space-x-4 px-4 py-3 rounded-xl text-muted-foreground hover:text-foreground",
-                                    active && "bg-gradient-to-r from-primary/90 to-primary text-primary-foreground hover:text-primary-foreground"
-                                )}
-                                tooltip={{ children: item.label }}
-                            >
-                                <Icon className="h-5 w-5" />
-                                <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
-                            </SidebarMenuButton>
-                        </Link>
-                    </SidebarMenuItem>
-                );
-            })}
+            <SidebarMenu className="space-y-1 tracking-wide mt-2">
+                {renderNavSection(mainNavItems)}
+                {renderNavSection(inventoryNavItems, 'Inventario y Finanzas')}
+                {renderNavSection(financeNavItems)}
+                {renderNavSection(toolsNavItems, 'Herramientas')}
+                {user?.role === 'admin' && renderNavSection(adminNavItems, 'Administración')}
             </SidebarMenu>
         </SidebarContent>
 
@@ -145,8 +178,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     <SidebarMenuButton
                       variant="ghost"
                       className={cn(
-                        "w-full justify-start space-x-4 px-4 py-3 rounded-xl text-muted-foreground hover:text-foreground",
-                        active && "bg-gradient-to-r from-primary/90 to-primary text-primary-foreground hover:text-primary-foreground"
+                        "w-full justify-start space-x-4 px-4 py-3 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground",
+                        active && "bg-gradient-to-r from-primary/10 to-primary/20 text-primary hover:text-primary font-semibold border-l-2 border-primary"
                       )}
                       tooltip={{ children: item.label }}
                     >
@@ -158,7 +191,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               );
             })}
             <SidebarMenuItem>
-              <SidebarMenuButton onClick={handleLogout} variant="ghost" className="w-full justify-start space-x-4 px-4 py-3 rounded-xl text-red-500/80 hover:text-red-500 hover:bg-red-500/10" tooltip={{ children: "Cerrar Sesión" }}>
+              <SidebarMenuButton onClick={handleLogout} variant="ghost" className="w-full justify-start space-x-4 px-4 py-3 rounded-lg text-red-500/80 hover:text-red-500 hover:bg-red-500/10" tooltip={{ children: "Cerrar Sesión" }}>
                 <LogOut className="h-5 w-5" />
                 <span className="group-data-[collapsible=icon]:hidden">Cerrar Sesión</span>
               </SidebarMenuButton>
@@ -174,6 +207,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </div>
             <div className="flex items-center gap-4">
                 <ThemeToggle />
+                <NotificationBell />
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <Button variant="ghost" className="relative h-10 w-10 rounded-full">
