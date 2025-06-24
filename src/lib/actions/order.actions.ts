@@ -9,7 +9,7 @@ import { getClientById } from "./client.actions";
 import { DEFAULT_STORE_SETTINGS } from "../constants";
 import { updatePartStock } from "./part.actions";
 import { getUsersByRole } from './user.actions';
-import { getUserById } from './auth.actions';
+import { getUserById, getAllMockUsers } from './auth.actions';
 import { createNotification } from './notification.actions';
 import { PackageCheck, PackageSearch, Briefcase, MessageCircle } from 'lucide-react';
 import { getBranchById } from "./branch.actions";
@@ -454,7 +454,7 @@ export async function logWhatsAppAttempt(
   const logDescription = `Intento de envío de WhatsApp con mensaje: "${message.substring(0, 50)}..."`;
   mockOrders[orderIndex].auditLog.push(createAuditLogEntry(userName, userName, logDescription));
 
-  return { success: true, message: "Intento de envío registrado.", order: mockOrders[orderIndex] };
+  return { success: true, message: "Intento de envío registrado.", order: logResult.order };
 }
 
 export async function generateWhatsAppLink(
