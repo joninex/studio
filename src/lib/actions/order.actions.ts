@@ -303,8 +303,9 @@ export async function updateOrderStatus(
   }
 
   const order = mockOrders[orderIndex];
+  const oldStatus = order.status;
   order.status = status;
-  order.auditLog.push(createAuditLogEntry(userName, userName, `Estado cambiado a: ${status}.`));
+  order.auditLog.push(createAuditLogEntry(userName, userName, `Estado cambiado de "${oldStatus}" a "${status}".`));
 
   // --- Notification Logic ---
   const notificationLink = `/orders/${order.id}`;
@@ -350,9 +351,9 @@ export async function updateOrderConfirmations(
     }
 
     const fieldToUpdate = confirmationType === 'intake' ? 'intakeFormSigned' : 'pickupFormSigned';
-    const logMessage = confirmationType === 'intake' 
-        ? `Confirmado: Comprobante de Ingreso ${isChecked ? 'firmado' : 'no firmado'}.`
-        : `Confirmado: Comprobante de Retiro ${isChecked ? 'firmado' : 'no firmado'}.`;
+    const formName = confirmationType === 'intake' ? 'Ingreso' : 'Retiro';
+    const actionText = isChecked ? 'marcó como firmado' : 'desmarcó como firmado';
+    const logMessage = `Usuario ${actionText} el comprobante de ${formName}.`;
         
     mockOrders[orderIndex][fieldToUpdate] = isChecked;
     mockOrders[orderIndex].auditLog.push(createAuditLogEntry(userName, userName, logMessage));
@@ -369,9 +370,10 @@ export async function updateOrderImei(
     if (orderIndex === -1) {
         return { success: false, message: "Orden no encontrada." };
     }
+    const oldImei = mockOrders[orderIndex].deviceIMEI || "N/A";
     mockOrders[orderIndex].deviceIMEI = imei;
     mockOrders[orderIndex].imeiNotVisible = false; // It's visible now
-    mockOrders[orderIndex].auditLog.push(createAuditLogEntry(userName, userName, `IMEI/Serie actualizado a: ${imei}.`));
+    mockOrders[orderIndex].auditLog.push(createAuditLogEntry(userName, userName, `IMEI/Serie actualizado de "${oldImei}" a "${imei}".`));
     return { success: true, message: "IMEI actualizado.", order: mockOrders[orderIndex] };
 }
 
@@ -454,7 +456,7 @@ export async function logWhatsAppAttempt(
   const logDescription = `Intento de envío de WhatsApp con mensaje: "${message.substring(0, 50)}..."`;
   mockOrders[orderIndex].auditLog.push(createAuditLogEntry(userName, userName, logDescription));
 
-  return { success: true, message: "Intento de envío registrado.", order: logResult.order };
+  return { success: true, message: "Intento de envío registrado.", order: mockOrders[orderIndex] };
 }
 
 export async function generateWhatsAppLink(
@@ -498,11 +500,13 @@ export async function assignTechnicianToOrder(
   if (!technician || technician.role !== 'tecnico') {
       return { success: false, message: "Técnico no válido." };
   }
+  
+  const oldTechnicianName = mockOrders[orderIndex].assignedTechnicianName || "Nadie";
 
   mockOrders[orderIndex].assignedTechnicianId = technician.uid;
   mockOrders[orderIndex].assignedTechnicianName = technician.name;
   
-  const logDescription = `Orden asignada al técnico: ${technician.name}.`;
+  const logDescription = `Técnico reasignado de "${oldTechnicianName}" a "${technician.name}".`;
   mockOrders[orderIndex].auditLog.push(createAuditLogEntry(assignerName, assignerName, logDescription));
   
   // Notify the assigned technician

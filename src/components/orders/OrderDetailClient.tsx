@@ -104,12 +104,8 @@ export function OrderDetailClient({ order: initialOrder, branch, technicians }: 
     if (!user || !newComment.trim()) return;
     startTransition(async () => {
         const result = await addOrderComment(order.id, newComment, user.name);
-        if (result.success && result.comment) {
-            setOrder(prevOrder => ({
-                ...prevOrder,
-                commentsHistory: [...prevOrder.commentsHistory, result.comment!],
-                auditLog: result.order?.auditLog || prevOrder.auditLog,
-            }));
+        if (result.success && result.order) {
+            setOrder(result.order);
             setNewComment("");
             toast({ title: "Éxito", description: "Comentario agregado."});
         } else {
@@ -152,7 +148,9 @@ export function OrderDetailClient({ order: initialOrder, branch, technicians }: 
       startTransition(async () => {
         const result = await generateWhatsAppLink(order.id, 'INITIAL_CONTACT', user.name);
         if (result.success && result.url) {
-            setOrder(prev => ({...prev, auditLog: result.order?.auditLog || prev.auditLog}));
+            if (result.order) {
+                setOrder(result.order);
+            }
             window.open(result.url, '_blank');
             toast({ title: "Acción Registrada", description: "Se registró el intento de envío por WhatsApp."});
         } else {
