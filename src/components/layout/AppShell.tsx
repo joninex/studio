@@ -35,7 +35,6 @@ import {
   BarChart,
   Contact,
   Smartphone,
-  Lightbulb,
   Truck,
   Package,
   TrendingUp,
@@ -46,13 +45,14 @@ import {
 import { useAuth } from "@/providers/AuthProvider";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ThemeToggle } from "@/components/shared/ThemeToggle";
-import { NotificationBell } from "./NotificationBell"; // Import the new component
+import { NotificationBell } from "./NotificationBell";
 import { cn } from "@/lib/utils";
 
 const mainNavItems = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/orders", label: "Órdenes", icon: FileText },
     { href: "/clients", label: "Clientes", icon: Contact },
+    { href: "/schedule", label: "Calendario", icon: CalendarDays },
 ];
 
 const inventoryNavItems = [
@@ -60,24 +60,18 @@ const inventoryNavItems = [
     { href: "/inventory/suppliers", label: "Proveedores", icon: Truck },
 ];
 
-const financeNavItems = [
-     { href: "/finance/income-report", label: "Reporte Ingresos", icon: TrendingUp },
-    { href: "/finance/cashflow", label: "Flujo de Caja", icon: ArrowRightLeft },
-];
-
-const toolsNavItems = [
-    { href: "/schedule", label: "Calendario", icon: CalendarDays },
+const analyticsNavItems = [
     { href: "/reports", label: "Reportes", icon: BarChart },
+    { href: "/finance/income-report", label: "Ingresos", icon: TrendingUp },
+    { href: "/finance/cashflow", label: "Flujo de Caja", icon: ArrowRightLeft },
 ];
 
 const adminNavItems = [
     { href: "/users", label: "Usuarios", icon: Users, adminOnly: true },
     { href: "/settings/branches", label: "Sucursales", icon: Building, adminOnly: true },
-]
+    { href: "/settings", label: "Configuración y Perfil", icon: Settings, adminOnly: false },
+];
 
-const accountItems = [
-    { href: "/settings", label: "Configuración", icon: Settings },
-]
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth();
@@ -160,37 +154,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         <SidebarContent>
             <SidebarMenu className="space-y-1 tracking-wide mt-2">
-                {renderNavSection(mainNavItems)}
-                {renderNavSection(inventoryNavItems, 'Inventario y Finanzas')}
-                {renderNavSection(financeNavItems)}
-                {renderNavSection(toolsNavItems, 'Herramientas')}
-                {user?.role === 'admin' && renderNavSection(adminNavItems, 'Administración')}
+                {renderNavSection(mainNavItems, 'Principal')}
+                {renderNavSection(inventoryNavItems, 'Inventario')}
+                {renderNavSection(analyticsNavItems, 'Analítica')}
+                {renderNavSection(adminNavItems, 'Administración')}
             </SidebarMenu>
         </SidebarContent>
 
         <SidebarFooter className="border-t">
           <SidebarMenu className="space-y-1">
-            {accountItems.map(item => {
-              const Icon = item.icon;
-              const active = isActive(item.href);
-              return (
-                <SidebarMenuItem key={item.href}>
-                  <Link href={item.href} className="w-full block">
-                    <SidebarMenuButton
-                      variant="ghost"
-                      className={cn(
-                        "w-full justify-start space-x-4 px-4 py-3 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground",
-                        active && "bg-gradient-to-r from-primary/10 to-primary/20 text-primary hover:text-primary font-semibold border-l-2 border-primary"
-                      )}
-                      tooltip={{ children: item.label }}
-                    >
-                      <Icon className="h-5 w-5" />
-                      <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
-                    </SidebarMenuButton>
-                  </Link>
-                </SidebarMenuItem>
-              );
-            })}
             <SidebarMenuItem>
               <SidebarMenuButton onClick={handleLogout} variant="ghost" className="w-full justify-start space-x-4 px-4 py-3 rounded-lg text-red-500/80 hover:text-red-500 hover:bg-red-500/10" tooltip={{ children: "Cerrar Sesión" }}>
                 <LogOut className="h-5 w-5" />
