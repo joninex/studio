@@ -15,7 +15,7 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/providers/AuthProvider";
-import { addOrderComment, updateOrderStatus, updateOrderConfirmations, updateOrderImei, logIntakeDocumentPrint, logWhatsAppAttempt, assignTechnicianToOrder } from "@/lib/actions/order.actions";
+import { addOrderComment, updateOrderStatus, updateOrderConfirmations, updateOrderImei, logIntakeDocumentPrint, generateWhatsAppLink, assignTechnicianToOrder } from "@/lib/actions/order.actions";
 import { ORDER_STATUSES, CHECKLIST_ITEMS } from "@/lib/constants";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -149,29 +149,15 @@ export function OrderDetailClient({ order: initialOrder, branch, technicians }: 
         toast({ variant: "destructive", title: "Error", description: "Usuario no autenticado." });
         return;
       }
-      if (!order.clientPhone) {
-          toast({ variant: "destructive", title: "Error", description: "El cliente no tiene un número de teléfono registrado."});
-          return;
-      }
-
-      const cleanedPhone = order.clientPhone.replace(/[\s+()-]/g, '');
-      const storeName = branch?.settings?.companyName || 'el taller'; 
-      const userName = user?.name || 'un técnico';
-      const estimatedTime = order.estimatedCompletionTime || 'el final del día';
-      
-      const message = `Hola ${order.clientName}, te contacto desde ${storeName}. Tu orden n° ${order.orderNumber} para el equipo ${order.deviceBrand} ${order.deviceModel} tiene una hora de finalización estimada para las ${estimatedTime}. Te avisaremos en cuanto esté lista. Saludos, ${userName}.`;
-      
-      const whatsappUrl = `https://wa.me/${cleanedPhone}?text=${encodeURIComponent(message)}`;
-      
       startTransition(async () => {
-        const result = await logWhatsAppAttempt(order.id, user.name, message);
-        if (result.success && result.order) {
-            setOrder(result.order);
+        const result = await generateWhatsAppLink(order.id, 'INITIAL_CONTACT', user.name);
+        if (result.success && result.url) {
+            setOrder(prev => ({...prev, auditLog: result.order?.auditLog || prev.auditLog}));
+            window.open(result.url, '_blank');
             toast({ title: "Acción Registrada", description: "Se registró el intento de envío por WhatsApp."});
         } else {
-            toast({ variant: "destructive", title: "Error de Registro", description: "No se pudo registrar el intento de envío."});
+            toast({ variant: "destructive", title: "Error", description: result.message || "No se pudo generar el enlace de WhatsApp."});
         }
-        window.open(whatsappUrl, '_blank');
       });
   };
 

@@ -1,7 +1,7 @@
 // src/lib/actions/order.actions.ts
 "use server";
 
-import type { Order, AuditLogEntry, Comment as OrderCommentType, OrderStatus, OrderPartItem, PaymentItem, UserRole } from "@/types";
+import type { Order, AuditLogEntry, Comment as OrderCommentType, OrderStatus, OrderPartItem, PaymentItem, UserRole, MessageTemplateKey, Branch } from "@/types";
 import { OrderSchema } from "@/lib/schemas";
 import type { z } from "zod";
 import { suggestRepairSolutions } from "@/ai/flows/suggest-repair-solutions";
@@ -12,6 +12,8 @@ import { getUsersByRole } from './user.actions';
 import { getUserById } from './auth.actions';
 import { createNotification } from './notification.actions';
 import { PackageCheck, PackageSearch, Briefcase, MessageCircle } from 'lucide-react';
+import { getBranchById } from "./branch.actions";
+import { getWhatsAppMessage } from "./communication.actions";
 
 let mockOrders: Order[] = [
   {
@@ -454,6 +456,33 @@ export async function logWhatsAppAttempt(
 
   return { success: true, message: "Intento de envío registrado.", order: mockOrders[orderIndex] };
 }
+
+export async function generateWhatsAppLink(
+  orderId: string,
+  templateKey: MessageTemplateKey,
+  userName: string,
+): Promise<{ success: boolean, message?: string, url?: string, order?: Order }> {
+    const order = await getOrderById(orderId);
+    const user = (await getAllMockUsers()).find(u => u.name === userName);
+
+    if (!order) return { success: false, message: "Orden no encontrada." };
+    if (!user) return { success: false, message: "Usuario no encontrado." };
+    if (!order.clientPhone) return { success: false, message: "El cliente no tiene un teléfono registrado." };
+
+    const branch = await getBranchById(order.branchId);
+    const message = await getWhatsAppMessage(templateKey, order, branch, user);
+
+    const logResult = await logWhatsAppAttempt(orderId, userName, message);
+    if (!logResult.success) {
+      return { success: false, message: logResult.message };
+    }
+    
+    const cleanedPhone = order.clientPhone.replace(/[\s+()-]/g, '');
+    const whatsappUrl = `https://wa.me/${cleanedPhone}?text=${encodeURIComponent(message)}`;
+    
+    return { success: true, url: whatsappUrl, order: logResult.order };
+}
+
 
 export async function assignTechnicianToOrder(
   orderId: string,

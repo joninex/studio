@@ -257,3 +257,5 @@ export interface Notification {
   createdAt: string | Date;
   icon?: LucideIcon; // Optional icon for visual distinction
 }
+
+export type MessageTemplateKey = 'INITIAL_CONTACT' | 'DIAGNOSIS_READY' | 'READY_FOR_PICKUP';
