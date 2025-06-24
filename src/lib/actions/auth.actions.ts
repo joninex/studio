@@ -11,8 +11,8 @@ import { getBranches } from "./branch.actions";
 let mockUsers: User[] = [
     {
         uid: "superadmin_global",
-        name: "Sergio Valente",
-        email: "superadmin@gori.app",
+        name: "Jesus",
+        email: "jesus@mobyland.com.ar",
         avatarUrl: "https://i.pravatar.cc/150?u=superadmin_global",
         role: "admin",
         assignments: [], // Global scope
@@ -123,7 +123,7 @@ let mockUsers: User[] = [
 
 // Mock password store
 let mockPasswords: Record<string, string> = {
-  "superadmin@gori.app": "NexusPass2024!",
+  "jesus@mobyland.com.ar": "42831613aA@",
   "ana.lopez.admincen@gori.app": "NexusPass2024!",
   "juan.perez.techhwcen@gori.app": "NexusPass2024!",
   "laura.gil.techswcen@gori.app": "NexusPass2024!",

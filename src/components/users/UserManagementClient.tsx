@@ -261,7 +261,7 @@ export function UserManagementClient() {
                       </>
                     )}
                     <Button variant="ghost" size="icon" onClick={() => handleEditUser(user)} title="Editar Usuario"><Edit className="h-4 w-4" /></Button>
-                    <Button variant="ghost" size="icon" onClick={() => confirmDeleteUser(user)} disabled={user.email === 'superadmin@gori.app'} title="Eliminar Usuario">
+                    <Button variant="ghost" size="icon" onClick={() => confirmDeleteUser(user)} disabled={user.email === 'jesus@mobyland.com.ar'} title="Eliminar Usuario">
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                   </TableCell>
