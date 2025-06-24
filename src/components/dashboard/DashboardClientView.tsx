@@ -3,9 +3,9 @@
 
 import type { Order, User } from "@/types";
 import { useAuth } from "@/providers/AuthProvider";
-import { AdminDashboard } from "@/components/dashboard/AdminDashboard";
-import { TechnicianDashboard } from "@/components/dashboard/TechnicianDashboard";
-import { ReceptionistDashboard } from "@/components/dashboard/ReceptionistDashboard";
+import { AdminDashboard } from "./AdminDashboard";
+import { TechnicianDashboard } from "./TechnicianDashboard";
+import { ReceptionistDashboard } from "./ReceptionistDashboard";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 
 interface DashboardClientViewProps {

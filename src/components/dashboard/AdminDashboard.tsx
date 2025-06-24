@@ -10,8 +10,8 @@ import { DashboardStatCard } from "./DashboardStatCard";
 import { OrderStatusChart } from "./OrderStatusChart";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Button } from "../ui/button";
-import { Badge } from "../ui/badge";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { ListChecks, Users, BarChartIcon, AlertTriangle, Eye, ServerCrash } from "lucide-react";
 
 interface AdminDashboardProps {
