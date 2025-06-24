@@ -30,6 +30,7 @@ import { PartSelector } from "./PartSelector";
 import { ClientSelector } from "./ClientSelector";
 import { ClientEditModal } from "../clients/ClientEditModal";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { RichTextEditor } from "@/components/shared/RichTextEditor";
 
 
 const FUNCTIONAL_CHECKLIST_IDS = CHECKLIST_ITEMS
@@ -354,7 +355,25 @@ export function OrderForm({ orderId }: OrderFormProps) {
               <CardHeader><CardTitle className="flex items-center gap-2"><AlertCircle className="text-primary"/> Riesgos y Observaciones</CardTitle></CardHeader>
               <CardContent className="space-y-4">
                 <FormField control={form.control} name="damageRisk" render={({ field }) => ( <FormItem><FormLabel>Daños físicos preexistentes</FormLabel><FormControl><Textarea placeholder="Describa daños específicos: marco, pantalla, tapa, etc." {...field} /></FormControl><FormMessage /></FormItem> )} />
-                <FormField control={form.control} name="observations" render={({ field }) => ( <FormItem><FormLabel>Accesorios y Observaciones Adicionales</FormLabel><FormControl><Textarea placeholder="Ej: Se entrega con cargador y cable. Cliente menciona que se mojó." {...field} /></FormControl><FormMessage /></FormItem> )} />
+                <FormField 
+                  control={form.control} 
+                  name="observations" 
+                  render={({ field }) => ( 
+                    <FormItem>
+                      <FormLabel>Accesorios y Observaciones Adicionales (Diagnóstico)</FormLabel>
+                      <FormControl>
+                        <RichTextEditor 
+                          content={field.value || ""} 
+                          onChange={field.onChange}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Use este editor para diagnósticos técnicos, observaciones detalladas o cualquier información relevante.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem> 
+                  )} 
+                />
                 <FormField control={form.control} name="estimatedCompletionTime" render={({ field }) => ( <FormItem><FormLabel className="flex items-center gap-1"><Clock className="h-4 w-4"/>Hora Estimada de Finalización</FormLabel><FormControl><Input placeholder="Ej: 18:00hs, Fin del día" {...field} /></FormControl><FormDescription>Esta hora se usará en las notificaciones al cliente.</FormDescription><FormMessage /></FormItem> )} />
               </CardContent>
             </Card>
