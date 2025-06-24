@@ -11,7 +11,7 @@ export default function ResetPasswordPage() {
               src="https://placehold.co/128x128.png"
               width={128}
               height={128}
-              alt="G.O.R.I Logo"
+              alt="NexusServ 360 Logo"
               className="mx-auto mb-4 rounded-2xl border border-primary/50 bg-card p-2 shadow-[0_0_20px_theme(colors.primary.DEFAULT)]"
               data-ai-hint="isometric schematic"
           />
@@ -19,7 +19,7 @@ export default function ResetPasswordPage() {
             Restablecer Contraseña
           </h1>
           <p className="mt-2 text-muted-foreground">
-            Ingrese su email para restablecer su contraseña de G.O.R.I.
+            Ingrese su email para restablecer su contraseña de NexusServ 360.
           </p>
         </div>
         <ResetPasswordForm />

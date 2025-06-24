@@ -5,8 +5,8 @@ import { AuthProvider } from '@/providers/AuthProvider';
 import { ThemeProvider } from '@/providers/ThemeProvider';
 
 export const metadata: Metadata = {
-  title: 'G.O.R.I - Gestión de Órdenes de Reparación Inteligente',
-  description: 'Sistema de Gestión de Órdenes de Reparación Inteligente',
+  title: 'NexusServ 360 - Gestión de Órdenes de Reparación',
+  description: 'Sistema de Gestión de Órdenes de Reparación Inteligente para Talleres de Servicio Técnico',
 };
 
 export default function RootLayout({
