@@ -1,13 +1,14 @@
 // src/components/dashboard/AdminDashboard.tsx
 "use client";
 
-import type { Order, OrderStatus, User } from "@/types";
+import type { Order, OrderStatus, User, Branch } from "@/types";
 import { useMemo } from "react";
 import { differenceInDays, isThisMonth, isToday, parseISO } from "date-fns";
 import Link from "next/link";
 
 import { DashboardStatCard } from "./DashboardStatCard";
 import { OrderStatusChart } from "./OrderStatusChart";
+import { FirstRunSetup } from "./FirstRunSetup";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -18,9 +19,12 @@ import { getUsers } from "@/lib/actions/user.actions";
 interface AdminDashboardProps {
     allOrders: Order[];
     allUsers: User[];
+    allBranches: Branch[];
 }
 
-export function AdminDashboard({ allOrders, allUsers }: AdminDashboardProps) {
+export function AdminDashboard({ allOrders, allUsers, allBranches }: AdminDashboardProps) {
+
+  const isFirstRun = allUsers.length <= 1 && allBranches.length === 0;
 
   const processedData = useMemo(() => {
     if (!allOrders) return { stats: { activeOrders: 0, newOrdersToday: 0, monthlyRevenue: 0, pendingAlertsCount: 0, inRepairCount: 0, readyForPickupCount: 0 }, alertOrders: [], chartData: [] };
@@ -99,6 +103,8 @@ export function AdminDashboard({ allOrders, allUsers }: AdminDashboardProps) {
 
   return (
     <div className="space-y-6">
+      {isFirstRun && <FirstRunSetup branches={allBranches} users={allUsers} />}
+      
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         <DashboardStatCard 
             title="Órdenes Activas" 

@@ -1,7 +1,7 @@
 // src/components/dashboard/DashboardClientView.tsx
 "use client";
 
-import type { Order, User } from "@/types";
+import type { Order, User, Branch } from "@/types";
 import { useAuth } from "@/providers/AuthProvider";
 import { AdminDashboard } from "./AdminDashboard";
 import { TechnicianDashboard } from "./TechnicianDashboard";
@@ -11,9 +11,10 @@ import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 interface DashboardClientViewProps {
   allOrders: Order[];
   allUsers: User[];
+  allBranches: Branch[];
 }
 
-export function DashboardClientView({ allOrders, allUsers }: DashboardClientViewProps) {
+export function DashboardClientView({ allOrders, allUsers, allBranches }: DashboardClientViewProps) {
   const { user, loading } = useAuth();
 
   if (loading || !user) {
@@ -26,7 +27,7 @@ export function DashboardClientView({ allOrders, allUsers }: DashboardClientView
 
   switch (user.role) {
     case 'admin':
-      return <AdminDashboard allOrders={allOrders} allUsers={allUsers} />;
+      return <AdminDashboard allOrders={allOrders} allUsers={allUsers} allBranches={allBranches} />;
     case 'tecnico':
       return <TechnicianDashboard allOrders={allOrders} currentUser={user} />;
     case 'recepcionista':

@@ -6,65 +6,7 @@ import { BranchSchema, StoreSettingsSchema } from "@/lib/schemas";
 import type { z } from "zod";
 import { DEFAULT_STORE_SETTINGS } from "@/lib/constants";
 
-let mockBranches: Branch[] = [
-    {
-        id: "B001",
-        name: "Sucursal Central",
-        address: "Av. Corrientes 1234, CABA",
-        phone: "(011) 4123-5678",
-        email: "central@gori.app",
-        status: 'active',
-        settings: {
-            ...DEFAULT_STORE_SETTINGS,
-            id: "settings_b001",
-            companyName: "G.O.R.I - Central",
-            companyCuit: "30-11223344-5",
-            companyAddress: "Av. Corrientes 1234, CABA",
-            companyContactDetails: "Tel: (011) 4123-5678 | central@gori-serv.com",
-            branchInfo: "Taller Central",
-        },
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-    },
-    {
-        id: "B002",
-        name: "Sucursal Norte",
-        address: "Av. Maipú 500, Vicente López",
-        phone: "(011) 4798-1234",
-        email: "norte@gori.app",
-        status: 'active',
-        settings: {
-            ...DEFAULT_STORE_SETTINGS,
-            id: "settings_b002",
-            companyName: "G.O.R.I - Suc. Norte",
-            companyCuit: "30-55667788-9",
-            companyAddress: "Av. Maipú 500, Vicente López",
-            companyContactDetails: "Tel: (011) 4798-1234 | norte@gori-serv.com",
-            branchInfo: "Sucursal Zona Norte",
-        },
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-    },
-    {
-        id: "B003",
-        name: "Depósito y Taller Avanzado",
-        address: "Parque Industrial, Lote 15",
-        phone: "N/A",
-        email: "deposito@gori.app",
-        status: 'inactive',
-        settings: {
-            ...DEFAULT_STORE_SETTINGS,
-            id: "settings_b003",
-            companyName: "G.O.R.I - Depósito",
-            companyCuit: "30-99887766-5",
-            companyAddress: "Parque Industrial, Lote 15",
-            companyContactDetails: "interno@gori-serv.com",
-            branchInfo: "Depósito y Taller Avanzado",
-        },
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-    }
-];
+let mockBranches: Branch[] = [];
 let branchCounter = mockBranches.length;
 
 function generateBranchId(): string {

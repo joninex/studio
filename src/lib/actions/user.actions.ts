@@ -23,40 +23,12 @@ let gori_db_usuarios: User[] = [
         updatedAt: new Date('2023-01-01T10:00:00Z').toISOString(),
         assignments: [], // Super admin has global access
     },
-    {
-        uid: "gori-user-uuid-002",
-        email: 'ana.lopez.admincen@gori.app',
-        name: 'Ana López',
-        avatarUrl: "https://i.pravatar.cc/150?u=ana.lopez.admincen",
-        role: 'admin',
-        status: 'active',
-        createdAt: new Date('2023-01-02T11:00:00Z').toISOString(),
-        updatedAt: new Date('2023-01-02T11:00:00Z').toISOString(),
-        assignments: [
-          { branchId: 'B001', role: 'admin', sector: 'Supervisión General, Administración' }
-        ]
-    },
-    {
-        uid: "gori-user-uuid-003",
-        email: 'juan.perez.techhwcen@gori.app',
-        name: 'Juan Pérez',
-        avatarUrl: "https://i.pravatar.cc/150?u=juan.perez.techhwcen",
-        role: 'tecnico',
-        status: 'active',
-        createdAt: new Date('2023-01-03T12:00:00Z').toISOString(),
-        updatedAt: new Date('2023-01-03T12:00:00Z').toISOString(),
-        assignments: [
-          { branchId: 'B001', role: 'tecnico', sector: 'Laboratorio Hardware' }
-        ]
-    },
 ];
 
 // This conceptually represents a separate, secure password store.
 // It is NOT exported to comply with "use server" module constraints.
 let gori_db_passwords: Record<string, string> = {
     "jesus@mobyland.com.ar": "42831613aA@",
-    "ana.lopez.admincen@gori.app": "NexusPass2024!",
-    "juan.perez.techhwcen@gori.app": "NexusPass2024!",
 };
 
 // --- GORI Data Access Functions ---

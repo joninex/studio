@@ -5,54 +5,8 @@ import type { Client } from "@/types";
 import { ClientSchema, type ClientFormData } from "@/lib/schemas";
 
 // Mock database for clients
-let mockClients: Client[] = [
-  {
-    id: "1001",
-    branchId: "B001",
-    name: "Juan",
-    lastName: "Perez",
-    dni: "12345678",
-    phone: "1122334455",
-    email: "juan.perez@example.com",
-    address: "Calle Falsa 123, Springfield",
-    notes: "Cliente frecuente, prefiere reparaciones rápidas.",
-    fiscalCondition: "Consumidor Final",
-    createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: "1002",
-    branchId: "B001",
-    name: "Maria",
-    lastName: "Lopez",
-    dni: "87654321",
-    phone: "5544332211",
-    email: "maria.lopez@example.com",
-    address: "Avenida Siempreviva 742",
-    businessName: "Kwik-E-Mart",
-    cuit: "30-87654321-5",
-    fiscalCondition: "Responsable Inscripto",
-    notes: "",
-    createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: "1003",
-    branchId: "B002",
-    name: "Carlos",
-    lastName: "Gomez",
-    dni: "34567890",
-    phone: "3344556677",
-    email: "carlos.gomez@example.com",
-    address: "Boulevard de los Sueños Rotos 100",
-    fiscalCondition: "Monotributista",
-    cuit: "20-34567890-1",
-    notes: "Dejó un equipo que no enciende.",
-    createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-  }
-];
-let clientCounter = 1003;
+let mockClients: Client[] = [];
+let clientCounter = 1000;
 
 function generateClientId(): string {
   clientCounter += 1;
