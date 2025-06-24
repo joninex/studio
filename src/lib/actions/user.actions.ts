@@ -41,7 +41,7 @@ export async function createUser(data: z.infer<typeof UserSchema>): Promise<{ su
     return { success: false, message: "Datos de usuario inválidos." };
   }
 
-  const { email, password, name, role, avatarUrl } = validatedFields.data;
+  const { email, password, name, role, avatarUrl, sector } = validatedFields.data;
   const currentUsers = await getAllMockUsers();
 
   if (currentUsers.find(u => u.email === email)) {
@@ -62,7 +62,7 @@ export async function createUser(data: z.infer<typeof UserSchema>): Promise<{ su
     status: "active", // New users created by admin are active by default
     createdAt: new Date().toISOString(), 
     updatedAt: new Date().toISOString(),
-    assignments: [{ branchId: 'B001', role: role, sector: 'Asignación General' }] // Assign to default branch and sector
+    assignments: [{ branchId: 'B001', role: role, sector: sector || 'Asignación General' }] // Assign to default branch and sector
   };
   const updatedUsers = [...currentUsers, newUser];
   await updateAllMockUsers(updatedUsers);
@@ -86,7 +86,7 @@ export async function updateUser(uid: string, data: Partial<z.infer<typeof UserS
   
   await new Promise(resolve => setTimeout(resolve, 300));
 
-  const { password, email, role, avatarUrl, ...restData } = validatedFields.data;
+  const { password, email, role, avatarUrl, sector, ...restData } = validatedFields.data;
   const existingUser = currentUsers[userIndex];
 
   if (existingUser.email === SUPER_ADMIN_EMAIL) {
@@ -112,6 +112,23 @@ export async function updateUser(uid: string, data: Partial<z.infer<typeof UserS
     updatedAt: new Date().toISOString() 
   };
   
+  // Handle assignments update
+  if (updatedUser.assignments && updatedUser.assignments.length > 0) {
+      if (role) {
+          updatedUser.assignments[0].role = role;
+      }
+      if (sector !== undefined) {
+          updatedUser.assignments[0].sector = sector;
+      }
+  } else {
+      // If user somehow has no assignments, create one
+      updatedUser.assignments = [{
+          branchId: 'B001', // A default branchId is needed.
+          role: role || updatedUser.role,
+          sector: sector || 'Asignación General'
+      }];
+  }
+
   if (email && email !== existingUser.email && existingUser.email !== SUPER_ADMIN_EMAIL) {
     const oldEmail = existingUser.email;
     const currentPasswords = await getMockPasswords();

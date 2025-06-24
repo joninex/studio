@@ -137,6 +137,7 @@ export const UserSchema = z.object({
     name: z.string().min(3, "El nombre es requerido."),
     email: z.string().email("Email inválido."),
     role: z.enum(validUserRoles),
+    sector: z.string().optional().or(z.literal('')),
     password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres.").optional().or(z.literal('')),
     avatarUrl: z.string().url("Debe ser una URL válida.").optional().or(z.literal('')),
 });

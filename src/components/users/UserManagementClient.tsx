@@ -42,7 +42,7 @@ export function UserManagementClient() {
 
   const form = useForm<z.infer<typeof UserSchema>>({
     resolver: zodResolver(UserSchema),
-    defaultValues: { name: "", email: "", role: "tecnico", password: "", avatarUrl: "" },
+    defaultValues: { name: "", email: "", role: "tecnico", sector: "", password: "", avatarUrl: "" },
   });
 
   async function loadUsers() {
@@ -78,7 +78,7 @@ export function UserManagementClient() {
         toast({ title: "Éxito", description: result.message });
         setIsFormOpen(false);
         setEditingUser(null);
-        form.reset({ name: "", email: "", role: "tecnico", password: "", avatarUrl: "" });
+        form.reset({ name: "", email: "", role: "tecnico", sector: "", password: "", avatarUrl: "" });
         await loadUsers();
       } else {
         toast({ variant: "destructive", title: "Error", description: result.message });
@@ -88,7 +88,10 @@ export function UserManagementClient() {
 
   const handleEditUser = (user: User) => {
     setEditingUser(user);
-    form.reset({ name: user.name, email: user.email, role: user.role, password: "", avatarUrl: user.avatarUrl || "" });
+    const userSector = user.assignments && user.assignments.length > 0
+      ? user.assignments.map(a => a.sector).join(', ')
+      : "";
+    form.reset({ name: user.name, email: user.email, role: user.role, sector: userSector, password: "", avatarUrl: user.avatarUrl || "" });
     setIsFormOpen(true);
   };
 
@@ -114,7 +117,7 @@ export function UserManagementClient() {
 
   const openNewUserForm = () => {
     setEditingUser(null);
-    form.reset({ name: "", email: "", role: "tecnico", password: "", avatarUrl: "" });
+    form.reset({ name: "", email: "", role: "tecnico", sector: "", password: "", avatarUrl: "" });
     setIsFormOpen(true);
   };
 
@@ -278,7 +281,7 @@ export function UserManagementClient() {
         setIsFormOpen(isOpen);
         if (!isOpen) {
             setEditingUser(null);
-            form.reset({ name: "", email: "", role: "tecnico", password: "", avatarUrl: "" });
+            form.reset({ name: "", email: "", role: "tecnico", sector: "", password: "", avatarUrl: "" });
         }
     }}>
         <DialogContent className="sm:max-w-[425px]">
@@ -324,6 +327,22 @@ export function UserManagementClient() {
                   <FormMessage />
                 </FormItem>
               )} />
+              <FormField
+                control={form.control}
+                name="sector"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Sector(es)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Ej: Laboratorio, Mostrador" {...field} value={field.value ?? ""} />
+                    </FormControl>
+                    <FormDescription>
+                      Puede asignar múltiples sectores separados por coma.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <FormField control={form.control} name="password" render={({ field }) => ( <FormItem><FormLabel>Contraseña {editingUser ? "(Dejar en blanco para no cambiar)" : ""}</FormLabel><FormControl><Input type="password" placeholder="••••••••" {...field} /></FormControl><FormMessage /></FormItem> )} />
               <DialogFooter>
                 <DialogClose asChild><Button type="button" variant="outline">Cancelar</Button></DialogClose>
