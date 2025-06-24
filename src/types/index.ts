@@ -41,6 +41,7 @@ export interface Branch {
 export interface UserAssignment {
     branchId: string;
     role: UserRole;
+    sector?: string;
 }
 
 export interface User {
