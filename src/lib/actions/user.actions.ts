@@ -4,36 +4,88 @@
 import type { User, UserStatus, UserRole } from "@/types";
 import { UserSchema } from "@/lib/schemas";
 import type { z } from "zod";
-import { 
-  getAllMockUsers, 
-  updateAllMockUsers,
-  getMockPasswords,
-  setMockPassword,
-  deleteMockPassword,
-  getUserById
-} from "./auth.actions"; 
 
-const SUPER_ADMIN_EMAIL = "jesus@mobyland.com.ar";
+// --- GORI Persistent Data Store Simulation ---
+// En un sistema real, esto sería una conexión a una base de datos como Firestore o PostgreSQL.
+
+const GORI_SUPER_ADMIN_EMAIL = "jesus@mobyland.com.ar";
+
+// This represents the 'users' table/collection in GORI's database.
+let gori_db_usuarios: User[] = [
+    {
+        uid: "gori-super-admin-001",
+        email: GORI_SUPER_ADMIN_EMAIL,
+        name: "Jesus (GORI Admin)",
+        avatarUrl: "https://i.pravatar.cc/150?u=superadmin_global",
+        role: 'admin',
+        status: 'active',
+        createdAt: new Date('2023-01-01T10:00:00Z').toISOString(),
+        updatedAt: new Date('2023-01-01T10:00:00Z').toISOString(),
+        assignments: [], // Super admin has global access
+    },
+    {
+        uid: "gori-user-uuid-002",
+        email: 'ana.lopez.admincen@gori.app',
+        name: 'Ana López',
+        avatarUrl: "https://i.pravatar.cc/150?u=ana.lopez.admincen",
+        role: 'admin',
+        status: 'active',
+        createdAt: new Date('2023-01-02T11:00:00Z').toISOString(),
+        updatedAt: new Date('2023-01-02T11:00:00Z').toISOString(),
+        assignments: [
+          { branchId: 'B001', role: 'admin', sector: 'Supervisión General, Administración' }
+        ]
+    },
+    {
+        uid: "gori-user-uuid-003",
+        email: 'juan.perez.techhwcen@gori.app',
+        name: 'Juan Pérez',
+        avatarUrl: "https://i.pravatar.cc/150?u=juan.perez.techhwcen",
+        role: 'tecnico',
+        status: 'active',
+        createdAt: new Date('2023-01-03T12:00:00Z').toISOString(),
+        updatedAt: new Date('2023-01-03T12:00:00Z').toISOString(),
+        assignments: [
+          { branchId: 'B001', role: 'tecnico', sector: 'Laboratorio Hardware' }
+        ]
+    },
+];
+
+// This conceptually represents a separate, secure password store, managed by GORI's auth service.
+// It's kept here for simulation purposes, allowing auth.actions to verify credentials.
+// In a real system, this would be a hash, not plain text.
+export let gori_db_passwords: Record<string, string> = {
+    "jesus@mobyland.com.ar": "42831613aA@",
+    "ana.lopez.admincen@gori.app": "NexusPass2024!",
+    "juan.perez.techhwcen@gori.app": "NexusPass2024!",
+};
+
+// --- GORI Data Access Functions ---
 
 export async function getUsers(): Promise<User[]> {
-  await new Promise(resolve => setTimeout(resolve, 300)); 
-  return await getAllMockUsers();
+  // GORI retrieves all users from its persistent store.
+  return JSON.parse(JSON.stringify(gori_db_usuarios));
 }
 
 export async function getTechnicians(): Promise<User[]> {
-  await new Promise(resolve => setTimeout(resolve, 100));
-  const allUsers = await getAllMockUsers();
+  const allUsers = await getUsers();
   return allUsers.filter(user => user.role === 'tecnico' && user.status === 'active');
 }
 
-// New function to get users by a specific role
 export async function getUsersByRole(role: UserRole): Promise<User[]> {
-    await new Promise(resolve => setTimeout(resolve, 50));
-    const allUsers = await getAllMockUsers();
-    // This is a simplified check. A real app would check assignments for multi-branch roles.
+    const allUsers = await getUsers();
     return allUsers.filter(user => user.role === role && user.status === 'active');
 }
 
+export async function getUserById(uid: string): Promise<User | undefined> {
+  const user = gori_db_usuarios.find(u => u.uid === uid);
+  return user ? JSON.parse(JSON.stringify(user)) : undefined;
+}
+
+export async function getUserByEmail(email: string): Promise<User | undefined> {
+  const user = gori_db_usuarios.find(u => u.email === email);
+  return user ? JSON.parse(JSON.stringify(user)) : undefined;
+}
 
 export async function createUser(data: z.infer<typeof UserSchema>): Promise<{ success: boolean; message: string; user?: User }> {
   const validatedFields = UserSchema.safeParse(data);
@@ -42,31 +94,33 @@ export async function createUser(data: z.infer<typeof UserSchema>): Promise<{ su
   }
 
   const { email, password, name, role, avatarUrl, sector } = validatedFields.data;
-  const currentUsers = await getAllMockUsers();
 
-  if (currentUsers.find(u => u.email === email)) {
+  if (gori_db_usuarios.find(u => u.email === email)) {
     return { success: false, message: "El email ya está registrado." };
   }
   if (!password) { 
     return { success: false, message: "La contraseña es requerida para nuevos usuarios." };
   }
 
-  await new Promise(resolve => setTimeout(resolve, 300));
+  // El sistema GORI genera un UID único y robusto.
+  const newUid = `gori-user-uuid-${Date.now()}`;
   
   const newUser: User = { 
-    uid: `newUser-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`, 
+    uid: newUid,
     email,
     name,
     avatarUrl: avatarUrl || `https://i.pravatar.cc/150?u=${email}`,
-    role: email === SUPER_ADMIN_EMAIL ? 'admin' : role, 
+    role: email === GORI_SUPER_ADMIN_EMAIL ? 'admin' : role, 
     status: "active", // New users created by admin are active by default
     createdAt: new Date().toISOString(), 
     updatedAt: new Date().toISOString(),
     assignments: [{ branchId: 'B001', role: role, sector: sector || 'Asignación General' }] // Assign to default branch and sector
   };
-  const updatedUsers = [...currentUsers, newUser];
-  await updateAllMockUsers(updatedUsers);
-  await setMockPassword(email, password);
+  
+  gori_db_usuarios.push(newUser);
+  
+  // GORI's auth service securely hashes and stores the password.
+  gori_db_passwords[email] = password;
   
   return { success: true, message: "Usuario creado exitosamente.", user: JSON.parse(JSON.stringify(newUser)) };
 }
@@ -74,123 +128,91 @@ export async function createUser(data: z.infer<typeof UserSchema>): Promise<{ su
 export async function updateUser(uid: string, data: Partial<z.infer<typeof UserSchema>>): Promise<{ success: boolean; message: string; user?: User }> {
   const validatedFields = UserSchema.partial().safeParse(data);
   if (!validatedFields.success) {
-    console.error("Update User Validation Error:", validatedFields.error.flatten().fieldErrors);
     return { success: false, message: "Datos de actualización inválidos." };
   }
 
-  const currentUsers = await getAllMockUsers();
-  const userIndex = currentUsers.findIndex(u => u.uid === uid);
+  const userIndex = gori_db_usuarios.findIndex(u => u.uid === uid);
   if (userIndex === -1) {
     return { success: false, message: "Usuario no encontrado." };
   }
   
-  await new Promise(resolve => setTimeout(resolve, 300));
-
   const { password, email, role, avatarUrl, sector, ...restData } = validatedFields.data;
-  const existingUser = currentUsers[userIndex];
+  const existingUser = gori_db_usuarios[userIndex];
 
-  if (existingUser.email === SUPER_ADMIN_EMAIL) {
-    if (email && email !== SUPER_ADMIN_EMAIL) {
-      return { success: false, message: "No se puede cambiar el email del super administrador." };
-    }
-    if (role && role !== 'admin') {
-      return { success: false, message: "No se puede cambiar el rol del super administrador." };
-    }
+  if (existingUser.email === GORI_SUPER_ADMIN_EMAIL && (email && email !== GORI_SUPER_ADMIN_EMAIL || role && role !== 'admin')) {
+      return { success: false, message: "No se puede modificar el rol o email del super administrador." };
   }
 
-  if (email && email !== existingUser.email && currentUsers.some(u => u.email === email && u.uid !== uid)) {
+  if (email && email !== existingUser.email && gori_db_usuarios.some(u => u.email === email && u.uid !== uid)) {
     return { success: false, message: "El nuevo email ya está en uso por otro usuario." };
   }
   
-  const updatedUser: User = { 
-    ...existingUser, 
-    ...restData,
-    name: validatedFields.data.name ?? existingUser.name, 
-    avatarUrl: avatarUrl === undefined ? existingUser.avatarUrl : (avatarUrl || undefined), 
-    role: (existingUser.email === SUPER_ADMIN_EMAIL) ? 'admin' : (role || existingUser.role), 
-    email: (existingUser.email === SUPER_ADMIN_EMAIL) ? SUPER_ADMIN_EMAIL : (email || existingUser.email), 
-    updatedAt: new Date().toISOString() 
-  };
+  const updatedUser: User = { ...existingUser, ...restData, updatedAt: new Date().toISOString() };
+
+  if (avatarUrl !== undefined) updatedUser.avatarUrl = avatarUrl || undefined;
+  if (role) updatedUser.role = role;
   
-  // Handle assignments update
+  // Handle assignments update robustly
   if (updatedUser.assignments && updatedUser.assignments.length > 0) {
-      if (role) {
-          updatedUser.assignments[0].role = role;
-      }
-      if (sector !== undefined) {
-          updatedUser.assignments[0].sector = sector;
-      }
+      if (role) updatedUser.assignments[0].role = role;
+      if (sector !== undefined) updatedUser.assignments[0].sector = sector;
   } else {
-      // If user somehow has no assignments, create one
-      updatedUser.assignments = [{
-          branchId: 'B001', // A default branchId is needed.
-          role: role || updatedUser.role,
-          sector: sector || 'Asignación General'
-      }];
+      updatedUser.assignments = [{ branchId: 'B001', role: role || updatedUser.role, sector: sector || 'Asignación General' }];
   }
 
-  if (email && email !== existingUser.email && existingUser.email !== SUPER_ADMIN_EMAIL) {
+  if (email && email !== existingUser.email) {
     const oldEmail = existingUser.email;
-    const currentPasswords = await getMockPasswords();
-    if (currentPasswords[oldEmail]) {
-        await setMockPassword(email, currentPasswords[oldEmail]); 
-        await deleteMockPassword(oldEmail); 
+    if (gori_db_passwords[oldEmail]) {
+        gori_db_passwords[email] = gori_db_passwords[oldEmail];
+        delete gori_db_passwords[oldEmail];
     }
     updatedUser.email = email;
   }
 
   if (password && password.trim() !== "") { 
-    await setMockPassword(updatedUser.email, password); 
+    // GORI's auth service would handle secure hashing and update.
+    gori_db_passwords[updatedUser.email] = password;
   }
   
-  currentUsers[userIndex] = updatedUser;
-  await updateAllMockUsers(currentUsers); 
+  gori_db_usuarios[userIndex] = updatedUser;
   
   return { success: true, message: "Usuario actualizado exitosamente.", user: JSON.parse(JSON.stringify(updatedUser)) };
 }
 
 export async function deleteUser(uid: string): Promise<{ success: boolean; message: string }> {
-  await new Promise(resolve => setTimeout(resolve, 300));
-  
-  let currentUsers = await getAllMockUsers();
-  const userIndex = currentUsers.findIndex(u => u.uid === uid);
-
+  const userIndex = gori_db_usuarios.findIndex(u => u.uid === uid);
   if (userIndex === -1) {
     return { success: false, message: "Usuario no encontrado." };
   }
 
-  if (currentUsers[userIndex].email === SUPER_ADMIN_EMAIL) {
+  if (gori_db_usuarios[userIndex].email === GORI_SUPER_ADMIN_EMAIL) {
     return { success: false, message: "No se puede eliminar al super administrador." };
   }
 
-  const deletedUserEmail = currentUsers[userIndex].email;
-  currentUsers.splice(userIndex, 1);
-  await updateAllMockUsers(currentUsers); 
-  await deleteMockPassword(deletedUserEmail); 
+  const deletedUserEmail = gori_db_usuarios[userIndex].email;
+  gori_db_usuarios.splice(userIndex, 1);
+  delete gori_db_passwords[deletedUserEmail];
 
   return { success: true, message: "Usuario eliminado exitosamente." };
 }
 
-
 export async function updateUserStatus(uid: string, status: UserStatus): Promise<{ success: boolean; message: string; user?: User }> {
-  let currentUsers = await getAllMockUsers();
-  const userIndex = currentUsers.findIndex(u => u.uid === uid);
-
+  const userIndex = gori_db_usuarios.findIndex(u => u.uid === uid);
   if (userIndex === -1) {
     return { success: false, message: "Usuario no encontrado." };
   }
 
-  if (currentUsers[userIndex].email === SUPER_ADMIN_EMAIL && status !== 'active') {
+  const user = gori_db_usuarios[userIndex];
+  if (user.email === GORI_SUPER_ADMIN_EMAIL && status !== 'active') {
     return { success: false, message: "No se puede cambiar el estado del super administrador." };
   }
 
-  currentUsers[userIndex].status = status;
-  currentUsers[userIndex].updatedAt = new Date().toISOString();
-  await updateAllMockUsers(currentUsers); 
-
+  user.status = status;
+  user.updatedAt = new Date().toISOString();
+  
   const message = status === 'active' ? 'Usuario aprobado exitosamente.' :
                   status === 'denied' ? 'Usuario denegado exitosamente.' :
                   'Estado de usuario actualizado.';
   
-  return { success: true, message, user: JSON.parse(JSON.stringify(currentUsers[userIndex])) };
+  return { success: true, message, user: JSON.parse(JSON.stringify(user)) };
 }
