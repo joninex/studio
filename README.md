@@ -8,6 +8,7 @@ NexusServ 360 está construido sobre una arquitectura moderna y monolítica util
 
 *   **Frontend:** Componentes de React renderizados tanto en el servidor (RSC) como en el cliente, estilizados con **Tailwind CSS** y componentes pre-construidos de **ShadCN UI**.
 *   **Backend (Lógica de Servidor):** La lógica de negocio tradicional (CRUD, etc.) se maneja a través de **Next.js Server Actions**, ubicadas en `src/lib/actions`. Esto elimina la necesidad de una API REST separada para la mayoría de las operaciones.
+*   **Inteligencia Artificial (IA):** Las funcionalidades de IA, como la generación de guías de reparación, se gestionan a través de **Genkit**, el framework de código abierto de Google para construir aplicaciones de IA. Esto permite integrar capacidades de modelos generativos directamente en los flujos de trabajo del taller.
 *   **Base de Datos (Simulada):** En el entorno de desarrollo actual, la persistencia de datos se simula en memoria dentro de los archivos de Server Actions (ej. `src/lib/actions/order.actions.ts`). Esto permite un desarrollo y despliegue rápido en entornos locales sin necesidad de una base de datos externa.
 *   **Autenticación (Local):** El flujo de autenticación y la gestión de usuarios están completamente contenidos dentro de la aplicación. No hay dependencias de servicios externos. La creación de nuevos usuarios es gestionada exclusivamente por un administrador desde la propia aplicación, asegurando un control de acceso total.
 
@@ -20,10 +21,12 @@ graph TD
     subgraph "Servidor Local (Next.js en Windows)"
         B(Next.js App Router)
         C[Server Actions<br>/src/lib/actions]
+        D[Motor de IA<br>(Genkit)]
         E[Base de Datos Simulada<br>(en memoria)]
     end
 
     A --"Llamadas a Server Actions (ej. crear orden)"--> C
+    A --"Solicitar guía IA"--> D
     C --"Operaciones CRUD"--> E
     B --> A
     B --> C
@@ -37,6 +40,7 @@ graph TD
 *   **Componentes UI:** [ShadCN UI](https://ui.shadcn.com/)
 *   **Estilos:** [Tailwind CSS](https://tailwindcss.com/)
 *   **Iconos:** [Lucide React](https://lucide.dev/)
+*   **IA:** [Genkit (Google AI)](https://firebase.google.com/docs/genkit)
 
 ## 3. Estructura del Repositorio
 
@@ -46,6 +50,7 @@ graph TD
 *   `/src/components/`: Componentes de React reutilizables.
 *   `/src/lib/`: Lógica central y utilidades.
     *   `/actions/`: **(Backend)** Server Actions que contienen la lógica de negocio y acceso a datos.
+*   `/src/ai/`: Lógica relacionada con la Inteligencia Artificial (Flujos de Genkit).
 *   `/src/providers/`: Proveedores de contexto de React (AuthProvider, ThemeProvider).
 *   `/public/`: Archivos estáticos, incluyendo las imágenes subidas por los usuarios.
 
@@ -68,11 +73,11 @@ Siga estos pasos para instalar y ejecutar NexusServ 360 en un entorno Windows.
 2.  **Clonar el Repositorio:**
     *   Navegue a la carpeta donde desea instalar la aplicación (ej. `cd C:\Users\SuUsuario\Documents`) y ejecute el siguiente comando para descargar el código:
     ```bash
-    git clone [URL_DEL_REPOSITORIO]
+    git clone https://github.com/joninex/studio.git
     ```
     *   Ingrese a la nueva carpeta creada:
     ```bash
-    cd [NOMBRE_DEL_DIRECTORIO]
+    cd studio
     ```
 
 3.  **Instalar Dependencias:**
