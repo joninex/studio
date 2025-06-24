@@ -18,7 +18,7 @@ export function PrintableOrder({ order, branch }: PrintableOrderProps) {
   const getChecklistValueDisplay = (value: 'si' | 'no' | 'sc' | string | undefined) => {
     if (value === 'si') return "✅ Sí";
     if (value === 'no') return "❌ No";
-    if (value === 'sc') return "🟡 No comprobado";
+    if (value === 'sc') return "🟡 S/C"; // Sin Comprobar
     if (value) return value;
     return 'N/A';
   };

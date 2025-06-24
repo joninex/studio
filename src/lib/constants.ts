@@ -42,7 +42,7 @@ export const CHECKLIST_ITEMS: Array<{ id: keyof Checklist; label: string, group:
   { id: "respuesta_tactil", label: "Respuesta táctil", group: "Pantalla y Controles", type: 'boolean' },
   { id: "botones_fisicos", label: "Botones físicos", group: "Pantalla y Controles", type: 'boolean' },
   { id: "sensor_huella_faceid", label: "Sensor Huella / Face ID", group: "Pantalla y Controles", type: 'boolean' },
-
+  
   // Audio y Comunicaciones
   { id: "auricular_llamadas", label: "Auricular (Llamadas)", group: "Audio y Comunicaciones", type: 'boolean' },
   { id: "altavoz_multimedia", label: "Altavoz (Multimedia)", group: "Audio y Comunicaciones", type: 'boolean' },
@@ -52,7 +52,7 @@ export const CHECKLIST_ITEMS: Array<{ id: keyof Checklist; label: string, group:
   // Cámaras
   { id: "camara_trasera", label: "Cámara trasera", group: "Cámaras", type: 'boolean' },
   { id: "camara_delantera", label: "Cámara delantera", group: "Cámaras", type: 'boolean' },
-
+  
   // Conectividad y Carga
   { id: "puerto_carga", label: "Puerto de carga", group: "Conectividad y Carga", type: 'boolean' },
   { id: "wifi_bluetooth", label: "Conexión Wi-Fi / Bluetooth", group: "Conectividad y Carga", type: 'boolean' },
@@ -85,8 +85,11 @@ export const DEFAULT_STORE_SETTINGS = {
     companyAddress: "Calle Falsa 123, Ciudad",
     companyContactDetails: "Tel: 123-456-7890 | Email: contacto@mitaller.com",
     branchInfo: "Sucursal Principal",
-    intakeConformityText: "El cliente declara que los datos y estados ingresados en este documento son fieles al estado del equipo al momento de su entrega y acepta que esta revisión es externa y sin apertura. Comprende y acepta que si no autorizó el desbloqueo, existen componentes no evaluados y la empresa no se responsabiliza por el funcionamiento de los mismos, quedando la responsabilidad limitada exclusivamente al componente a reemplazar o al servicio a prestar según diagnóstico final. La empresa no se responsabiliza por fallos o vicios ocultos no diagnosticados en esta etapa. En caso de no aceptar el presupuesto final, podrá retirar el equipo sin costo de revisión. Acepta las condiciones generales del servicio.",
-    clientVoucherLegalReminder: "Para retirar el equipo es indispensable presentar este comprobante y documento de identidad del titular. La empresa no se responsabiliza por accesorios no declarados en el ingreso. La garantía de 90 días cubre exclusivamente el trabajo y los repuestos detallados en la reparación final, no fallas pre-existentes o nuevas no relacionadas.",
+    // Consolidated legal text for the workshop copy
+    intakeConformityText: "El cliente declara que los datos y el estado del equipo detallados en este documento son fieles a la condición del mismo al momento de su entrega. Acepta que esta revisión es de carácter externo y no invasivo, realizada sin la apertura del equipo. Si no se proporcionó un código de desbloqueo, el cliente comprende y acepta que los componentes que requieren acceso al sistema no pudieron ser evaluados y, por lo tanto, la responsabilidad del servicio técnico se limita exclusivamente al componente a reparar o reemplazar según el diagnóstico final. La empresa no se responsabiliza por fallas o vicios ocultos no diagnosticados en esta etapa inicial. En caso de no aceptar el presupuesto final, el equipo podrá ser retirado sin costo de revisión. El cliente confirma haber leído y aceptado las condiciones generales del servicio.",
+    // Simplified legal reminder for the customer's voucher
+    clientVoucherLegalReminder: "Para retirar el equipo es indispensable presentar este comprobante y documento de identidad del titular. La empresa no se responsabiliza por accesorios no declarados en el ingreso. La garantía de 90 días cubre exclusivamente el trabajo y los repuestos detallados en la reparación final.",
+    noUnlockCodeDisclaimer: "IMPORTANTE: Si no se informa el patrón/clave de desbloqueo, el equipo no podrá ser testeado en su totalidad. El presupuesto y la reparación quedarán limitados a la falla reportada. La empresa no se hace responsable por fallas secundarias no detectadas.",
     unlockDisclaimerText: "IMPORTANTE: Si no se informa el patrón/clave de desbloqueo, el equipo no podrá ser testeado en su totalidad. El presupuesto y la reparación quedarán limitados a la falla reportada. La empresa no se hace responsable por fallas secundarias no detectadas.",
     abandonmentPolicyText: "POLÍTICA DE ABANDONO: Pasados los 30 días corridos desde la fecha de notificación para retirar el equipo, se cobrará un recargo diario por depósito. Pasados los 60 días, la empresa podrá disponer del equipo para cubrir los costos de reparación y almacenamiento según el Art. 2525 y 2526 del C.C. y C.",
     abandonmentPolicyDays30: 30,
