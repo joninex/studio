@@ -8,75 +8,75 @@ body {
 
 @layer base {
   :root {
-    /* G.O.R.I Light Mode */
-    --background: 220 29% 95%; /* #F0F2F5 */
-    --foreground: 220 20% 10%;
-
-    --card: 220 29% 98%;
-    --card-foreground: 220 20% 10%;
-
-    --popover: 220 29% 98%;
-    --popover-foreground: 220 20% 10%;
-
-    --primary: 231 48% 48%; /* #3F51B5 - Deep Blue */
-    --primary-foreground: 0 0% 100%;
-
-    --secondary: 215 25% 90%;
-    --secondary-foreground: 220 20% 10%;
-
-    --muted: 215 25% 90%;
-    --muted-foreground: 220 20% 40%;
+    /* NexusServ 360 Light Mode - Vivid Cyan & Sunny Yellow */
+    --background: 220 14% 98%; /* #F9FAFB - gray-50 */
+    --foreground: 222 47% 11%; /* #111827 - gray-900 */
     
-    --accent: 38 100% 63%; /* #FFAB40 - Soft Orange */
-    --accent-foreground: 220 20% 10%;
-
+    --card: 0 0% 100%; /* #FFFFFF - white */
+    --card-foreground: 222 47% 11%;
+    
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    
+    --primary: 188 84% 48%; /* #06B6D4 - cyan-500 */
+    --primary-foreground: 0 0% 100%; /* white */
+    
+    --secondary: 220 13% 96%; /* #F3F4F6 - gray-100 */
+    --secondary-foreground: 222 47% 11%;
+    
+    --muted: 220 13% 96%;
+    --muted-foreground: 217 9% 49%; /* #6B7280 - gray-500 */
+    
+    --accent: 45 93% 58%; /* #FACC15 - yellow-400 */
+    --accent-foreground: 222 47% 11%;
+    
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
-
-    --border: 215 20% 85%;
-    --input: 215 20% 90%;
-    --ring: 231 48% 48%; /* Deep Blue */
-
-    --radius: 1rem; /* rounded-2xl */
+    
+    --border: 220 13% 90%; /* #E5E7EB - gray-200 */
+    --input: 220 13% 90%;
+    --ring: 188 84% 48%;
+    
+    --radius: 0.75rem; /* rounded-xl */
   }
 
   .dark {
-    /* G.O.R.I Dark Mode */
-    --background: 221 39% 11%; /* #0F172A */
-    --foreground: 210 40% 96%; /* #F1F5F9 */
-
-    --card: 216 34% 17%; /* #1E293B with opacity in component */
-    --card-foreground: 210 40% 96%;
-
-    --popover: 221 39% 11%;
-    --popover-foreground: 210 40% 96%;
-
-    --primary: 231 48% 58%; /* Brighter Deep Blue */
-    --primary-foreground: 221 39% 11%;
-
-    --secondary: 217 33% 25%; /* #293548 */
-    --secondary-foreground: 210 40% 96%;
-
-    --muted: 215 28% 28%; /* #334155 */
-    --muted-foreground: 215 25% 65%; /* #94A3B8 */
-
-    --accent: 38 100% 70%; /* Brighter Soft Orange */
-    --accent-foreground: 221 39% 11%;
-
-    --destructive: 0 72% 51%; /* A slightly deeper red for dark mode */
-    --destructive-foreground: 210 40% 96%;
-
-    --border: 217 33% 25%; /* #293548 */
-    --input: 217 27% 20%; /* #26324a */
-    --ring: 231 48% 58%; /* Brighter Deep Blue */
+    /* NexusServ 360 Dark Mode - Vivid Cyan & Sunny Yellow */
+    --background: 222 47% 11%; /* #111827 - gray-900 */
+    --foreground: 220 14% 98%; /* #F9FAFB - gray-50 */
     
-    --chart-1: 231 48% 58%; /* Corresponds to primary */
-    --chart-2: 38 100% 70%; /* Corresponds to accent */
-    --chart-3: 159 64% 52%;
-    --chart-4: 48 96% 53%;
-    --chart-5: 0 91% 71%;
-
-    --radius: 1rem; /* rounded-2xl */
+    --card: 224 39% 16%; /* #1F2937 - gray-800 */
+    --card-foreground: 220 14% 98%;
+    
+    --popover: 222 47% 11%;
+    --popover-foreground: 220 14% 98%;
+    
+    --primary: 188 84% 52%; /* #22D3EE - cyan-400 */
+    --primary-foreground: 222 47% 11%;
+    
+    --secondary: 220 14% 27%; /* #374151 - gray-700 */
+    --secondary-foreground: 220 14% 98%;
+    
+    --muted: 220 14% 27%;
+    --muted-foreground: 218 11% 65%; /* #9CA3AF - gray-400 */
+    
+    --accent: 45 93% 58%; /* #FACC15 - yellow-400 */
+    --accent-foreground: 222 47% 11%;
+    
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    
+    --border: 220 14% 27%;
+    --input: 220 12% 34%; /* #4B5563 - gray-600 */
+    --ring: 188 84% 52%;
+    
+    --chart-1: 188 84% 52%;
+    --chart-2: 45 93% 58%;
+    --chart-3: 142 71% 45%;
+    --chart-4: 330 84% 60%;
+    --chart-5: 262 84% 60%;
+    
+    --radius: 0.75rem;
   }
 }
 
