@@ -8,7 +8,8 @@ import { suggestRepairSolutions } from "@/ai/flows/suggest-repair-solutions";
 import { getMockClients, getClientById } from "./client.actions";
 import { DEFAULT_STORE_SETTINGS } from "../constants";
 import { updatePartStock } from "./part.actions";
-import { getUsersByRole, getUserById } from './user.actions';
+import { getUsersByRole } from './user.actions';
+import { getUserById } from './auth.actions';
 import { createNotification } from './notification.actions';
 import { PackageCheck, PackageSearch, Briefcase } from 'lucide-react';
 
