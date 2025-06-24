@@ -89,7 +89,7 @@ export function PrintableOrder({ order, branch }: PrintableOrderProps) {
         {!order.unlockPatternProvided && (
             <div className="warning-box">
                 <h3 className="section-title warning-title">¡ATENCIÓN! Equipo Sin Código de Desbloqueo</h3>
-                <p>{DEFAULT_STORE_SETTINGS.noUnlockCodeDisclaimer}</p>
+                <p>{settings.noUnlockCodeDisclaimer}</p>
             </div>
         )}
 

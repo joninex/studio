@@ -13,6 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ListChecks, Users, BarChartIcon, AlertTriangle, Eye, ServerCrash, Wrench, PackageCheck, DollarSign } from "lucide-react";
+import { getUsers } from "@/lib/actions/user.actions";
 
 interface AdminDashboardProps {
     allOrders: Order[];

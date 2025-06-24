@@ -105,14 +105,23 @@ function generateOrderNumber(): string {
   return `ORD${String(orderCounter).padStart(3, '0')}`;
 }
 
-function createAuditLogEntry(userId: string, userName: string, description: string): AuditLogEntry {
+function createAuditLogEntry(userName: string, description: string): Omit<AuditLogEntry, 'id' | 'userId'> {
     return {
-        id: `log-${Date.now()}`,
-        userId,
         userName,
         description,
         timestamp: new Date().toISOString(),
     };
+}
+
+function addAuditLog(order: Order, userName: string, description: string) {
+    const newLogEntry: AuditLogEntry = {
+        id: `log-${Date.now()}-${Math.random()}`,
+        userId: userName, // Using name for simplicity in mock
+        userName,
+        description,
+        timestamp: new Date().toISOString(),
+    };
+    order.auditLog.push(newLogEntry);
 }
 
 
@@ -152,9 +161,11 @@ export async function createOrder(
     status: "Recibido",
     intakeFormSigned: false,
     pickupFormSigned: false,
-    auditLog: [createAuditLogEntry(userName, userName, 'Orden creada en el sistema.')],
+    auditLog: [],
     commentsHistory: [],
   };
+
+  addAuditLog(newOrder, userName, 'Orden creada en el sistema.');
 
   if (data.partsUsed && data.partsUsed.length > 0) {
     for (const part of data.partsUsed) {
@@ -163,7 +174,7 @@ export async function createOrder(
         return { success: false, message: stockResult.message || "Error de stock." };
       }
     }
-    newOrder.auditLog.push(createAuditLogEntry(userName, userName, `${data.partsUsed.length} repuesto(s) asignado(s) y descontado(s) del stock.`));
+    addAuditLog(newOrder, userName, `${data.partsUsed.length} repuesto(s) asignado(s) y descontado(s) del stock.`);
   }
 
   mockOrders.push(newOrder);
@@ -245,7 +256,7 @@ export async function updateOrder(
     clientName = client.name;
     clientLastName = client.lastName;
     clientPhone = client.phone;
-    originalOrder.auditLog.push(createAuditLogEntry(userName, userName, `Cliente cambiado a: ${client.name} ${client.lastName}.`));
+    addAuditLog(originalOrder, userName, `Cliente cambiado a: ${client.name} ${client.lastName}.`);
   }
   
   const originalParts = originalOrder.partsUsed || [];
@@ -276,8 +287,9 @@ export async function updateOrder(
     clientName,
     clientLastName,
     clientPhone,
-    auditLog: [...originalOrder.auditLog, createAuditLogEntry(userName, userName, 'Datos de la orden y repuestos actualizados.')],
   };
+  
+  addAuditLog(mockOrders[orderIndex], userName, 'Datos de la orden y repuestos actualizados.');
 
   return { success: true, message: "Orden actualizada.", order: mockOrders[orderIndex] };
 }
@@ -304,7 +316,7 @@ export async function updateOrderStatus(
   const order = mockOrders[orderIndex];
   const oldStatus = order.status;
   order.status = status;
-  order.auditLog.push(createAuditLogEntry(userName, userName, `Estado cambiado de "${oldStatus}" a "${status}".`));
+  addAuditLog(order, userName, `Estado cambiado de "${oldStatus}" a "${status}".`);
 
   // --- Notification Logic ---
   const notificationLink = `/orders/${order.id}`;
@@ -354,10 +366,11 @@ export async function updateOrderConfirmations(
     const actionText = isChecked ? 'marcó como firmado' : 'desmarcó como firmado';
     const logMessage = `Usuario ${actionText} el comprobante de ${formName}.`;
         
-    mockOrders[orderIndex][fieldToUpdate] = isChecked;
-    mockOrders[orderIndex].auditLog.push(createAuditLogEntry(userName, userName, logMessage));
+    const order = mockOrders[orderIndex];
+    order[fieldToUpdate] = isChecked;
+    addAuditLog(order, userName, logMessage);
 
-    return { success: true, message: "Confirmación actualizada.", order: mockOrders[orderIndex] };
+    return { success: true, message: "Confirmación actualizada.", order: order };
 }
 
 export async function updateOrderImei(
@@ -369,11 +382,12 @@ export async function updateOrderImei(
     if (orderIndex === -1) {
         return { success: false, message: "Orden no encontrada." };
     }
-    const oldImei = mockOrders[orderIndex].deviceIMEI || "N/A";
-    mockOrders[orderIndex].deviceIMEI = imei;
-    mockOrders[orderIndex].imeiNotVisible = false; // It's visible now
-    mockOrders[orderIndex].auditLog.push(createAuditLogEntry(userName, userName, `IMEI/Serie actualizado de "${oldImei}" a "${imei}".`));
-    return { success: true, message: "IMEI actualizado.", order: mockOrders[orderIndex] };
+    const order = mockOrders[orderIndex];
+    const oldImei = order.deviceIMEI || "N/A";
+    order.deviceIMEI = imei;
+    order.imeiNotVisible = false; // It's visible now
+    addAuditLog(order, userName, `IMEI/Serie actualizado de "${oldImei}" a "${imei}".`);
+    return { success: true, message: "IMEI actualizado.", order: order };
 }
 
 
@@ -386,6 +400,7 @@ export async function addOrderComment(
   if (orderIndex === -1) {
     return { success: false, message: "Orden no encontrada." };
   }
+  const order = mockOrders[orderIndex];
   const commentId = `cmt-${Date.now()}`;
   const newComment: OrderCommentType = {
     id: commentId,
@@ -395,10 +410,10 @@ export async function addOrderComment(
     userName: userName,
   };
 
-  mockOrders[orderIndex].commentsHistory.push(newComment);
-  mockOrders[orderIndex].auditLog.push(createAuditLogEntry(userName, userName, `Comentario agregado: "${commentText.substring(0, 30)}..."`));
+  order.commentsHistory.push(newComment);
+  addAuditLog(order, userName, `Comentario agregado: "${commentText.substring(0, 30)}..."`);
 
-  return { success: true, message: "Comentario agregado.", comment: newComment, order: mockOrders[orderIndex] };
+  return { success: true, message: "Comentario agregado.", comment: newComment, order: order };
 }
 
 export async function addPartToOrder(orderId: string, part: OrderPartItem): Promise<{ success: boolean; message: string }> {
@@ -422,10 +437,11 @@ export async function logIntakeDocumentPrint(
     return { success: false, message: "Orden no encontrada." };
   }
   
+  const order = mockOrders[orderIndex];
   const logDescription = `Documentos de ingreso (Interno y Cliente) impresos.`;
-  mockOrders[orderIndex].auditLog.push(createAuditLogEntry(userName, userName, logDescription));
+  addAuditLog(order, userName, logDescription);
 
-  return { success: true, message: "Acción registrada en la bitácora.", order: mockOrders[orderIndex] };
+  return { success: true, message: "Acción registrada en la bitácora.", order: order };
 }
 
 export async function logWhatsAppAttempt(
@@ -437,11 +453,11 @@ export async function logWhatsAppAttempt(
   if (orderIndex === -1) {
     return { success: false, message: "Orden no encontrada para registrar el envío de WhatsApp." };
   }
-
+  const order = mockOrders[orderIndex];
   const logDescription = `Intento de envío de WhatsApp con mensaje: "${message.substring(0, 50)}..."`;
-  mockOrders[orderIndex].auditLog.push(createAuditLogEntry(userName, userName, logDescription));
+  addAuditLog(order, userName, logDescription);
 
-  return { success: true, message: "Intento de envío registrado.", order: mockOrders[orderIndex] };
+  return { success: true, message: "Intento de envío registrado.", order: order };
 }
 
 export async function generateWhatsAppLink(
@@ -486,21 +502,22 @@ export async function assignTechnicianToOrder(
       return { success: false, message: "Técnico no válido." };
   }
   
-  const oldTechnicianName = mockOrders[orderIndex].assignedTechnicianName || "Nadie";
+  const order = mockOrders[orderIndex];
+  const oldTechnicianName = order.assignedTechnicianName || "Nadie";
 
-  mockOrders[orderIndex].assignedTechnicianId = technician.uid;
-  mockOrders[orderIndex].assignedTechnicianName = technician.name;
+  order.assignedTechnicianId = technician.uid;
+  order.assignedTechnicianName = technician.name;
   
   const logDescription = `Técnico reasignado de "${oldTechnicianName}" a "${technician.name}".`;
-  mockOrders[orderIndex].auditLog.push(createAuditLogEntry(assignerName, assignerName, logDescription));
+  addAuditLog(order, assignerName, logDescription);
   
   // Notify the assigned technician
   await createNotification({
     userId: technician.uid,
-    message: `Te han asignado la orden ${mockOrders[orderIndex].orderNumber} (${mockOrders[orderIndex].deviceModel}).`,
+    message: `Te han asignado la orden ${order.orderNumber} (${order.deviceModel}).`,
     link: `/orders/${orderId}`,
     icon: Briefcase,
   });
 
-  return { success: true, message: "Técnico asignado exitosamente.", order: mockOrders[orderIndex] };
+  return { success: true, message: "Técnico asignado exitosamente.", order: order };
 }
