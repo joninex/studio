@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "postinstall": "patch-package"
   },
   "dependencies": {
     "@fullcalendar/core": "^6.1.15",
@@ -40,15 +41,12 @@
     "@tiptap/pm": "^2.22.3",
     "@tiptap/react": "^2.4.0",
     "@tiptap/starter-kit": "^2.22.3",
-    "antd": "^5.26.2",
     "apexcharts": "^3.46.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "1.0.0",
     "date-fns": "^3.6.0",
     "dotenv": "^16.5.0",
-    "firebase": "^11.9.1",
-    "flowbite-typography": "^1.0.5",
     "genkit": "^1.0.0",
     "@genkit-ai/googleai": "*",
     "lucide-react": "^0.475.0",
