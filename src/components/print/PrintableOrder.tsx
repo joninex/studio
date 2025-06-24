@@ -96,20 +96,26 @@ export function PrintableOrder({ order, branch }: PrintableOrderProps) {
         <section className="print-section break-inside-avoid">
           <h3 className="section-title">4. Checklist Técnico de Ingreso</h3>
            <p className="legend">
-            <strong>Significado:</strong> ✅ Sí (Funciona) | ❌ No (Falla) | 🟡 S/C (Sin Comprobar por falta de acceso/energía)
+            <strong>Significado:</strong> ✅ Sí (Funciona) | ❌ No (Falla) | 🟡 S/C (Sin Comprobar)
           </p>
           {Object.entries(checklistGroups).map(([groupName, items]) => (
             <div key={groupName} className="checklist-group">
               <h4>{groupName}</h4>
               <table className="checklist-table">
                 <tbody>
-                  {chunkArray(items, 2).map((pair, index) => (
+                  {chunkArray(items, 3).map((triple, index) => (
                     <tr key={index}>
-                      <td>{pair[0].label}:</td>
-                      <td><strong>{getChecklistValueDisplay(order.checklist[pair[0].id as keyof Checklist])}</strong></td>
-                      {pair[1] ? <>
-                        <td>{pair[1].label}:</td>
-                        <td><strong>{getChecklistValueDisplay(order.checklist[pair[1].id as keyof Checklist])}</strong></td>
+                      <td>{triple[0].label}:</td>
+                      <td><strong>{getChecklistValueDisplay(order.checklist[triple[0].id as keyof Checklist])}</strong></td>
+                      
+                      {triple[1] ? <>
+                        <td>{triple[1].label}:</td>
+                        <td><strong>{getChecklistValueDisplay(order.checklist[triple[1].id as keyof Checklist])}</strong></td>
+                      </> : <><td></td><td></td></>}
+
+                      {triple[2] ? <>
+                        <td>{triple[2].label}:</td>
+                        <td><strong>{getChecklistValueDisplay(order.checklist[triple[2].id as keyof Checklist])}</strong></td>
                       </> : <><td></td><td></td></>}
                     </tr>
                   ))}
