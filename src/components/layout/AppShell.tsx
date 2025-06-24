@@ -41,34 +41,46 @@ import {
   ArrowRightLeft,
   Building,
   CalendarDays,
+  PenTool,
+  ExternalLink,
 } from "lucide-react";
 import { useAuth } from "@/providers/AuthProvider";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ThemeToggle } from "@/components/shared/ThemeToggle";
 import { NotificationBell } from "./NotificationBell";
 import { cn } from "@/lib/utils";
+import type { LucideIcon } from 'lucide-react';
 
-const mainNavItems = [
+type NavItem = {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+  adminOnly?: boolean;
+  external?: boolean;
+};
+
+const mainNavItems: NavItem[] = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/orders", label: "Órdenes", icon: FileText },
     { href: "/clients", label: "Clientes", icon: Contact },
     { href: "/schedule", label: "Calendario", icon: CalendarDays },
 ];
 
-const inventoryNavItems = [
+const inventoryNavItems: NavItem[] = [
     { href: "/inventory/parts", label: "Repuestos", icon: Package },
     { href: "/inventory/suppliers", label: "Proveedores", icon: Truck },
 ];
 
-const analyticsNavItems = [
+const analyticsNavItems: NavItem[] = [
     { href: "/reports", label: "Reportes", icon: BarChart },
     { href: "/finance/income-report", label: "Ingresos", icon: TrendingUp },
     { href: "/finance/cashflow", label: "Flujo de Caja", icon: ArrowRightLeft },
 ];
 
-const adminNavItems = [
+const adminNavItems: NavItem[] = [
     { href: "/users", label: "Usuarios", icon: Users, adminOnly: true },
     { href: "/settings/branches", label: "Sucursales", icon: Building, adminOnly: true },
+    { href: "https://www.figma.com/file/your-file-id/your-project-name", label: "Diseño (Figma)", icon: PenTool, adminOnly: false, external: true },
     { href: "/settings", label: "Configuración y Perfil", icon: Settings, adminOnly: false },
 ];
 
@@ -101,27 +113,39 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return pathname.startsWith(href);
   };
   
-  const renderNavSection = (items: typeof mainNavItems, title?: string) => (
+  const renderNavSection = (items: NavItem[], title?: string) => (
     <>
       {title && <span className="flex font-medium text-sm text-gray-400 px-4 my-2 uppercase group-data-[collapsible=icon]:hidden">{title}</span>}
       {items.filter(item => !item.adminOnly || user?.role === 'admin').map(item => {
           const Icon = item.icon;
-          const active = isActive(item.href);
+          const active = !item.external && isActive(item.href);
+
+          const buttonContent = (
+            <SidebarMenuButton
+              variant="ghost"
+              className={cn(
+                  "w-full justify-start space-x-4 px-4 py-3 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground",
+                  active && "bg-gradient-to-r from-primary/10 to-primary/20 text-primary hover:text-primary font-semibold border-l-2 border-primary"
+              )}
+              tooltip={{ children: item.label }}
+            >
+              <Icon className="h-5 w-5" />
+              <span className="group-data-[collapsible=icon]:hidden flex-1">{item.label}</span>
+              {item.external && <ExternalLink className="h-4 w-4 ml-auto text-muted-foreground/70 group-data-[collapsible=icon]:hidden" />}
+            </SidebarMenuButton>
+          );
+
           return (
               <SidebarMenuItem key={item.href}>
-                  <Link href={item.href} className="w-full block">
-                      <SidebarMenuButton
-                          variant="ghost"
-                          className={cn(
-                              "w-full justify-start space-x-4 px-4 py-3 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground",
-                              active && "bg-gradient-to-r from-primary/10 to-primary/20 text-primary hover:text-primary font-semibold border-l-2 border-primary"
-                          )}
-                          tooltip={{ children: item.label }}
-                      >
-                          <Icon className="h-5 w-5" />
-                          <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
-                      </SidebarMenuButton>
-                  </Link>
+                  {item.external ? (
+                    <a href={item.href} target="_blank" rel="noopener noreferrer" className="w-full block">
+                        {buttonContent}
+                    </a>
+                  ) : (
+                    <Link href={item.href} className="w-full block">
+                        {buttonContent}
+                    </Link>
+                  )}
               </SidebarMenuItem>
           );
       })}
