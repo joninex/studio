@@ -48,7 +48,7 @@ export const CHECKLIST_ITEMS: Array<{ id: keyof Checklist; label: string, group:
   { id: "altavoz_multimedia", label: "Altavoz (Multimedia)", group: "Audio y Comunicaciones", type: 'boolean' },
   { id: "microfono", label: "Micrófono", group: "Audio y Comunicaciones", type: 'boolean' },
   { id: "vibrador", label: "Vibrador", group: "Audio y Comunicaciones", type: 'boolean' },
-  
+
   // Cámaras
   { id: "camara_trasera", label: "Cámara trasera", group: "Cámaras", type: 'boolean' },
   { id: "camara_delantera", label: "Cámara delantera", group: "Cámaras", type: 'boolean' },

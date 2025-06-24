@@ -17,6 +17,7 @@ let mockOrders: Order[] = [
     clientId: "1001",
     clientName: "Juan",
     clientLastName: "Perez",
+    clientPhone: "1122334455",
     deviceBrand: "Samsung",
     deviceModel: "Galaxy S21",
     deviceColor: "Phantom Black",
@@ -62,6 +63,7 @@ let mockOrders: Order[] = [
     clientId: "1002",
     clientName: "Maria",
     clientLastName: "Lopez",
+    clientPhone: "5544332211",
     deviceBrand: "Apple",
     deviceModel: "iPhone 12",
     deviceColor: "Azul",
@@ -137,6 +139,7 @@ export async function createOrder(
     ...data,
     clientName: client.name,
     clientLastName: client.lastName,
+    clientPhone: client.phone,
     branchId: branchId,
     entryDate: new Date().toISOString(),
     status: "Recibido",
@@ -232,6 +235,8 @@ export async function updateOrder(
   
   let clientName = originalOrder.clientName;
   let clientLastName = originalOrder.clientLastName;
+  let clientPhone = originalOrder.clientPhone;
+
 
   if (data.clientId && data.clientId !== originalOrder.clientId) {
     const client = await getClientById(data.clientId);
@@ -240,6 +245,7 @@ export async function updateOrder(
     }
     clientName = client.name;
     clientLastName = client.lastName;
+    clientPhone = client.phone;
     originalOrder.auditLog.push(createAuditLogEntry(userName, userName, `Cliente cambiado a: ${client.name} ${client.lastName}.`));
   }
   
@@ -270,6 +276,7 @@ export async function updateOrder(
     ...data,
     clientName,
     clientLastName,
+    clientPhone,
     auditLog: [...originalOrder.auditLog, createAuditLogEntry(userName, userName, 'Datos de la orden y repuestos actualizados.')],
   };
 
@@ -399,4 +406,20 @@ export async function logIntakeDocumentPrint(
   mockOrders[orderIndex].auditLog.push(createAuditLogEntry(userName, userName, logDescription));
 
   return { success: true, message: "Acción registrada en la bitácora.", order: mockOrders[orderIndex] };
+}
+
+export async function logWhatsAppAttempt(
+  orderId: string,
+  userName: string,
+  message: string,
+): Promise<{ success: boolean, message: string, order?: Order }> {
+  const orderIndex = mockOrders.findIndex(o => o.id === orderId);
+  if (orderIndex === -1) {
+    return { success: false, message: "Orden no encontrada para registrar el envío de WhatsApp." };
+  }
+
+  const logDescription = `Intento de envío de WhatsApp con mensaje: "${message.substring(0, 50)}..."`;
+  mockOrders[orderIndex].auditLog.push(createAuditLogEntry(userName, userName, logDescription));
+
+  return { success: true, message: "Intento de envío registrado.", order: mockOrders[orderIndex] };
 }

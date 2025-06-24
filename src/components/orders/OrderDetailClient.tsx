@@ -15,12 +15,12 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/providers/AuthProvider";
-import { addOrderComment, updateOrderStatus, updateOrderConfirmations, updateOrderImei, logIntakeDocumentPrint } from "@/lib/actions/order.actions";
+import { addOrderComment, updateOrderStatus, updateOrderConfirmations, updateOrderImei, logIntakeDocumentPrint, logWhatsAppAttempt } from "@/lib/actions/order.actions";
 import { ORDER_STATUSES, CHECKLIST_ITEMS } from "@/lib/constants";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { AlertCircle, CalendarDays, DollarSign, FileText, Info, ListChecks, MessageSquare, Printer, User as UserIcon, Wrench, Package, CreditCard, Pencil, CheckCircle, Clock, ShieldCheck, FileSignature, History } from "lucide-react";
+import { AlertCircle, CalendarDays, DollarSign, FileText, Info, ListChecks, MessageSquare, Printer, User as UserIcon, Wrench, Package, CreditCard, Pencil, CheckCircle, Clock, ShieldCheck, FileSignature, History, MessageCircle } from "lucide-react";
 import { LoadingSpinner } from "../shared/LoadingSpinner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
@@ -108,34 +108,55 @@ export function OrderDetailClient({ order: initialOrder, branch }: OrderDetailCl
         return;
     }
     setIsPrinting(true);
-    try {
-        await logIntakeDocumentPrint(order.id, user.name);
-        toast({ title: "Acción Registrada", description: "La impresión de los documentos de ingreso ha sido registrada." });
-        window.open(`/print/${order.id}`, '_blank');
-    } catch (error) {
-        toast({ variant: "destructive", title: "Error", description: "No se pudo registrar la acción de impresión." });
-        console.error("Failed to log document print:", error);
-    } finally {
-        setIsPrinting(false);
-    }
+    startTransition(async () => {
+        try {
+            const result = await logIntakeDocumentPrint(order.id, user.name);
+            if (result.success && result.order) {
+              setOrder(result.order); // Update order state with new audit log
+              toast({ title: "Acción Registrada", description: "La impresión ha sido registrada." });
+              window.open(`/print/${order.id}`, '_blank');
+            } else {
+              toast({ variant: "destructive", title: "Error de registro", description: result.message });
+              window.open(`/print/${order.id}`, '_blank'); // Open print view even if logging fails
+            }
+        } catch (error) {
+            toast({ variant: "destructive", title: "Error", description: "No se pudo registrar la acción de impresión." });
+            console.error("Failed to log document print:", error);
+        } finally {
+            setIsPrinting(false);
+        }
+    });
   };
   
   const handleWhatsAppContact = () => {
-    if (!order.clientPhone) {
-        toast({ variant: "destructive", title: "Error", description: "El cliente no tiene un número de teléfono registrado."});
+      if (!user) {
+        toast({ variant: "destructive", title: "Error", description: "Usuario no autenticado." });
         return;
-    }
+      }
+      if (!order.clientPhone) {
+          toast({ variant: "destructive", title: "Error", description: "El cliente no tiene un número de teléfono registrado."});
+          return;
+      }
 
-    const cleanedPhone = order.clientPhone.replace(/[\s+()-]/g, '');
-    
-    const storeName = branch?.settings?.companyName || 'el taller'; 
-    const userName = user?.name || 'un técnico';
-    const estimatedTime = order.estimatedCompletionTime || 'el final del día';
-    
-    const message = `Hola ${order.clientName}, te contacto desde ${storeName}. Tu orden n° ${order.orderNumber} para el equipo ${order.deviceBrand} ${order.deviceModel} tiene una hora de finalización estimada para las ${estimatedTime}. Te avisaremos en cuanto esté lista. Saludos, ${userName}.`;
-    
-    const whatsappUrl = `https://wa.me/${cleanedPhone}?text=${encodeURIComponent(message)}`;
-    window.open(whatsappUrl, '_blank');
+      const cleanedPhone = order.clientPhone.replace(/[\s+()-]/g, '');
+      const storeName = branch?.settings?.companyName || 'el taller'; 
+      const userName = user?.name || 'un técnico';
+      const estimatedTime = order.estimatedCompletionTime || 'el final del día';
+      
+      const message = `Hola ${order.clientName}, te contacto desde ${storeName}. Tu orden n° ${order.orderNumber} para el equipo ${order.deviceBrand} ${order.deviceModel} tiene una hora de finalización estimada para las ${estimatedTime}. Te avisaremos en cuanto esté lista. Saludos, ${userName}.`;
+      
+      const whatsappUrl = `https://wa.me/${cleanedPhone}?text=${encodeURIComponent(message)}`;
+      
+      startTransition(async () => {
+        const result = await logWhatsAppAttempt(order.id, user.name, message);
+        if (result.success && result.order) {
+            setOrder(result.order);
+            toast({ title: "Acción Registrada", description: "Se registró el intento de envío por WhatsApp."});
+        } else {
+            toast({ variant: "destructive", title: "Error de Registro", description: "No se pudo registrar el intento de envío."});
+        }
+        window.open(whatsappUrl, '_blank');
+      });
   };
 
   if (!order) {
@@ -174,9 +195,15 @@ export function OrderDetailClient({ order: initialOrder, branch }: OrderDetailCl
             <AlertDescription className="flex justify-between items-center flex-wrap gap-2">
                 <span>Imprima los documentos de ingreso para la firma manuscrita del cliente.</span>
                  <div className="flex gap-2">
+                    {order.clientPhone && (
+                      <Button onClick={handleWhatsAppContact} disabled={isTransitioning} variant="outline" className="bg-green-50 hover:bg-green-100 text-green-700 border-green-200 hover:border-green-300">
+                          {isTransitioning ? <LoadingSpinner size={16} className="mr-2"/> : <MessageCircle className="mr-2 h-4 w-4" />}
+                          Enviar WhatsApp
+                      </Button>
+                    )}
                     <Button onClick={handlePrint} disabled={isPrinting}>
                         {isPrinting ? <LoadingSpinner size={16} className="mr-2"/> : <Printer className="mr-2 h-4 w-4" />}
-                        Imprimir Documentos de Ingreso
+                        Imprimir Documentos
                     </Button>
                  </div>
             </AlertDescription>

@@ -1,7 +1,7 @@
 // src/lib/actions/auth.actions.ts
 "use server";
 
-import type { User, UserStatus, StoreSettings, Branch } from "@/types";
+import type { User, UserStatus, StoreSettings, Branch, UserRole } from "@/types";
 import { LoginSchema, ResetPasswordSchema, RegisterSchema } from "@/lib/schemas";
 import type { z } from "zod";
 import { DEFAULT_STORE_SETTINGS } from "@/lib/constants";
@@ -34,6 +34,19 @@ let mockUsers: User[] = [
     updatedAt: new Date().toISOString(),
   },
   {
+    uid: "recep123",
+    name: "Recepcionista (Suc. Central)",
+    email: "recepcionista@example.com",
+    avatarUrl: "https://i.pravatar.cc/150?u=recep123",
+    role: "recepcionista",
+    assignments: [
+        { branchId: "B001", role: "recepcionista" }
+    ],
+    status: "active",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
     uid: "manager456",
     name: "Manager User (Multi-Sucursal)",
     email: "manager@example.com",
@@ -53,6 +66,7 @@ let mockUsers: User[] = [
 let mockPasswords: Record<string, string> = {
   "jesus@mobyland.com.ar": "42831613aA@",
   "tech@example.com": "password123",
+  "recepcionista@example.com": "password123",
   "manager@example.com": "password123",
 };
 
@@ -140,9 +154,9 @@ export async function registerUser(
     name,
     email,
     avatarUrl: `https://i.pravatar.cc/150?u=${email}`,
-    role: "tecnico",
+    role: "recepcionista",
     status: "pending",
-    assignments: defaultBranchId ? [{ branchId: defaultBranchId, role: 'tecnico'}] : [],
+    assignments: defaultBranchId ? [{ branchId: defaultBranchId, role: 'recepcionista'}] : [],
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
