@@ -20,9 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { PART_CATEGORIES } from "@/lib/constants";
 
-const NONE_CATEGORY_FILTER_VALUE = "__ALL_CATEGORIES__";
-const validCategoryOptions = PART_CATEGORIES.filter(cat => cat !== "") as PartCategory[];
-
+const validCategoryOptions = PART_CATEGORIES;
 
 interface PartListClientProps {
   initialParts: Part[]; 
@@ -69,11 +67,7 @@ export function PartListClient({ initialParts, initialFilters }: PartListClientP
 
 
   const handleFilterChange = (filterName: keyof typeof filters, value: string) => {
-     if (filterName === 'category' && value === NONE_CATEGORY_FILTER_VALUE) {
-      setFilters(prev => ({ ...prev, category: "" }));
-    } else {
       setFilters(prev => ({ ...prev, [filterName]: value }));
-    }
   };
 
   const applyFilters = () => {
@@ -129,15 +123,15 @@ export function PartListClient({ initialParts, initialFilters }: PartListClientP
               value={filters.sku}
               onChange={(e) => handleFilterChange("sku", e.target.value)}
             />
-            <Select value={filters.category === "" ? NONE_CATEGORY_FILTER_VALUE : filters.category} onValueChange={(value) => handleFilterChange("category", value)}>
+            <Select value={filters.category ?? ""} onValueChange={(value) => handleFilterChange("category", value)}>
                 <SelectTrigger>
-                <SelectValue placeholder="Categoría" />
+                <SelectValue placeholder="Todas las Categorías" />
                 </SelectTrigger>
                 <SelectContent>
-                <SelectItem value={NONE_CATEGORY_FILTER_VALUE}>Todas las Categorías</SelectItem>
-                {validCategoryOptions.map(cat => (
-                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                ))}
+                  <SelectItem value="">Todas las Categorías</SelectItem>
+                  {validCategoryOptions.map(cat => (
+                      <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                  ))}
                 </SelectContent>
             </Select>
             <div className="flex gap-2 lg:col-start-5">

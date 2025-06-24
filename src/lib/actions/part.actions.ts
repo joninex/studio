@@ -1,7 +1,7 @@
 // src/lib/actions/part.actions.ts
 "use server";
 
-import type { Part } from "@/types";
+import type { Part, PartCategory } from "@/types";
 import { PartSchema, type PartFormData } from "@/lib/schemas";
 import type { z } from "zod";
 
@@ -83,7 +83,7 @@ export async function createPart(
   const newPart: Part = {
     id: newId,
     ...validatedFields.data,
-    category: validatedFields.data.category || "", // Ensure empty string if undefined
+    category: validatedFields.data.category,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
@@ -109,7 +109,7 @@ export async function updatePart(
   const updatedPart: Part = {
     ...mockParts[partIndex],
     ...validatedFields.data,
-    category: validatedFields.data.category || "", // Ensure empty string if undefined
+    category: validatedFields.data.category,
     updatedAt: new Date().toISOString(),
   };
   mockParts[partIndex] = updatedPart;
@@ -129,7 +129,7 @@ export async function deletePart(partId: string): Promise<{ success: boolean; me
 export async function getParts(filters?: {
   name?: string;
   sku?: string;
-  category?: string;
+  category?: PartCategory;
 }): Promise<Part[]> {
   await new Promise(resolve => setTimeout(resolve, 300)); 
   let filteredParts = [...mockParts]; 

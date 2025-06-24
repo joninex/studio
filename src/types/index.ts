@@ -56,7 +56,7 @@ export interface User {
   updatedAt?: string | Date;
 }
 
-export type FiscalCondition = 'Consumidor Final' | 'Monotributista' | 'Responsable Inscripto' | 'Exento' | '';
+export type FiscalCondition = 'Consumidor Final' | 'Monotributista' | 'Responsable Inscripto' | 'Exento';
 
 
 export interface Client {
@@ -143,7 +143,7 @@ export interface AuditLogEntry {
     timestamp: string | Date | Timestamp;
 }
 
-export type PartCategory = "Pantalla" | "Batería" | "Flex" | "Cámara" | "Placa" | "Componente" | "Carcasa" | "Otro" | "";
+export type PartCategory = "Pantalla" | "Batería" | "Flex" | "Cámara" | "Placa" | "Componente" | "Carcasa" | "Otro";
 export type PartUnit = "unidad" | "metro" | "kit";
 
 export interface Part {
@@ -151,7 +151,7 @@ export interface Part {
     name: string;
     sku: string;
     description?: string;
-    category: PartCategory;
+    category?: PartCategory;
     unit: PartUnit;
     costPrice: number;
     salePrice: number;

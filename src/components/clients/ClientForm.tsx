@@ -27,8 +27,6 @@ interface ClientFormProps {
   onSuccess?: (client: Client) => void;
 }
 
-const NONE_FISCAL_CONDITION_VALUE = "";
-
 export function ClientForm({ clientId, initialData, onSuccess }: ClientFormProps) {
   const router = useRouter();
   const { toast } = useToast();
@@ -140,21 +138,30 @@ export function ClientForm({ clientId, initialData, onSuccess }: ClientFormProps
             <FormField control={form.control} name="businessName" render={({ field }) => ( <FormItem><FormLabel>Razón Social</FormLabel><FormControl><Input placeholder="Nombre de la empresa o negocio" {...field} /></FormControl><FormMessage /></FormItem> )} />
             <FormField control={form.control} name="cuit" render={({ field }) => ( <FormItem><FormLabel>CUIT</FormLabel><FormControl><Input placeholder="Número de CUIT" {...field} /></FormControl><FormMessage /></FormItem> )} />
         </div>
-        <FormField control={form.control} name="fiscalCondition" render={({ field }) => ( 
+        <FormField
+          control={form.control}
+          name="fiscalCondition"
+          render={({ field }) => (
             <FormItem>
-                <FormLabel>Condición Fiscal</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value || NONE_FISCAL_CONDITION_VALUE}>
-                    <FormControl><SelectTrigger><SelectValue placeholder="Seleccione condición fiscal..." /></SelectTrigger></FormControl>
-                    <SelectContent>
-                        <SelectItem value={NONE_FISCAL_CONDITION_VALUE}>Consumidor Final</SelectItem>
-                        {FISCAL_CONDITIONS.filter(fc => fc !== "" && fc !== "Consumidor Final").map(fc => (
-                            <SelectItem key={fc} value={fc as FiscalCondition}>{fc}</SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-                <FormMessage />
-            </FormItem> 
-        )} />
+              <FormLabel>Condición Fiscal</FormLabel>
+              <Select onValueChange={field.onChange} value={field.value ?? ""}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccione condición fiscal..." />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {FISCAL_CONDITIONS.map((fc) => (
+                    <SelectItem key={fc} value={fc}>
+                      {fc}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <Separator className="my-6" />
         

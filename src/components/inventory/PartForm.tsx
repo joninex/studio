@@ -22,8 +22,6 @@ import { Package, ScanLine, DollarSign, Shapes, Tag, ClipboardList, Info, ImageI
 import { PART_CATEGORIES, PART_UNITS } from "@/lib/constants";
 import type { PartCategory, PartUnit } from "@/types";
 
-const NONE_CATEGORY_VALUE = ""; // Represents "No Category" or "Seleccione..."
-
 interface PartFormProps {
   partId?: string;
   initialData?: Partial<PartFormData>;
@@ -186,21 +184,30 @@ export function PartForm({ partId, initialData }: PartFormProps) {
             <Card>
               <CardHeader><CardTitle className="flex items-center gap-2"><Shapes className="text-primary"/> Categorización y Unidades</CardTitle></CardHeader>
               <CardContent className="space-y-4">
-                <FormField control={form.control} name="category" render={({ field }) => ( 
+                <FormField
+                  control={form.control}
+                  name="category"
+                  render={({ field }) => (
                     <FormItem>
-                        <FormLabel>Categoría</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value || NONE_CATEGORY_VALUE}>
-                            <FormControl><SelectTrigger><SelectValue placeholder="Seleccione categoría..." /></SelectTrigger></FormControl>
-                            <SelectContent>
-                                <SelectItem value={NONE_CATEGORY_VALUE}>Ninguna / Sin especificar</SelectItem>
-                                {PART_CATEGORIES.filter(cat => cat !== "").map(cat => (
-                                    <SelectItem key={cat} value={cat as PartCategory}>{cat}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                        <FormMessage />
-                    </FormItem> 
-                )} />
+                      <FormLabel>Categoría</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value ?? ""}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleccione categoría..." />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {PART_CATEGORIES.map((cat) => (
+                            <SelectItem key={cat} value={cat}>
+                              {cat}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 <FormField control={form.control} name="unit" render={({ field }) => ( 
                     <FormItem>
                         <FormLabel>Unidad de Medida</FormLabel>
