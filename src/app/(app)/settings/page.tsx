@@ -6,17 +6,59 @@ import { useAuth } from "@/providers/AuthProvider";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { SettingsForm } from "@/components/settings/SettingsForm";
 import { ProfileSettingsCard } from "@/components/settings/ProfileSettingsCard"; // Import new component
-import { AlertTriangle, QrCode, Building } from "lucide-react"; 
+import { AlertTriangle, QrCode, Building, DatabaseBackup, AlertCircle } from "lucide-react"; 
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import Image from "next/image"; 
 import { Button } from "@/components/ui/button"; 
 import { Separator } from "@/components/ui/separator"; 
+import { useState, useTransition, useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
+import { createBackup, restoreBackup, checkBackupExists } from "@/lib/actions/system.actions";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { useRouter } from "next/navigation";
+
 
 export default function SettingsPage() {
   const { user, loading } = useAuth();
+  const { toast } = useToast();
+  const router = useRouter();
+  const [isBackupTransitioning, startBackupTransition] = useTransition();
+  const [backupFileExists, setBackupFileExists] = useState(false);
+
   // For now, we'll assume the user edits the settings for their FIRST assigned branch.
   // In a real multi-branch UI, there would be a branch selector here.
   const primaryBranchId = user?.assignments?.[0]?.branchId || (user?.role === 'admin' ? 'B001' : undefined);
+
+   useEffect(() => {
+    if (user?.role === 'admin') {
+      checkBackupExists().then(setBackupFileExists);
+    }
+  }, [user]);
+
+  const handleCreateBackup = () => {
+    startBackupTransition(async () => {
+      const result = await createBackup();
+      if (result.success) {
+        toast({ title: "Éxito", description: result.message });
+        checkBackupExists().then(setBackupFileExists); // Re-check after creation
+      } else {
+        toast({ variant: "destructive", title: "Error", description: result.message });
+      }
+    });
+  };
+
+  const handleRestoreBackup = () => {
+    startBackupTransition(async () => {
+      const result = await restoreBackup();
+      if (result.success) {
+        toast({ title: "Restauración Exitosa", description: result.message });
+        // Force a hard reload to ensure all in-memory data is refreshed application-wide
+        window.location.reload();
+      } else {
+        toast({ variant: "destructive", title: "Error de Restauración", description: result.message });
+      }
+    });
+  };
 
    if (loading) {
     return (
@@ -63,6 +105,71 @@ export default function SettingsPage() {
             </CardHeader>
             <CardContent>
                 <p className="text-muted-foreground">No está asignado a ninguna sucursal para poder editar su configuración.</p>
+            </CardContent>
+        </Card>
+      )}
+       
+      <Separator />
+
+      {user.role === 'admin' && (
+        <Card className="shadow-xl">
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                    <DatabaseBackup className="h-6 w-6 text-primary" />
+                    Gestión de Backups y Restauración
+                </CardTitle>
+                <CardDescription>Cree o restaure un snapshot completo de los datos de la aplicación (órdenes, clientes, usuarios, etc.).</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                 <div className="flex flex-col sm:flex-row gap-4 justify-between items-center p-4 border rounded-lg bg-muted/50">
+                    <div>
+                        <h4 className="font-semibold">Crear un Nuevo Backup</h4>
+                        <p className="text-sm text-muted-foreground">Esto guardará el estado actual de todos los datos en un archivo `gori_backup.json`.</p>
+                    </div>
+                    <Button onClick={handleCreateBackup} disabled={isBackupTransitioning}>
+                        {isBackupTransitioning ? <LoadingSpinner size={16} className="mr-2"/> : null}
+                        Crear Backup Ahora
+                    </Button>
+                </div>
+
+                 <div className="flex flex-col sm:flex-row gap-4 justify-between items-center p-4 border rounded-lg bg-muted/50">
+                    <div>
+                        <h4 className="font-semibold">Restaurar desde Backup</h4>
+                        <p className="text-sm text-muted-foreground">Esto reemplazará todos los datos actuales con los del archivo `gori_backup.json`.</p>
+                    </div>
+                     <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                         <Button variant="destructive" disabled={isBackupTransitioning || !backupFileExists}>
+                            {isBackupTransitioning ? <LoadingSpinner size={16} className="mr-2"/> : null}
+                            Restaurar Backup
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader className="text-center items-center">
+                          <AlertTriangle className="h-16 w-16 text-destructive mb-2" />
+                          <AlertDialogTitle className="text-2xl">¿Está absolutamente seguro?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Esta acción es irreversible. Todos los datos actuales (órdenes, clientes, usuarios, etc.) serán eliminados y reemplazados por los datos del archivo de backup. 
+                            La aplicación se recargará.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter className="sm:justify-center pt-4">
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={handleRestoreBackup}
+                            disabled={isBackupTransitioning}
+                            className="bg-destructive hover:bg-destructive/90"
+                          >
+                             {isBackupTransitioning && <LoadingSpinner size={16} className="mr-2"/>}
+                            Sí, restaurar y reemplazar todo
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                </div>
+                 {!backupFileExists && (
+                    <div className="text-sm text-muted-foreground text-center">No se encontró un archivo `gori_backup.json`. Cree uno para poder restaurar.</div>
+                 )}
             </CardContent>
         </Card>
       )}

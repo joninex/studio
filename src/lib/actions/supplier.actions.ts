@@ -6,52 +6,28 @@ import { SupplierSchema, type SupplierFormData } from "@/lib/schemas";
 import type { z } from "zod";
 
 // Mock database for suppliers
-let mockSuppliers: Supplier[] = [
-  {
-    id: "SUP001",
-    name: "ElectroComponentes Web",
-    contactName: "Juan Ventas",
-    phone: "5491112345678", // Example Argentina WhatsApp number
-    email: "ventas@electrocomponentes.com",
-    address: "Tienda Online - Envíos a todo el país",
-    cuit: "30-12345678-9",
-    sellsDescription: "Pantallas, baterías, flex, ICs para móviles y tablets.",
-    notes: "Principal proveedor de pantallas y baterías. Buena calidad en originales.",
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: "SUP002",
-    name: "Importadora Tech Global",
-    contactName: "Ana Logística",
-    phone: "541187654321", // Another example
-    email: "info@techglobal.com.ar",
-    address: "Calle Falsa 456, Depósito Central, Ciudad Autónoma de Buenos Aires",
-    cuit: "33-87654321-0",
-    sellsDescription: "Componentes menores, flex, herramientas básicas, genéricos.",
-    notes: "Buenos precios en flex y componentes menores. Consultar por lotes.",
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: "SUP003",
-    name: "FixParts Argentina",
-    contactName: "Soporte Ventas",
-    phone: "1122334455", // Local number without country code
-    email: "pedidos@fixparts.com.ar",
-    address: "Av. Siempreviva 742, Local 3, Springfield",
-    sellsDescription: "Herramientas especializadas, insumos de soldadura, microscopios.",
-    notes: "Herramientas y algunos insumos. Tienen local físico para retiros.",
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  }
-];
+let mockSuppliers: Supplier[] = [];
 let supplierCounter = mockSuppliers.length;
 
 function generateSupplierId(): string {
   supplierCounter += 1;
   return `SUP${String(supplierCounter).padStart(3, '0')}`;
 }
+
+// --- Funciones para Backup y Restauración ---
+export async function getRawSupplierData() {
+  return {
+    suppliers: mockSuppliers,
+    counter: supplierCounter,
+  };
+}
+
+export async function restoreSupplierData(data: { suppliers: Supplier[]; counter: number }) {
+  mockSuppliers = data.suppliers || [];
+  supplierCounter = data.counter || (data.suppliers?.length ?? 0);
+}
+// --- Fin Funciones para Backup y Restauración ---
+
 
 export async function getSupplierById(supplierId: string): Promise<Supplier | null> {
   await new Promise(resolve => setTimeout(resolve, 150)); 

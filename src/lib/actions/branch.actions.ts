@@ -14,6 +14,21 @@ function generateBranchId(): string {
   return `B${String(branchCounter).padStart(3, '0')}`;
 }
 
+// --- Funciones para Backup y Restauración ---
+export async function getRawBranchData() {
+  return {
+    branches: mockBranches,
+    counter: branchCounter,
+  };
+}
+
+export async function restoreBranchData(data: { branches: Branch[]; counter: number }) {
+  mockBranches = data.branches || [];
+  branchCounter = data.counter || (data.branches?.length ?? 0);
+}
+// --- Fin Funciones para Backup y Restauración ---
+
+
 export async function getBranches(): Promise<Branch[]> {
     await new Promise(resolve => setTimeout(resolve, 100));
     return JSON.parse(JSON.stringify(mockBranches));

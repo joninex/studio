@@ -6,64 +6,28 @@ import { PartSchema, type PartFormData } from "@/lib/schemas";
 import type { z } from "zod";
 
 // Mock database for parts
-let mockParts: Part[] = [
-  {
-    id: "PART001",
-    name: "Pantalla iPhone 12 Original",
-    sku: "IP12-SCR-OEM",
-    description: "Pantalla de reemplazo original para iPhone 12.",
-    category: "Pantalla",
-    unit: "unidad",
-    costPrice: 80,
-    salePrice: 150,
-    stock: 10,
-    minStock: 2,
-    supplierInfo: "Proveedor Apple Directo",
-    notes: "Alta calidad, frágil.",
-    imageUrl: "https://placehold.co/100x100.png?text=Pantalla",
-    createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: "PART002",
-    name: "Batería Samsung S21 Genérica",
-    sku: "SAM-S21-BAT-GEN",
-    description: "Batería compatible para Samsung Galaxy S21.",
-    category: "Batería",
-    unit: "unidad",
-    costPrice: 20,
-    salePrice: 45,
-    stock: 25,
-    minStock: 5,
-    supplierInfo: "Importaciones Tech Global",
-    notes: "Verificar compatibilidad de pines.",
-    imageUrl: "https://placehold.co/100x100.png?text=Bateria",
-    createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: "PART003",
-    name: "Flex Pin de Carga Universal MicroUSB",
-    sku: "FLX-MICUSB-UNIV",
-    description: "Flex de pin de carga MicroUSB para varios modelos.",
-    category: "Flex",
-    unit: "unidad",
-    costPrice: 5,
-    salePrice: 15,
-    stock: 50,
-    minStock: 10,
-    supplierInfo: "Componentes Electrónicos SRL",
-    imageUrl: "",
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-];
+let mockParts: Part[] = [];
 let partCounter = mockParts.length;
 
 function generatePartId(): string {
   partCounter += 1;
   return `PART${String(partCounter).padStart(3, '0')}`;
 }
+
+// --- Funciones para Backup y Restauración ---
+export async function getRawPartData() {
+  return {
+    parts: mockParts,
+    counter: partCounter,
+  };
+}
+
+export async function restorePartData(data: { parts: Part[]; counter: number }) {
+  mockParts = data.parts || [];
+  partCounter = data.counter || (data.parts?.length ?? 0);
+}
+// --- Fin Funciones para Backup y Restauración ---
+
 
 export async function getPartById(partId: string): Promise<Part | null> {
   await new Promise(resolve => setTimeout(resolve, 150)); 

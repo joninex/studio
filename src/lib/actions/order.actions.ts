@@ -21,6 +21,21 @@ function generateOrderNumber(): string {
   return `ORD${String(orderCounter).padStart(3, '0')}`;
 }
 
+// --- Funciones para Backup y Restauración ---
+export async function getRawOrderData() {
+  return {
+    orders: mockOrders,
+    counter: orderCounter,
+  };
+}
+
+export async function restoreOrderData(data: { orders: Order[]; counter: number }) {
+  mockOrders = data.orders || [];
+  orderCounter = data.counter || (data.orders?.length ?? 0);
+}
+// --- Fin Funciones para Backup y Restauración ---
+
+
 function createAuditLogEntry(userName: string, description: string): Omit<AuditLogEntry, 'id' | 'userId'> {
     return {
         userName,

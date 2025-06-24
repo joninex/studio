@@ -31,6 +31,22 @@ let gori_db_passwords: Record<string, string> = {
     "jesus@mobyland.com.ar": "42831613aA@",
 };
 
+
+// --- Funciones para Backup y Restauración ---
+export async function getRawUserData() {
+  return {
+    users: gori_db_usuarios,
+    passwords: gori_db_passwords,
+  };
+}
+
+export async function restoreUserData(data: { users: User[]; passwords: Record<string, string> }) {
+  gori_db_usuarios = data.users || [];
+  gori_db_passwords = data.passwords || {};
+}
+// --- Fin Funciones para Backup y Restauración ---
+
+
 // --- GORI Data Access Functions ---
 
 export async function verifyUserPassword(

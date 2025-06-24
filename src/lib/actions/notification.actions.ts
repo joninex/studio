@@ -6,6 +6,21 @@ import type { Notification } from "@/types";
 let mockNotifications: Notification[] = [];
 let notificationCounter = 0;
 
+// --- Funciones para Backup y Restauración ---
+export async function getRawNotificationData() {
+  return {
+    notifications: mockNotifications,
+    counter: notificationCounter,
+  };
+}
+
+export async function restoreNotificationData(data: { notifications: Notification[]; counter: number }) {
+  mockNotifications = data.notifications || [];
+  notificationCounter = data.counter || (data.notifications?.length ?? 0);
+}
+// --- Fin Funciones para Backup y Restauración ---
+
+
 export async function createNotification(
   data: Omit<Notification, "id" | "createdAt" | "read">
 ): Promise<Notification> {

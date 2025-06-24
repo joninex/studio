@@ -13,6 +13,21 @@ function generateClientId(): string {
   return String(clientCounter);
 }
 
+// --- Funciones para Backup y Restauración ---
+export async function getRawClientData() {
+  return {
+    clients: mockClients,
+    counter: clientCounter,
+  };
+}
+
+export async function restoreClientData(data: { clients: Client[]; counter: number }) {
+  mockClients = data.clients || [];
+  clientCounter = data.counter || (data.clients?.length ? 1000 + data.clients.length : 1000);
+}
+// --- Fin Funciones para Backup y Restauración ---
+
+
 export async function getClients(branchId: string, filters?: { search?: string }): Promise<Client[]> {
   await new Promise(resolve => setTimeout(resolve, 300));
   

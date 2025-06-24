@@ -259,3 +259,15 @@ export interface Notification {
 }
 
 export type MessageTemplateKey = 'INITIAL_CONTACT' | 'DIAGNOSIS_READY' | 'READY_FOR_PICKUP';
+
+// Defines the structure of the backup file
+export interface FullBackupData {
+  usersData: ReturnType<typeof import('@/lib/actions/user.actions').getRawUserData>;
+  clientsData: ReturnType<typeof import('@/lib/actions/client.actions').getRawClientData>;
+  ordersData: ReturnType<typeof import('@/lib/actions/order.actions').getRawOrderData>;
+  partsData: ReturnType<typeof import('@/lib/actions/part.actions').getRawPartData>;
+  suppliersData: ReturnType<typeof import('@/lib/actions/supplier.actions').getRawSupplierData>;
+  branchesData: ReturnType<typeof import('@/lib/actions/branch.actions').getRawBranchData>;
+  notificationsData: ReturnType<typeof import('@/lib/actions/notification.actions').getRawNotificationData>;
+  backupDate: string;
+}
