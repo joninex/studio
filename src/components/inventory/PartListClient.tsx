@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Edit, Trash2, Search, FilterX, PackagePlus, Eye } from "lucide-react";
+import { Edit, Trash2, Search, FilterX, PackagePlus, Eye, AlertTriangle } from "lucide-react";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
@@ -220,14 +220,15 @@ export function PartListClient({ initialParts, initialFilters }: PartListClientP
 
       <AlertDialog open={!!partToDelete} onOpenChange={(open) => !open && setPartToDelete(null)}>
         <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Está seguro de eliminar este repuesto?</AlertDialogTitle>
+          <AlertDialogHeader className="text-center items-center">
+            <AlertTriangle className="h-16 w-16 text-destructive mb-2" />
+            <AlertDialogTitle className="text-2xl">¿Está seguro?</AlertDialogTitle>
             <AlertDialogDescription>
               Esta acción no se puede deshacer. Se eliminará permanentemente el repuesto: <br />
               <strong>{partToDelete?.name} (SKU: {partToDelete?.sku || 'N/A'})</strong>.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
+          <AlertDialogFooter className="sm:justify-center pt-4">
             <AlertDialogCancel onClick={() => setPartToDelete(null)}>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeletePart} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
               {isDeleting && <LoadingSpinner size={16} className="mr-2"/>}

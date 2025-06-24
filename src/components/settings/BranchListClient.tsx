@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent } from "@/components/ui/card";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Edit, Trash2, CheckCircle, XCircle } from "lucide-react";
+import { Edit, Trash2, CheckCircle, XCircle, AlertTriangle } from "lucide-react";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
@@ -93,13 +93,14 @@ export function BranchListClient({ branches: initialBranches }: BranchListClient
 
       <AlertDialog open={!!branchToDelete} onOpenChange={(open) => !open && setBranchToDelete(null)}>
         <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Está seguro de eliminar esta sucursal?</AlertDialogTitle>
+          <AlertDialogHeader className="text-center items-center">
+            <AlertTriangle className="h-16 w-16 text-destructive mb-2" />
+            <AlertDialogTitle className="text-2xl">¿Está seguro?</AlertDialogTitle>
             <AlertDialogDescription>
               Esta acción no se puede deshacer. Se eliminará permanentemente la sucursal: <strong>{branchToDelete?.name}</strong>. Asegúrese de que no tenga órdenes o usuarios activos asignados.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
+          <AlertDialogFooter className="sm:justify-center pt-4">
             <AlertDialogCancel onClick={() => setBranchToDelete(null)}>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteBranch} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
               {isDeleting && <LoadingSpinner size={16} className="mr-2"/>}

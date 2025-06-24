@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Edit, Trash2, Search, FilterX, MessageSquare, UserPlus, Info, Home } from "lucide-react";
+import { Edit, Trash2, Search, FilterX, MessageSquare, UserPlus, Info, Home, AlertTriangle } from "lucide-react";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import { useToast } from "@/hooks/use-toast";
 
@@ -202,14 +202,15 @@ export function SupplierListClient({ initialSuppliers, initialFilters }: Supplie
 
       <AlertDialog open={!!supplierToDelete} onOpenChange={(open) => !open && setSupplierToDelete(null)}>
         <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Está seguro de eliminar este proveedor?</AlertDialogTitle>
+          <AlertDialogHeader className="text-center items-center">
+            <AlertTriangle className="h-16 w-16 text-destructive mb-2" />
+            <AlertDialogTitle className="text-2xl">¿Está seguro?</AlertDialogTitle>
             <AlertDialogDescription>
               Esta acción no se puede deshacer. Se eliminará permanentemente el proveedor: <br />
               <strong>{supplierToDelete?.name}</strong>.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
+          <AlertDialogFooter className="sm:justify-center pt-4">
             <AlertDialogCancel onClick={() => setSupplierToDelete(null)}>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteSupplier} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
               {isDeleting && <LoadingSpinner size={16} className="mr-2"/>}
