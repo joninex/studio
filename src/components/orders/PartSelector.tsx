@@ -41,13 +41,16 @@ export function PartSelector({ isOpen, onOpenChange, onSelectPart, currentParts 
   useEffect(() => {
     if (isOpen) {
       fetchParts();
+    } else {
+      // Cleanup when the dialog is closed to prevent showing stale data
+      setParts([]);
+      setSearchTerm("");
     }
   }, [isOpen, fetchParts]);
 
   const handleSelect = (part: Part) => {
     onSelectPart(part);
     onOpenChange(false);
-    setSearchTerm("");
   };
 
   return (

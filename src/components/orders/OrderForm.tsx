@@ -22,12 +22,13 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/providers/AuthProvider";
 import { AISuggestion, type Order, type Checklist, Part, Client } from "@/types";
 import { CHECKLIST_ITEMS, YES_NO_OPTIONS, LEGAL_TEXTS } from "@/lib/constants";
-import { AlertCircle, Bot, DollarSign, Info, ListChecks, LucideSparkles, User, Wrench, Clock, Lock, LockOpen, InfoIcon, Package, PackagePlus, Trash2 } from "lucide-react";
+import { AlertCircle, Bot, DollarSign, Info, ListChecks, LucideSparkles, User, Wrench, Clock, Lock, LockOpen, InfoIcon, Package, PackagePlus, Trash2, Edit } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import { DeclaredFaultInput } from "./DeclaredFaultInput";
 import { PartSelector } from "./PartSelector";
 import { ClientSelector } from "./ClientSelector";
+import { ClientEditModal } from "../clients/ClientEditModal";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 
@@ -49,6 +50,7 @@ export function OrderForm({ orderId }: OrderFormProps) {
   const [isLoading, setIsLoading] = useState(!!orderId);
   const [isPartSelectorOpen, setIsPartSelectorOpen] = useState(false);
   const [isClientSelectorOpen, setIsClientSelectorOpen] = useState(false);
+  const [isClientEditModalOpen, setIsClientEditModalOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
 
   const currentBranchId = user?.role === 'admin' ? 'B001' : user?.assignments?.[0]?.branchId;
@@ -180,6 +182,10 @@ export function OrderForm({ orderId }: OrderFormProps) {
     form.setValue("clientId", client.id, { shouldValidate: true });
     setSelectedClient(client);
   };
+  
+  const handleClientUpdate = (updatedClient: Client) => {
+    setSelectedClient(updatedClient);
+  };
 
 
   if (isLoading) {
@@ -208,7 +214,7 @@ export function OrderForm({ orderId }: OrderFormProps) {
                        <FormControl>
                             <Input type="hidden" {...field} />
                        </FormControl>
-                       <div className="p-4 border rounded-md min-h-[80px] bg-muted/30 flex items-center justify-between">
+                       <div className="p-4 border rounded-md min-h-[80px] bg-muted/30 flex items-center justify-between flex-wrap gap-2">
                             {selectedClient ? (
                                 <div>
                                     <p className="font-semibold">{selectedClient.name} {selectedClient.lastName}</p>
@@ -218,9 +224,16 @@ export function OrderForm({ orderId }: OrderFormProps) {
                             ) : (
                                 <p className="text-muted-foreground">Ningún cliente seleccionado.</p>
                             )}
-                            <Button type="button" variant="outline" onClick={() => setIsClientSelectorOpen(true)}>
-                                {selectedClient ? "Cambiar" : "Seleccionar"} Cliente
-                            </Button>
+                            <div className="flex items-center gap-2">
+                                {selectedClient && (
+                                    <Button type="button" variant="ghost" size="sm" onClick={() => setIsClientEditModalOpen(true)}>
+                                        <Edit className="mr-2 h-4 w-4"/> Editar
+                                    </Button>
+                                )}
+                                <Button type="button" variant="outline" onClick={() => setIsClientSelectorOpen(true)}>
+                                    {selectedClient ? "Cambiar" : "Seleccionar"}
+                                </Button>
+                            </div>
                        </div>
                        <FormMessage />
                     </FormItem> 
@@ -481,6 +494,14 @@ export function OrderForm({ orderId }: OrderFormProps) {
         onOpenChange={setIsClientSelectorOpen}
         onSelectClient={handleSelectClient}
       />
+      {selectedClient && (
+        <ClientEditModal
+            isOpen={isClientEditModalOpen}
+            onOpenChange={setIsClientEditModalOpen}
+            client={selectedClient}
+            onClientUpdate={handleClientUpdate}
+        />
+      )}
     </Form>
   );
 }

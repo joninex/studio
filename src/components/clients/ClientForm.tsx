@@ -19,16 +19,17 @@ import { UserCircle, Phone, Mail, Home, Edit3, FileText, Building, Info } from "
 import { Separator } from "../ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { FISCAL_CONDITIONS } from "@/lib/constants";
-import type { FiscalCondition } from "@/types";
+import type { Client, FiscalCondition } from "@/types";
 
 interface ClientFormProps {
   clientId?: string;
   initialData?: Partial<ClientFormData>;
+  onSuccess?: (client: Client) => void;
 }
 
 const NONE_FISCAL_CONDITION_VALUE = "";
 
-export function ClientForm({ clientId, initialData }: ClientFormProps) {
+export function ClientForm({ clientId, initialData, onSuccess }: ClientFormProps) {
   const router = useRouter();
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
@@ -60,7 +61,7 @@ export function ClientForm({ clientId, initialData }: ClientFormProps) {
             form.reset(data);
           } else {
             toast({ variant: "destructive", title: "Error", description: "Cliente no encontrado." });
-            router.push("/clients");
+            if (!onSuccess) router.push("/clients");
           }
         })
         .catch(() => {
@@ -68,25 +69,33 @@ export function ClientForm({ clientId, initialData }: ClientFormProps) {
         })
         .finally(() => setIsLoadingData(false));
     }
-  }, [clientId, initialData, form, toast, router]);
+  }, [clientId, initialData, form, toast, router, onSuccess]);
 
   const onSubmit = (values: ClientFormData) => {
     startTransition(async () => {
       if (clientId) {
         const result = await updateClient(clientId, values);
-        if (result.success) {
+        if (result.success && result.client) {
           toast({ title: "Éxito", description: "Cliente actualizado correctamente." });
-          router.push("/clients");
-          router.refresh(); 
+          if (onSuccess) {
+            onSuccess(result.client);
+          } else {
+            router.push("/clients");
+            router.refresh(); 
+          }
         } else {
           toast({ variant: "destructive", title: "Error", description: result.message });
         }
       } else {
         const result = await createClient(values);
-        if (result.success && result.client?.id) {
+        if (result.success && result.client) {
           toast({ title: "Éxito", description: "Cliente creado correctamente." });
-          router.push("/clients");
-          router.refresh(); 
+          if (onSuccess) {
+            onSuccess(result.client);
+          } else {
+            router.push("/clients");
+            router.refresh(); 
+          }
         } else {
           toast({ variant: "destructive", title: "Error", description: result.message || "No se pudo crear el cliente." });
         }
