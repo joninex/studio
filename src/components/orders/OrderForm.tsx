@@ -489,12 +489,15 @@ export function OrderForm({ orderId }: OrderFormProps) {
         onSelectPart={handleSelectPart}
         currentParts={fields.map(f => f.partId)}
       />
-      <ClientSelector
-        isOpen={isClientSelectorOpen}
-        onOpenChange={setIsClientSelectorOpen}
-        onSelectClient={handleSelectClient}
-      />
-      {selectedClient && (
+      {currentBranchId && (
+        <ClientSelector
+          isOpen={isClientSelectorOpen}
+          onOpenChange={setIsClientSelectorOpen}
+          onSelectClient={handleSelectClient}
+          branchId={currentBranchId}
+        />
+      )}
+      {(selectedClient && currentBranchId) && (
         <ClientEditModal
             isOpen={isClientEditModalOpen}
             onOpenChange={setIsClientEditModalOpen}

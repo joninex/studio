@@ -63,6 +63,7 @@ export type FiscalCondition = 'Consumidor Final' | 'Monotributista' | 'Responsab
 
 export interface Client {
   id: string;
+  branchId: string;
   name: string;
   lastName: string;
   dni: string;

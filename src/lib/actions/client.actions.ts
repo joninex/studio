@@ -8,6 +8,7 @@ import { ClientSchema, type ClientFormData } from "@/lib/schemas";
 let mockClients: Client[] = [
   {
     id: "1001",
+    branchId: "B001",
     name: "Juan",
     lastName: "Perez",
     dni: "12345678",
@@ -21,6 +22,7 @@ let mockClients: Client[] = [
   },
   {
     id: "1002",
+    branchId: "B001",
     name: "Maria",
     lastName: "Lopez",
     dni: "87654321",
@@ -36,6 +38,7 @@ let mockClients: Client[] = [
   },
   {
     id: "1003",
+    branchId: "B002",
     name: "Carlos",
     lastName: "Gomez",
     dni: "34567890",
@@ -56,9 +59,11 @@ function generateClientId(): string {
   return String(clientCounter);
 }
 
-export async function getClients(filters?: { search?: string }): Promise<Client[]> {
+export async function getClients(branchId: string, filters?: { search?: string }): Promise<Client[]> {
   await new Promise(resolve => setTimeout(resolve, 300));
-  let filteredClients = [...mockClients];
+  
+  // First, filter by the mandatory branchId
+  let filteredClients = mockClients.filter(c => c.branchId === branchId);
 
   if (filters?.search) {
       const searchLower = filters.search.toLowerCase();
@@ -80,7 +85,7 @@ export async function getClientById(clientId: string): Promise<Client | null> {
   return client ? { ...client } : null;
 }
 
-export async function createClient(values: ClientFormData): Promise<{ success: boolean; message: string; client?: Client }> {
+export async function createClient(values: ClientFormData, branchId: string): Promise<{ success: boolean; message: string; client?: Client }> {
   const validatedFields = ClientSchema.safeParse(values);
   if (!validatedFields.success) {
     return { success: false, message: "Datos de cliente inválidos." };
@@ -89,6 +94,7 @@ export async function createClient(values: ClientFormData): Promise<{ success: b
   const newId = generateClientId();
   const newClient: Client = {
     id: newId,
+    branchId: branchId,
     ...validatedFields.data,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),

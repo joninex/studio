@@ -17,25 +17,27 @@ interface ClientSelectorProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   onSelectClient: (client: Client) => void;
+  branchId: string;
 }
 
-export function ClientSelector({ isOpen, onOpenChange, onSelectClient }: ClientSelectorProps) {
+export function ClientSelector({ isOpen, onOpenChange, onSelectClient, branchId }: ClientSelectorProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
   const [clients, setClients] = useState<Client[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   const fetchClients = useCallback(async () => {
+    if (!branchId) return;
     setIsLoading(true);
     try {
-      const results = await getClients({ search: debouncedSearchTerm });
+      const results = await getClients(branchId, { search: debouncedSearchTerm });
       setClients(results);
     } catch (error) {
       console.error("Failed to fetch clients:", error);
     } finally {
       setIsLoading(false);
     }
-  }, [debouncedSearchTerm]);
+  }, [debouncedSearchTerm, branchId]);
 
   useEffect(() => {
     if (isOpen) {

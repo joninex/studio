@@ -6,7 +6,6 @@ import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import Link from "next/link";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { useDebounce } from "use-debounce";
 
 import type { Client } from "@/types";
 import { getClients } from "@/lib/actions/client.actions";
@@ -22,9 +21,10 @@ import { useToast } from "@/hooks/use-toast";
 interface ClientListClientProps {
   initialClients: Client[]; 
   initialFilters: { search?: string };
+  branchId: string;
 }
 
-export function ClientListClient({ initialClients, initialFilters }: ClientListClientProps) {
+export function ClientListClient({ initialClients, initialFilters, branchId }: ClientListClientProps) {
   const [clients, setClients] = useState<Client[]>(initialClients);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
@@ -33,12 +33,11 @@ export function ClientListClient({ initialClients, initialFilters }: ClientListC
   const { toast } = useToast();
 
   const [searchTerm, setSearchTerm] = useState(initialFilters.search || "");
-  const [debouncedSearchTerm] = useDebounce(searchTerm, 500);
 
   const fetchClientsInternal = useCallback(async (searchQuery: string) => {
     setIsLoading(true);
     try {
-      const fetchedClients = await getClients({ search: searchQuery });
+      const fetchedClients = await getClients(branchId, { search: searchQuery });
       setClients(fetchedClients);
     } catch (error) {
       console.error("Error fetching clients:", error);
@@ -46,28 +45,28 @@ export function ClientListClient({ initialClients, initialFilters }: ClientListC
     } finally {
       setIsLoading(false);
     }
-  }, [toast]);
+  }, [toast, branchId]);
 
   useEffect(() => {
-    const params = new URLSearchParams(searchParams.toString());
-    const currentSearch = params.get('search') || '';
+    const currentSearch = searchParams.get('search') || '';
     setSearchTerm(currentSearch);
     fetchClientsInternal(currentSearch);
   }, [searchParams, fetchClientsInternal]);
 
-  useEffect(() => {
+  const handleSearch = () => {
     const params = new URLSearchParams(searchParams.toString());
-    if (debouncedSearchTerm) {
-        params.set('search', debouncedSearchTerm);
+    if (searchTerm) {
+        params.set('search', searchTerm);
     } else {
         params.delete('search');
     }
     router.replace(`${pathname}?${params.toString()}`);
-  }, [debouncedSearchTerm, pathname, router, searchParams]);
+  };
 
 
   const clearFilters = () => {
     setSearchTerm("");
+    router.replace(pathname);
   };
 
   const handleDeleteClient = async (clientId: string) => {
@@ -87,9 +86,13 @@ export function ClientListClient({ initialClients, initialFilters }: ClientListC
                     placeholder="Buscar cliente..."
                     value={searchTerm}
                     onChange={(e: ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                     className="pl-10"
                 />
             </div>
+            <Button onClick={handleSearch} disabled={isLoading}>
+                <Search className="mr-2 h-4 w-4" /> Buscar
+            </Button>
             <Button onClick={clearFilters} variant="outline" disabled={isLoading || !searchTerm}>
               <FilterX className="mr-2 h-4 w-4" /> Limpiar
             </Button>

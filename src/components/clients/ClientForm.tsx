@@ -25,9 +25,10 @@ interface ClientFormProps {
   clientId?: string;
   initialData?: Partial<ClientFormData>;
   onSuccess?: (client: Client) => void;
+  branchId: string; // branchId is now mandatory
 }
 
-export function ClientForm({ clientId, initialData, onSuccess }: ClientFormProps) {
+export function ClientForm({ clientId, initialData, onSuccess, branchId }: ClientFormProps) {
   const router = useRouter();
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
@@ -85,7 +86,7 @@ export function ClientForm({ clientId, initialData, onSuccess }: ClientFormProps
           toast({ variant: "destructive", title: "Error", description: result.message });
         }
       } else {
-        const result = await createClient(values);
+        const result = await createClient(values, branchId);
         if (result.success && result.client) {
           toast({ title: "Éxito", description: "Cliente creado correctamente." });
           if (onSuccess) {
@@ -144,7 +145,7 @@ export function ClientForm({ clientId, initialData, onSuccess }: ClientFormProps
           render={({ field }) => (
             <FormItem>
               <FormLabel>Condición Fiscal</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value ?? ""}>
+              <Select onValueChange={field.onChange} value={field.value ?? undefined}>
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Seleccione condición fiscal..." />
