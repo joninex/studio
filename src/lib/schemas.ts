@@ -33,6 +33,14 @@ export const ChecklistSchema = z.object(checklistShapeObject);
 const validOrderStatuses = ORDER_STATUSES.filter(status => status !== "") as [OrderStatus, ...OrderStatus[]];
 const validClassificationOptions = CLASSIFICATION_OPTIONS.filter(opt => opt !== null) as [Classification, ...Classification[]];
 
+export const OrderPartItemSchema = z.object({
+  partId: z.string().min(1, "El ID del repuesto es requerido."),
+  partName: z.string().min(1, "El nombre del repuesto es requerido."),
+  quantity: z.number().min(1, "La cantidad debe ser al menos 1.").int("La cantidad debe ser un número entero."),
+  unitPrice: z.number().nonnegative("El precio unitario no puede ser negativo."),
+  costPrice: z.number().nonnegative("El costo unitario no puede ser negativo."),
+});
+
 export const OrderSchema = z.object({
   branchId: z.string().min(1, "La sucursal es requerida."),
   clientId: z.string().min(1, "ID de Cliente es requerido."),
@@ -53,6 +61,7 @@ export const OrderSchema = z.object({
   costSparePart: z.number().nonnegative(),
   costLabor: z.number().nonnegative(),
   observations: z.string().optional(),
+  partsUsed: z.array(OrderPartItemSchema).optional(),
   estimatedCompletionTime: z.string().optional().or(z.literal('')),
   status: z.enum(validOrderStatuses).optional(),
   classification: z.enum(validClassificationOptions).nullable().optional(),

@@ -7,6 +7,7 @@ import type { z } from "zod";
 import { suggestRepairSolutions } from "@/ai/flows/suggest-repair-solutions";
 import { getMockClients } from "./client.actions";
 import { DEFAULT_STORE_SETTINGS } from "../constants";
+import { updatePartStock } from "./part.actions";
 
 let mockOrders: Order[] = [
   {
@@ -45,7 +46,7 @@ let mockOrders: Order[] = [
       { id: 'cmt-1', userId: 'tech123', userName: 'Tech User', description: 'Se confirma pantalla rota, posible daño en flex de display.', timestamp: new Date(Date.now() - 1.5 * 24 * 60 * 60 * 1000).toISOString()}
     ],
     partsUsed: [
-      { partId: "PART001", partName: "Pantalla iPhone 12 Original", quantity: 1, unitPrice: 150.00 }
+      { partId: "PART001", partName: "Pantalla iPhone 12 Original", quantity: 1, unitPrice: 150.00, costPrice: 80.00 }
     ],
     paymentHistory: [
       { id: "PAY001", amount: 100, method: 'efectivo', date: new Date().toISOString() },
@@ -81,6 +82,7 @@ let mockOrders: Order[] = [
     pickupFormSigned: false,
     auditLog: [],
     commentsHistory: [],
+    partsUsed: [],
   },
 ];
 let orderCounter = mockOrders.length;
@@ -133,6 +135,16 @@ export async function createOrder(
     auditLog: [createAuditLogEntry(userName, userName, 'Orden creada en el sistema.')],
     commentsHistory: [],
   };
+
+  if (data.partsUsed && data.partsUsed.length > 0) {
+    for (const part of data.partsUsed) {
+      const stockResult = await updatePartStock(part.partId, -part.quantity);
+      if (!stockResult.success) {
+        return { success: false, message: stockResult.message || "Error de stock." };
+      }
+    }
+    newOrder.auditLog.push(createAuditLogEntry(userName, userName, `${data.partsUsed.length} repuesto(s) asignado(s) y descontado(s) del stock.`));
+  }
 
   mockOrders.push(newOrder);
   return { success: true, message: `Orden ${newOrderNumber} creada exitosamente.`, order: newOrder };
@@ -199,6 +211,7 @@ export async function updateOrder(
 ): Promise<{ success: boolean; message: string; order?: Order }> {
   const validatedFields = OrderSchema.safeParse(values);
   if (!validatedFields.success) {
+    console.log("Validation Errors:", validatedFields.error.flatten().fieldErrors);
     return { success: false, message: "Datos inválidos para actualizar." };
   }
 
@@ -208,14 +221,35 @@ export async function updateOrder(
   }
   
   const originalOrder = mockOrders[orderIndex];
+  
+  const originalParts = originalOrder.partsUsed || [];
+  const newParts = validatedFields.data.partsUsed || [];
+
+  const stockAdjustments = new Map<string, number>();
+
+  originalParts.forEach(part => {
+      stockAdjustments.set(part.partId, (stockAdjustments.get(part.partId) || 0) + part.quantity);
+  });
+
+  newParts.forEach(part => {
+      stockAdjustments.set(part.partId, (stockAdjustments.get(part.partId) || 0) - part.quantity);
+  });
+
+  for (const [partId, quantityDelta] of stockAdjustments.entries()) {
+    if (quantityDelta !== 0) {
+        // Here, a negative delta means we are consuming stock, so we pass it as is.
+        const stockResult = await updatePartStock(partId, -quantityDelta);
+        if (!stockResult.success) {
+            return { success: false, message: `Error de stock al actualizar: ${stockResult.message}` };
+        }
+    }
+  }
 
   mockOrders[orderIndex] = {
     ...originalOrder,
     ...validatedFields.data,
+    auditLog: [...originalOrder.auditLog, createAuditLogEntry(userName, userName, 'Datos de la orden y repuestos actualizados.')],
   };
-  
-  mockOrders[orderIndex].auditLog.push(createAuditLogEntry(userName, userName, 'Datos de la orden actualizados.'));
-
 
   return { success: true, message: "Orden actualizada.", order: mockOrders[orderIndex] };
 }

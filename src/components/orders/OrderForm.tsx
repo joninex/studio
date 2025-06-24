@@ -1,7 +1,7 @@
 // src/components/orders/OrderForm.tsx
 "use client";
 
-import { useForm, Controller } from "react-hook-form";
+import { useForm, Controller, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useState, useTransition, useEffect } from "react";
@@ -19,12 +19,15 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/providers/AuthProvider";
-import { AISuggestion, type Order, type Checklist } from "@/types";
+import { AISuggestion, type Order, type Checklist, Part } from "@/types";
 import { CHECKLIST_ITEMS, YES_NO_OPTIONS, LEGAL_TEXTS } from "@/lib/constants";
-import { AlertCircle, Bot, DollarSign, Info, ListChecks, LucideSparkles, User, Wrench, Clock, Lock, LockOpen, InfoIcon } from "lucide-react";
+import { AlertCircle, Bot, DollarSign, Info, ListChecks, LucideSparkles, User, Wrench, Clock, Lock, LockOpen, InfoIcon, Package, PackagePlus, Trash2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import { DeclaredFaultInput } from "./DeclaredFaultInput";
+import { PartSelector } from "./PartSelector";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+
 
 const FUNCTIONAL_CHECKLIST_IDS = CHECKLIST_ITEMS
     .filter(item => item.group !== 'Estado Físico' && item.type === 'boolean')
@@ -42,6 +45,7 @@ export function OrderForm({ orderId }: OrderFormProps) {
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [aiSuggestion, setAiSuggestion] = useState<AISuggestion | null>(null);
   const [isLoading, setIsLoading] = useState(!!orderId);
+  const [isPartSelectorOpen, setIsPartSelectorOpen] = useState(false);
 
   const currentBranchId = user?.role === 'admin' ? 'B001' : user?.assignments?.[0]?.branchId;
 
@@ -61,11 +65,25 @@ export function OrderForm({ orderId }: OrderFormProps) {
       damageRisk: "", costSparePart: 0, costLabor: 0,
       observations: "",
       estimatedCompletionTime: "",
+      partsUsed: [],
     },
   });
   
   const unlockPatternProvided = form.watch("unlockPatternProvided");
   const imeiNotVisible = form.watch("imeiNotVisible");
+  const partsUsed = form.watch("partsUsed");
+
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: "partsUsed",
+  });
+
+  useEffect(() => {
+    if (partsUsed) {
+      const totalCost = partsUsed.reduce((sum, part) => sum + (part.unitPrice * part.quantity), 0);
+      form.setValue("costSparePart", totalCost, { shouldValidate: true });
+    }
+  }, [partsUsed, form]);
 
   useEffect(() => {
     if (!unlockPatternProvided) {
@@ -139,6 +157,17 @@ export function OrderForm({ orderId }: OrderFormProps) {
     }
     setIsAiLoading(false);
   };
+
+  const handleSelectPart = (part: Part) => {
+    append({
+      partId: part.id,
+      partName: part.name,
+      quantity: 1,
+      unitPrice: part.salePrice,
+      costPrice: part.costPrice,
+    });
+  };
+
 
   if (isLoading) {
     return <div className="flex justify-center items-center h-64"><LoadingSpinner size={48}/> <p className="ml-4">Cargando orden...</p></div>;
@@ -320,15 +349,80 @@ export function OrderForm({ orderId }: OrderFormProps) {
                 <FormField control={form.control} name="estimatedCompletionTime" render={({ field }) => ( <FormItem><FormLabel className="flex items-center gap-1"><Clock className="h-4 w-4"/>Hora Estimada de Finalización</FormLabel><FormControl><Input placeholder="Ej: 18:00hs, Fin del día" {...field} /></FormControl><FormDescription>Esta hora se usará en las notificaciones al cliente.</FormDescription><FormMessage /></FormItem> )} />
               </CardContent>
             </Card>
+          </div>
+        </div>
 
+        <Separator />
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <Card>
-              <CardHeader><CardTitle className="flex items-center gap-2"><DollarSign className="text-primary"/> Costos Iniciales</CardTitle></CardHeader>
-              <CardContent className="grid grid-cols-2 gap-4">
-                <FormField control={form.control} name="costSparePart" render={({ field }) => ( <FormItem><FormLabel>Repuesto ($)</FormLabel><FormControl><Input type="number" placeholder="0.00" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl><FormMessage /></FormItem> )} />
-                <FormField control={form.control} name="costLabor" render={({ field }) => ( <FormItem><FormLabel>Mano de Obra ($)</FormLabel><FormControl><Input type="number" placeholder="0.00" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)}/></FormControl><FormMessage /></FormItem> )} />
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                    <span className="flex items-center gap-2"><Package className="text-primary"/> Repuestos Utilizados</span>
+                    <Button type="button" variant="outline" size="sm" onClick={() => setIsPartSelectorOpen(true)}>
+                    <PackagePlus className="mr-2 h-4 w-4" />
+                    Agregar Repuesto
+                    </Button>
+                </CardTitle>
+                <CardDescription>Repuestos que se incluirán en el presupuesto.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {fields.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-[50%]">Nombre</TableHead>
+                          <TableHead>Cantidad</TableHead>
+                          <TableHead>Precio Unit.</TableHead>
+                          <TableHead>Subtotal</TableHead>
+                          <TableHead className="text-right">Acción</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {fields.map((item, index) => (
+                          <TableRow key={item.id}>
+                            <TableCell>{item.partName}</TableCell>
+                            <TableCell>
+                              <Input
+                                type="number"
+                                min="1"
+                                className="h-8 w-20"
+                                {...form.register(`partsUsed.${index}.quantity` as const, {
+                                  valueAsNumber: true,
+                                })}
+                              />
+                              <FormMessage>{form.formState.errors.partsUsed?.[index]?.quantity?.message}</FormMessage>
+                            </TableCell>
+                            <TableCell>${item.unitPrice.toFixed(2)}</TableCell>
+                            <TableCell>${(item.unitPrice * (form.watch(`partsUsed.${index}.quantity`) || 0)).toFixed(2)}</TableCell>
+                            <TableCell className="text-right">
+                              <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}>
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-4">No se han agregado repuestos.</p>
+                )}
               </CardContent>
             </Card>
-          </div>
+
+            <Card>
+              <CardHeader><CardTitle className="flex items-center gap-2"><DollarSign className="text-primary"/> Costos y Presupuesto</CardTitle></CardHeader>
+              <CardContent className="grid grid-cols-1 gap-4">
+                <FormField control={form.control} name="costSparePart" render={({ field }) => ( <FormItem><FormLabel>Costo Total Repuestos ($)</FormLabel><FormControl><Input type="number" placeholder="0.00" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} disabled /></FormControl><FormDescription>Este valor se calcula automáticamente.</FormDescription><FormMessage /></FormItem> )} />
+                <FormField control={form.control} name="costLabor" render={({ field }) => ( <FormItem><FormLabel>Costo Mano de Obra ($)</FormLabel><FormControl><Input type="number" placeholder="0.00" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)}/></FormControl><FormMessage /></FormItem> )} />
+                <div className="p-4 bg-muted rounded-lg text-right">
+                    <p className="text-sm text-muted-foreground">PRESUPUESTO TOTAL ESTIMADO</p>
+                    <p className="text-2xl font-bold text-primary">${(form.watch("costSparePart") + form.watch("costLabor")).toFixed(2)}</p>
+                </div>
+              </CardContent>
+            </Card>
         </div>
         
         <Separator />
@@ -340,6 +434,13 @@ export function OrderForm({ orderId }: OrderFormProps) {
           </Button>
         </div>
       </form>
+
+      <PartSelector
+        isOpen={isPartSelectorOpen}
+        onOpenChange={setIsPartSelectorOpen}
+        onSelectPart={handleSelectPart}
+        currentParts={fields.map(f => f.partId)}
+      />
     </Form>
   );
 }

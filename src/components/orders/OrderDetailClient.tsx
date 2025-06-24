@@ -235,35 +235,68 @@ export function OrderDetailClient({ order: initialOrder, branch }: OrderDetailCl
             </div>
             
             <Separator/>
+
             <div className="grid md:grid-cols-2 gap-6">
                 <Card>
                     <CardHeader><CardTitle className="text-lg flex items-center gap-2"><DollarSign/>Costos y Presupuesto</CardTitle></CardHeader>
-                    <CardContent className="text-sm grid sm:grid-cols-3 gap-4">
-                        <p><strong>Costo Repuestos:</strong> ${order.costSparePart.toFixed(2)}</p>
-                        <p><strong>Costo Mano de Obra:</strong> ${order.costLabor.toFixed(2)}</p>
-                        <p className="font-bold text-base"><strong>Total Presupuestado:</strong> ${totalCost.toFixed(2)}</p>
+                    <CardContent className="text-sm space-y-2">
+                        <div className="flex justify-between"><span>Costo Repuestos:</span> <span>${(order.costSparePart || 0).toFixed(2)}</span></div>
+                        <div className="flex justify-between"><span>Costo Mano de Obra:</span> <span>${(order.costLabor || 0).toFixed(2)}</span></div>
+                        <Separator className="my-2"/>
+                        <div className="flex justify-between font-bold text-base"><span>Total Presupuestado:</span> <span>${totalCost.toFixed(2)}</span></div>
                     </CardContent>
                 </Card>
-                <Card>
-                    <CardHeader><CardTitle className="text-lg flex items-center gap-2"><ListChecks/>Checklist de Recepción</CardTitle></CardHeader>
+                 <Card>
+                    <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Package/>Repuestos Utilizados</CardTitle></CardHeader>
                     <CardContent>
-                        <div className="space-y-3">
-                            {Object.entries(checklistGroups).map(([groupName, items]) => (
-                                <div key={groupName}>
-                                <h4 className="font-semibold text-primary/90">{groupName}</h4>
-                                <ul className="list-disc list-inside columns-2 text-sm text-muted-foreground">
-                                    {items.map(item => (
-                                        <li key={item.id}>
-                                            {item.label}: {getChecklistValueDisplay(order.checklist[item.id as keyof Checklist])}
-                                        </li>
+                        {order.partsUsed && order.partsUsed.length > 0 ? (
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Repuesto</TableHead>
+                                        <TableHead className="text-right">Cant.</TableHead>
+                                        <TableHead className="text-right">Subtotal</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {order.partsUsed.map(part => (
+                                        <TableRow key={part.partId}>
+                                            <TableCell>{part.partName}</TableCell>
+                                            <TableCell className="text-right">{part.quantity}</TableCell>
+                                            <TableCell className="text-right font-semibold">${(part.quantity * part.unitPrice).toFixed(2)}</TableCell>
+                                        </TableRow>
                                     ))}
-                                </ul>
-                                </div>
-                            ))}
-                        </div>
+                                </TableBody>
+                            </Table>
+                        ) : (
+                            <p className="text-sm text-muted-foreground text-center py-4">No se utilizaron repuestos en esta orden.</p>
+                        )}
                     </CardContent>
                 </Card>
             </div>
+
+            <Separator/>
+            
+            <Card>
+                <CardHeader><CardTitle className="text-lg flex items-center gap-2"><ListChecks/>Checklist de Recepción</CardTitle></CardHeader>
+                <CardContent>
+                    <div className="space-y-3">
+                        {Object.entries(checklistGroups).map(([groupName, items]) => (
+                            <div key={groupName}>
+                            <h4 className="font-semibold text-primary/90">{groupName}</h4>
+                            <ul className="list-disc list-inside columns-2 md:columns-3 text-sm text-muted-foreground">
+                                {items.map(item => (
+                                    <li key={item.id}>
+                                        {item.label}: {getChecklistValueDisplay(order.checklist[item.id as keyof Checklist])}
+                                    </li>
+                                ))}
+                            </ul>
+                            </div>
+                        ))}
+                    </div>
+                </CardContent>
+            </Card>
+
             </CardContent>
         </Card>
 

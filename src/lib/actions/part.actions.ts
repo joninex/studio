@@ -150,3 +150,22 @@ export async function getParts(filters?: {
   return filteredParts.sort((a, b) => a.name.localeCompare(b.name));
   // return filteredParts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 }
+
+export async function updatePartStock(partId: string, quantityChange: number): Promise<{ success: boolean; message?: string }> {
+  await new Promise(resolve => setTimeout(resolve, 20)); // quick operation
+  const partIndex = mockParts.findIndex(p => p.id === partId);
+  if (partIndex === -1) {
+    return { success: false, message: `Repuesto con ID ${partId} no encontrado.` };
+  }
+
+  const part = mockParts[partIndex];
+  const newStock = part.stock + quantityChange; 
+
+  if (newStock < 0) {
+    return { success: false, message: `Stock insuficiente para ${part.name}. Stock actual: ${part.stock}, se necesitan ${-quantityChange}.` };
+  }
+
+  mockParts[partIndex].stock = newStock;
+  mockParts[partIndex].updatedAt = new Date().toISOString();
+  return { success: true };
+}

@@ -173,7 +173,8 @@ export interface OrderPartItem {
     partId: string;
     partName: string;
     quantity: number;
-    unitPrice: number;
+    unitPrice: number; // This is the sale price per unit
+    costPrice: number; // The cost per unit
 }
 
 export interface PaymentItem {
