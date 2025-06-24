@@ -41,6 +41,7 @@ import {
   TrendingUp,
   ArrowRightLeft,
   Building,
+  CalendarDays,
 } from "lucide-react";
 import { useAuth } from "@/providers/AuthProvider";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -65,6 +66,7 @@ const financeNavItems = [
 ];
 
 const toolsNavItems = [
+    { href: "/schedule", label: "Calendario", icon: CalendarDays },
     { href: "/ai-guides", label: "Guías IA", icon: Lightbulb },
     { href: "/reports", label: "Reportes", icon: BarChart },
 ];
