@@ -21,54 +21,60 @@ export function PrintableOrder({ order, branch }: PrintableOrderProps) {
     if (value === 'sc') return "🟡 No comprobado";
     if (value) return value;
     return 'N/A';
-  }
+  };
   
   const checklistGroups = CHECKLIST_ITEMS.reduce((acc, item) => {
     (acc[item.group] = acc[item.group] || []).push(item);
     return acc;
   }, {} as Record<string, typeof CHECKLIST_ITEMS>);
 
+  const chunkArray = <T,>(arr: T[], size: number): T[][] => {
+    return Array.from({ length: Math.ceil(arr.length / size) }, (v, i) =>
+      arr.slice(i * size, i * size + size)
+    );
+  };
+
   const PageOne = () => (
     <div className="print-page">
       <header className="print-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        <div className="company-details">
           {settings?.companyLogoUrl ? (
             <Image
               src={settings.companyLogoUrl}
               alt={`${settings.companyName || ''} Logo`}
               width={120}
               height={40}
-              style={{ objectFit: 'contain' }}
+              className="logo"
               data-ai-hint="company logo"
             />
           ) : (
-            <div style={{ width: '120px', height: '40px' }}>
-              <h1 style={{ fontSize: '18px', fontWeight: 'bold' }}>{settings.companyName}</h1>
+            <div className="logo-placeholder">
+              <span className="font-bold text-lg">{settings.companyName}</span>
             </div>
           )}
-          <div>
-            <p style={{ fontSize: '10px' }}>{settings.companyAddress}</p>
-            <p style={{ fontSize: '10px' }}>{settings.companyContactDetails}</p>
-            <p style={{ fontSize: '10px' }}>CUIT: {settings.companyCuit || "N/A"}</p>
+          <div className="contact-info">
+            <p>{settings.companyAddress}</p>
+            <p>{settings.companyContactDetails}</p>
+            <p>CUIT: {settings.companyCuit || "N/A"}</p>
           </div>
         </div>
-        <div style={{ textAlign: 'right' }}>
-          <h2 style={{ fontSize: '18px', fontWeight: 'bold' }}>Orden de Recepción Técnica</h2>
-          <p style={{ fontFamily: 'monospace', fontSize: '16px', marginTop: '8px' }}>N° Orden: {order.orderNumber}</p>
-          <p style={{ fontSize: '10px' }}>Fecha: {format(parseISO(order.entryDate as string), "dd/MM/yyyy HH:mm", { locale: es })}</p>
+        <div className="order-details">
+          <h2>Orden de Recepción Técnica</h2>
+          <p className="order-number">N° Orden: {order.orderNumber}</p>
+          <p>Fecha: {format(parseISO(order.entryDate as string), "dd/MM/yyyy HH:mm", { locale: es })}</p>
         </div>
       </header>
 
       <main className="print-main">
-        <section className="print-section" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+        <section className="print-section grid-2-col">
           <div>
-            <h3 className="section-title">Datos del Cliente</h3>
+            <h3 className="section-title">1. Datos del Cliente</h3>
             <p><strong>Nombre:</strong> {order.clientName || 'N/A'} {order.clientLastName || ''}</p>
             <p><strong>DNI:</strong> {order.clientId || 'N/A'}</p>
             <p><strong>Teléfono:</strong> {order.clientPhone || 'N/A'}</p>
           </div>
           <div>
-            <h3 className="section-title">Datos del Equipo</h3>
+            <h3 className="section-title">2. Datos del Equipo</h3>
             <p><strong>Marca/Modelo:</strong> {order.deviceBrand} {order.deviceModel}</p>
             <p><strong>IMEI/Serial:</strong> {order.imeiNotVisible ? "No visible al ingreso" : order.deviceIMEI}</p>
             <p><strong>Accesorios:</strong> {order.observations || "Ninguno"}</p>
@@ -76,88 +82,88 @@ export function PrintableOrder({ order, branch }: PrintableOrderProps) {
         </section>
 
         <section className="print-section">
-          <h3 className="section-title">Falla Declarada por el Cliente</h3>
-          <p style={{ border: '1px solid #eee', padding: '8px', minHeight: '40px', borderRadius: '4px' }}>{order.declaredFault || "N/A"}</p>
+          <h3 className="section-title">3. Falla Declarada por el Cliente</h3>
+          <p className="bordered-box">{order.declaredFault || "N/A"}</p>
         </section>
         
         {!order.unlockPatternProvided && (
-            <section className="print-section" style={{ border: '1px solid #f00', padding: '8px', borderRadius: '4px', background: '#fff0f0' }}>
-                <h3 className="section-title" style={{ color: '#d00' }}>¡ATENCIÓN! Equipo Sin Código de Desbloqueo</h3>
-                <p style={{ fontSize: '10px', color: '#d00' }}>{DEFAULT_STORE_SETTINGS.noUnlockCodeDisclaimer}</p>
-            </section>
+            <div className="warning-box">
+                <h3 className="section-title warning-title">¡ATENCIÓN! Equipo Sin Código de Desbloqueo</h3>
+                <p>{DEFAULT_STORE_SETTINGS.noUnlockCodeDisclaimer}</p>
+            </div>
         )}
 
         <section className="print-section break-inside-avoid">
-          <h3 className="section-title">Checklist Técnico de Ingreso</h3>
-           <div style={{ fontSize: '10px', color: '#666', marginBottom: '8px' }}>
+          <h3 className="section-title">4. Checklist Técnico de Ingreso</h3>
+           <p className="legend">
             <strong>Significado:</strong> ✅ Sí (Funciona) | ❌ No (Falla) | 🟡 S/C (Sin Comprobar por falta de acceso/energía)
-          </div>
+          </p>
           {Object.entries(checklistGroups).map(([groupName, items]) => (
-            <div key={groupName} style={{ marginBottom: '8px' }}>
-              <h4 style={{ fontWeight: 'bold', fontSize: '12px', color: '#333' }}>{groupName}</h4>
-              <div style={{ columns: 2, gap: '24px' }}>
-                {items.map(item => (
-                  <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', padding: '2px 0', borderBottom: '1px dotted #ccc' }}>
-                    <span>{item.label}:</span>
-                    <span style={{ fontWeight: 'bold' }}>{getChecklistValueDisplay(order.checklist[item.id as keyof Checklist])}</span>
-                  </div>
-                ))}
-              </div>
+            <div key={groupName} className="checklist-group">
+              <h4>{groupName}</h4>
+              <table className="checklist-table">
+                <tbody>
+                  {chunkArray(items, 2).map((pair, index) => (
+                    <tr key={index}>
+                      <td>{pair[0].label}:</td>
+                      <td><strong>{getChecklistValueDisplay(order.checklist[pair[0].id as keyof Checklist])}</strong></td>
+                      {pair[1] ? <>
+                        <td>{pair[1].label}:</td>
+                        <td><strong>{getChecklistValueDisplay(order.checklist[pair[1].id as keyof Checklist])}</strong></td>
+                      </> : <><td></td><td></td></>}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           ))}
         </section>
-
+        
         <section className="print-section">
-            <h3 className="section-title">Daños y Observaciones Adicionales</h3>
-            <p style={{ border: '1px solid #eee', padding: '8px', minHeight: '40px', borderRadius: '4px' }}>{order.damageRisk || "Sin daños pre-existentes reportados."}</p>
+            <h3 className="section-title">5. Daños y Observaciones Adicionales</h3>
+            <p className="bordered-box">{order.damageRisk || "Sin daños pre-existentes reportados."}</p>
         </section>
       </main>
 
       <footer className="print-footer">
-        <div style={{ fontSize: '10px', textAlign: 'justify', border: '1px solid #ccc', padding: '8px', borderRadius: '4px', background: '#f9f9f9' }}>
-          <h3 style={{ fontWeight: 'bold', textAlign: 'center', marginBottom: '4px' }}>Cláusula de Conformidad de Ingreso</h3>
+        <div className="legal-text">
+          <h3 className="section-title legal-title">Cláusula de Conformidad de Ingreso</h3>
           <p>{settings.intakeConformityText}</p>
         </div>
-        <div style={{ display: 'flex', justifyContent: 'space-around', alignItems: 'flex-end', gap: '48px', paddingTop: '64px' }}>
-          <div style={{ flex: 1, textAlign: 'center' }}>
-            <div style={{ borderTop: '1px solid black', paddingTop: '4px' }}>Firma del Cliente</div>
-          </div>
-          <div style={{ flex: 1, textAlign: 'center' }}>
-            <div style={{ borderTop: '1px solid black', paddingTop: '4px' }}>Aclaración</div>
-          </div>
-          <div style={{ flex: 1, textAlign: 'center' }}>
-            <div style={{ borderTop: '1px solid black', paddingTop: '4px' }}>DNI</div>
-          </div>
+        <div className="signature-area">
+          <div className="signature-box"><p>Firma del Cliente</p></div>
+          <div className="signature-box"><p>Aclaración</p></div>
+          <div className="signature-box"><p>DNI</p></div>
         </div>
       </footer>
     </div>
   );
 
   const PageTwo = () => (
-     <div className="print-page">
+     <div className="print-page customer-copy">
         <header className="print-header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+           <div className="company-details">
             {settings?.companyLogoUrl ? (
-              <Image src={settings.companyLogoUrl} alt={`${settings.companyName || ''} Logo`} width={120} height={40} style={{ objectFit: 'contain' }} data-ai-hint="company logo" />
+              <Image src={settings.companyLogoUrl} alt={`${settings.companyName || ''} Logo`} width={120} height={40} className="logo" data-ai-hint="company logo" />
             ) : (
-             <div style={{ width: '120px', height: '40px' }}>
-              <h1 style={{ fontSize: '18px', fontWeight: 'bold' }}>{settings.companyName}</h1>
+             <div className="logo-placeholder">
+              <h2 className="font-bold text-lg">{settings.companyName}</h2>
             </div>
             )}
           </div>
-          <div style={{ textAlign: 'right' }}>
-            <h2 style={{ fontSize: '18px', fontWeight: 'bold' }}>Comprobante para Cliente</h2>
-            <p style={{ fontFamily: 'monospace', fontSize: '16px', marginTop: '8px' }}>N° Orden: {order.orderNumber}</p>
-            <p style={{ fontSize: '10px' }}>Fecha Ingreso: {format(parseISO(order.entryDate as string), "dd/MM/yyyy HH:mm", { locale: es })}</p>
+          <div className="order-details">
+            <h2>Comprobante para Cliente</h2>
+            <p className="order-number">N° Orden: {order.orderNumber}</p>
+            <p>Fecha Ingreso: {format(parseISO(order.entryDate as string), "dd/MM/yyyy HH:mm", { locale: es })}</p>
           </div>
         </header>
 
         <main className="print-main">
-            <section className="print-section" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <section className="print-section grid-2-col">
                 <div>
                     <h3 className="section-title">Cliente</h3>
-                    <p>{order.clientName || 'N/A'} {order.clientLastName || ''}</p>
-                    <p>DNI: {order.clientId || 'N/A'}</p> 
+                    <p><strong>Nombre:</strong> {order.clientName || 'N/A'} {order.clientLastName || ''}</p>
+                    <p><strong>DNI:</strong> {order.clientId || 'N/A'}</p> 
                 </div>
                 <div>
                     <h3 className="section-title">Equipo</h3>
@@ -168,43 +174,35 @@ export function PrintableOrder({ order, branch }: PrintableOrderProps) {
             
             <section className="print-section">
                 <h3 className="section-title">Falla Declarada por el Cliente</h3>
-                <p style={{ border: '1px solid #eee', padding: '8px', minHeight: '40px', borderRadius: '4px' }}>{order.declaredFault || "N/A"}</p>
-            </section>
-
-             <section className="print-section">
-                <h3 className="section-title">Estado Actual de la Orden</h3>
-                <p style={{ fontSize: '16px', fontWeight: 'bold', color: '#007bff' }}>{order.status}</p>
+                <p className="bordered-box">{order.declaredFault || "N/A"}</p>
             </section>
         </main>
         
         <footer className="print-footer">
-            <div style={{ textAlign: 'center', border: '2px solid black', padding: '8px', borderRadius: '4px', marginBottom: '16px' }}>
-                <p style={{ fontWeight: 'bold', fontSize: '12px' }}>IMPORTANTE: CONSERVE ESTE COMPROBANTE PARA RETIRAR SU EQUIPO</p>
-            </div>
-            <div style={{ fontSize: '10px', textAlign: 'justify', border: '1px solid #ccc', padding: '8px', borderRadius: '4px', background: '#f9f9f9' }}>
-                <h3 style={{ fontWeight: 'bold', textAlign: 'center', marginBottom: '4px' }}>Términos y Condiciones del Servicio</h3>
+            <div className="legal-text important-note">
+                <p><strong>IMPORTANTE: CONSERVE ESTE COMPROBANTE PARA RETIRAR SU EQUIPO</strong></p>
                 <p>{settings.clientVoucherLegalReminder}</p>
             </div>
-             <div style={{ display: 'flex', justifyContent: 'space-around', alignItems: 'flex-end', gap: '48px', paddingTop: '64px' }}>
-                <div style={{ flex: 1, textAlign: 'center' }}>
-                    <div style={{ borderTop: '1px solid black', paddingTop: '4px' }}>Firma al Retirar</div>
-                </div>
-                <div style={{ flex: 1, textAlign: 'center' }}>
-                    <div style={{ borderTop: '1px solid black', paddingTop: '4px' }}>Aclaración</div>
-                </div>
-                <div style={{ flex: 1, textAlign: 'center' }}>
-                    <div style={{ borderTop: '1px solid black', paddingTop: '4px' }}>DNI</div>
-                </div>
+             <div className="signature-area">
+                <div className="signature-box"><p>Firma al Retirar</p></div>
+                <div className="signature-box"><p>Aclaración</p></div>
+                <div className="signature-box"><p>DNI</p></div>
             </div>
         </footer>
     </div>
   );
 
   return (
-    <>
-      <PageOne />
-      <div className="page-break"></div>
-      <PageTwo />
-    </>
+     <div className="talonario">
+      <div className="copia-taller">
+        <PageOne />
+      </div>
+      <div className="corte">
+        <p>Recortar por la línea de puntos</p>
+      </div>
+       <div className="copia-cliente">
+        <PageTwo />
+      </div>
+    </div>
   );
 }

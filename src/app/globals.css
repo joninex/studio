@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 body {
-  font-family: 'Space Grotesk', Arial, Helvetica, sans-serif;
+  font-family: 'Inter', Arial, Helvetica, sans-serif;
 }
 
 @layer base {
@@ -97,12 +97,15 @@ body {
     margin: 0;
   }
 
-  body {
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
+  body, html {
     background: #fff !important;
     color: #000 !important;
-    font-family: 'Helvetica Neue', Arial, sans-serif;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  
+  body > *:not(.printable-area-wrapper) {
+    display: none;
   }
 
   .no-print {
@@ -122,71 +125,102 @@ body {
     background-color: #fff !important;
   }
 
-  .printable-area * {
-    color: #000 !important;
-    background-color: transparent !important;
-    box-shadow: none !important;
+  .talonario {
+    width: 210mm;
+    margin: auto;
+    font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+    color: #222;
+  }
+  
+  .copia-taller, .copia-cliente {
+    page-break-inside: avoid;
+    padding: 2cm;
+  }
+
+  .copia-taller {
+    height: 148.5mm; /* Top half of A4 */
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .copia-cliente {
+    height: 148.5mm; /* Bottom half of A4 */
+    display: flex;
+    flex-direction: column;
+  }
+
+  .corte {
+    border-top: 2px dashed #999;
+    text-align: center;
+    font-size: 10px;
+    color: #666;
+    margin: 0 2cm;
   }
   
   .print-page {
-    width: 210mm;
-    min-height: 297mm;
-    padding: 2cm;
-    margin: 0 auto;
+    width: 100%;
+    height: 100%;
     display: flex;
     flex-direction: column;
-    background: white;
-    font-size: 12px;
-    line-height: 1.5;
   }
-
+  
   .print-header {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    padding-bottom: 12px;
+    padding-bottom: 8px;
     border-bottom: 1px solid #ccc;
+    gap: 16px;
   }
   
-  .print-main {
-    flex-grow: 1;
+  .print-header .company-details {
+    display: flex;
+    align-items: center;
+    gap: 12px;
   }
 
-  .print-footer {
-    margin-top: auto;
-    padding-top: 12px;
-    border-top: 1px solid #ccc;
-    font-size: 10px;
-    color: #666;
-    text-align: center;
-  }
-
-  .print-section {
-    margin-top: 16px;
-  }
+  .print-header .logo { object-fit: contain; }
+  .print-header .logo-placeholder { width: 120px; text-align: left; }
+  .print-header .contact-info { font-size: 10px; color: #444; }
+  .print-header .order-details { text-align: right; }
+  .print-header h2 { font-size: 16px; font-weight: 600; margin:0; }
+  .print-header .order-number { font-size: 14px; font-weight: 500; margin-top: 4px; }
+  .print-header p { font-size: 10px; margin: 2px 0; }
+  
+  .print-main { flex-grow: 1; }
+  .print-section { margin-top: 12px; }
+  .grid-2-col { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
   
   .section-title {
-    font-size: 14px;
-    font-weight: bold;
+    font-size: 12px;
+    font-weight: 600;
+    color: #333;
     border-bottom: 1px solid #eee;
     padding-bottom: 4px;
     margin-bottom: 8px;
-    color: #333;
   }
-  
-  .page-break {
-    page-break-before: always !important;
-  }
-  
-  .break-inside-avoid {
-    page-break-inside: avoid;
-  }
+  .print-section p { font-size: 11px; line-height: 1.5; }
+  .bordered-box { border: 1px solid #eee; padding: 8px; min-height: 40px; border-radius: 4px; font-size: 11px; }
 
-  a[href]:after {
-    content: none !important;
-  }
-
-  body > *:not(.printable-area-wrapper) {
-    display: none;
-  }
+  .warning-box { border: 1px solid #c00; padding: 8px; border-radius: 4px; background: #fff5f5; margin-top: 12px; }
+  .warning-box .warning-title { color: #c00; font-size: 12px; }
+  .warning-box p { font-size: 10px; color: #c00; }
+  
+  .legend { font-size: 9px; color: #666; margin-bottom: 8px; }
+  .checklist-group { margin-bottom: 8px; break-inside: avoid; }
+  .checklist-group h4 { font-size: 11px; font-weight: 600; }
+  .checklist-table { width: 100%; border-collapse: collapse; }
+  .checklist-table td { font-size: 10px; padding: 2px 4px; }
+  .checklist-table td:nth-child(odd) { width: 40%; }
+  .checklist-table td:nth-child(even) { width: 10%; }
+  
+  .print-footer { margin-top: auto; padding-top: 8px; border-top: 1px solid #ccc; }
+  .legal-text { font-size: 8pt; line-height: 1.4; text-align: justify; margin-bottom: 16px; }
+  .legal-text .legal-title { text-align: center; }
+  .important-note { text-align: center; font-size: 10px; border: 1px solid #333; padding: 8px; border-radius: 4px; }
+  
+  .signature-area { display: flex; justify-content: space-around; gap: 24px; margin-top: 48px; }
+  .signature-box { flex: 1; text-align: center; border-top: 1px solid #333; padding-top: 4px; font-size: 10px; }
+  
+  .break-inside-avoid { page-break-inside: avoid; }
 }
