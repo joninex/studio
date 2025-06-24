@@ -68,7 +68,7 @@ export function NotificationBell() {
           <span className="sr-only">Notificaciones</span>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-80" align="end">
+      <DropdownMenuContent className="w-96" align="end">
         <DropdownMenuLabel className="flex justify-between items-center">
           Notificaciones
           {unreadCount > 0 && (
@@ -82,19 +82,31 @@ export function NotificationBell() {
         <DropdownMenuGroup>
           {notifications.length > 0 ? (
             notifications.slice(0, 5).map(notif => {
-              const Icon = notif.icon;
+              const Icon = notif.icon || Bell;
               return (
-                <DropdownMenuItem key={notif.id} asChild>
-                  <Link href={notif.link} className={cn("flex items-start gap-3 cursor-pointer", !notif.read && "bg-primary/5")}>
-                    {Icon && <Icon className="h-4 w-4 mt-1 text-primary shrink-0" />}
+                <DropdownMenuItem key={notif.id} asChild className="p-0">
+                  <Link href={notif.link} className={cn(
+                      "flex items-start gap-4 cursor-pointer p-3 w-full", 
+                      !notif.read && "bg-primary/5"
+                  )}>
+                    {/* Icon Avatar */}
+                    <div className="w-10 h-10 flex items-center justify-center bg-primary/10 rounded-full shrink-0 mt-1">
+                      <Icon className="h-5 w-5 text-primary" />
+                    </div>
+                    
+                    {/* Content */}
                     <div className="flex-1">
-                      <p className="text-sm leading-tight">{notif.message}</p>
+                      <p className="text-sm text-foreground/90 leading-snug">
+                        {notif.message}
+                      </p>
                       <p className="text-xs text-muted-foreground mt-1">
                         {formatDistanceToNow(new Date(notif.createdAt), { addSuffix: true, locale: es })}
                       </p>
                     </div>
-                     {!notif.read && (
-                        <div className="w-2 h-2 rounded-full bg-primary mt-1" />
+
+                    {/* Unread Indicator */}
+                    {!notif.read && (
+                        <div className="w-2 h-2 rounded-full bg-primary self-center shrink-0" />
                     )}
                   </Link>
                 </DropdownMenuItem>
