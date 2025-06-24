@@ -17,6 +17,7 @@ import { LoadingSpinner } from "../shared/LoadingSpinner";
 import { getSettingsForBranch, updateSettingsForBranch } from "@/lib/actions/branch.actions";
 import { DEFAULT_STORE_SETTINGS } from "@/lib/constants";
 import { Building } from "lucide-react";
+import { ImageUpload } from "../shared/ImageUpload";
 
 
 interface SettingsFormProps {
@@ -78,6 +79,8 @@ export function SettingsForm({ branchId }: SettingsFormProps) {
   if (isLoading) {
     return <div className="flex justify-center items-center py-10"><LoadingSpinner size={32}/> <p className="ml-2">Cargando configuración de sucursal...</p></div>;
   }
+  
+  const logoUrl = form.watch("companyLogoUrl");
 
   return (
     <Form {...form}>
@@ -88,8 +91,24 @@ export function SettingsForm({ branchId }: SettingsFormProps) {
             <CardDescription>Información de la sucursal <span className="font-bold">{form.getValues("branchInfo")}</span> que aparecerá en comprobantes y comunicaciones.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+             <FormItem>
+              <FormLabel>Logo de la Empresa</FormLabel>
+              <FormControl>
+                <ImageUpload
+                  label="Logo de la Empresa"
+                  placeholderImage="https://placehold.co/120x120.png?text=Logo"
+                  aiHint="company logo"
+                  currentImageUrl={logoUrl}
+                  onUploadComplete={(path) => {
+                    form.setValue('companyLogoUrl', path, { shouldValidate: true });
+                  }}
+                  imageClassName="rounded-lg h-32 w-auto object-contain"
+                />
+              </FormControl>
+              <FormDescription>Suba el logo de su empresa. Recomendado: formato PNG con fondo transparente.</FormDescription>
+              <FormMessage>{form.formState.errors.companyLogoUrl?.message}</FormMessage>
+            </FormItem>
             <FormField control={form.control} name="companyName" render={({ field }) => ( <FormItem><FormLabel>Nombre de la Tienda/Empresa</FormLabel><FormControl><Input placeholder="Nombre de su Taller" {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
-            <FormField control={form.control} name="companyLogoUrl" render={({ field }) => ( <FormItem><FormLabel>URL del Logo</FormLabel><FormControl><Input type="url" placeholder="https://ejemplo.com/logo.png" {...field} value={field.value ?? ""} /></FormControl><FormDescription>Ingrese la URL completa de una imagen para el logo.</FormDescription><FormMessage /></FormItem> )} />
             <FormField control={form.control} name="companyCuit" render={({ field }) => ( <FormItem><FormLabel>CUIT/CUIL (Opcional)</FormLabel><FormControl><Input placeholder="Ej: 20-12345678-9" {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
             <FormField control={form.control} name="companyAddress" render={({ field }) => ( <FormItem><FormLabel>Dirección</FormLabel><FormControl><Textarea rows={2} placeholder="Dirección completa del taller" {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
             <FormField control={form.control} name="companyContactDetails" render={({ field }) => ( <FormItem><FormLabel>Información de Contacto (para impresiones)</FormLabel><FormControl><Textarea rows={3} placeholder="Teléfono, Email, WhatsApp, etc." {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />

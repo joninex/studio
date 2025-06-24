@@ -81,7 +81,7 @@ export const PartSchema = z.object({
     minStock: z.number().int("El stock mínimo debe ser un número entero.").nonnegative("El stock mínimo no puede ser negativo.").optional().default(0),
     supplierInfo: z.string().optional().or(z.literal('')),
     notes: z.string().optional().or(z.literal('')),
-    imageUrl: z.string().url("Debe ser una URL válida.").optional().or(z.literal('')),
+    imageUrl: z.string().optional().or(z.literal('')),
 });
 
 export type PartFormData = z.infer<typeof PartSchema>;
@@ -129,18 +129,18 @@ export const UserSchema = z.object({
     role: z.enum(validUserRoles),
     sector: z.string().optional().or(z.literal('')),
     password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres.").optional().or(z.literal('')),
-    avatarUrl: z.string().url("Debe ser una URL válida.").optional().or(z.literal('')),
+    avatarUrl: z.string().optional().or(z.literal('')),
 });
 
 export const ProfileUpdateSchema = z.object({
     name: z.string().min(3, { message: "El nombre debe tener al menos 3 caracteres." }),
-    avatarUrl: z.string().url({ message: "Por favor ingrese una URL válida." }).optional().or(z.literal('')),
+    avatarUrl: z.string().optional().or(z.literal('')),
 });
 
 
 export const StoreSettingsSchema = z.object({
     companyName: z.string().min(1, "El nombre de la tienda es requerido."),
-    companyLogoUrl: z.string().url().optional().or(z.literal('')),
+    companyLogoUrl: z.string().optional().or(z.literal('')),
     companyCuit: z.string().optional().or(z.literal('')),
     companyAddress: z.string().min(1, "La dirección es requerida."),
     companyContactDetails: z.string().min(1, "Los detalles de contacto son requeridos."),
