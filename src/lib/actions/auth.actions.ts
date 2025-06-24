@@ -4,11 +4,10 @@
 import type { User } from "@/types";
 import { LoginSchema, ResetPasswordSchema, RegisterSchema } from "@/lib/schemas";
 import type { z } from "zod";
-import { getBranches } from "./branch.actions";
 import { 
     getUserByEmail, 
-    createUser as createGoriUser, 
-    gori_db_passwords 
+    createUser as createGoriUser,
+    verifyUserPassword
 } from "./user.actions";
 
 export async function login(
@@ -35,8 +34,8 @@ export async function login(
   }
 
   // En un sistema real, GORI's auth service haría la comparación de hash.
-  // Para la simulación, comparamos la contraseña en texto plano.
-  if (gori_db_passwords[email] !== password) {
+  const isPasswordValid = await verifyUserPassword(email, password);
+  if (!isPasswordValid) {
     return { success: false, message: "Contraseña incorrecta." };
   }
   

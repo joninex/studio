@@ -13,7 +13,7 @@ const GORI_SUPER_ADMIN_EMAIL = "jesus@mobyland.com.ar";
 // This represents the 'users' table/collection in GORI's database.
 let gori_db_usuarios: User[] = [
     {
-        uid: "gori-super-admin-001",
+        uid: "gori-user-uuid-001",
         email: GORI_SUPER_ADMIN_EMAIL,
         name: "Jesus (GORI Admin)",
         avatarUrl: "https://i.pravatar.cc/150?u=superadmin_global",
@@ -51,10 +51,9 @@ let gori_db_usuarios: User[] = [
     },
 ];
 
-// This conceptually represents a separate, secure password store, managed by GORI's auth service.
-// It's kept here for simulation purposes, allowing auth.actions to verify credentials.
-// In a real system, this would be a hash, not plain text.
-export let gori_db_passwords: Record<string, string> = {
+// This conceptually represents a separate, secure password store.
+// It is NOT exported to comply with "use server" module constraints.
+let gori_db_passwords: Record<string, string> = {
     "jesus@mobyland.com.ar": "42831613aA@",
     "ana.lopez.admincen@gori.app": "NexusPass2024!",
     "juan.perez.techhwcen@gori.app": "NexusPass2024!",
@@ -215,4 +214,16 @@ export async function updateUserStatus(uid: string, status: UserStatus): Promise
                   'Estado de usuario actualizado.';
   
   return { success: true, message, user: JSON.parse(JSON.stringify(user)) };
+}
+
+export async function verifyUserPassword(
+    email: string, 
+    password_plaintext: string
+): Promise<boolean> {
+  // Simulate a quick async check
+  await new Promise(resolve => setTimeout(resolve, 50));
+  if (gori_db_passwords[email] && gori_db_passwords[email] === password_plaintext) {
+      return true;
+  }
+  return false;
 }
