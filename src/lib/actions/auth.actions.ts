@@ -61,7 +61,3 @@ export async function resetPassword(
   console.log(`Password reset email sent to ${email} (mock)`);
   return { success: true, message: "Si este correo está registrado, se enviará un enlace de restablecimiento." };
 }
-
-export async function logoutAction(): Promise<{ success: boolean }> {
-  return { success: true };
-}

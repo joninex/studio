@@ -3,7 +3,6 @@
 
 import type { User } from "@/types";
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { auth as mockFirebaseAuth } from "@/lib/firebase/client"; // Using mocked client auth
 import { useRouter, usePathname } from "next/navigation";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 
@@ -23,17 +22,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const pathname = usePathname();
 
   useEffect(() => {
-    // Mock onAuthStateChanged
-    const unsubscribe = mockFirebaseAuth.onAuthStateChanged((firebaseUser: User | null) => {
-      if (firebaseUser) {
-        setUser(firebaseUser);
-      } else {
-        setUser(null);
+    // Check for user session in localStorage on initial load
+    try {
+      const storedUser = localStorage.getItem('authUser');
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
       }
+    } catch (error) {
+      console.error("Failed to parse user from localStorage", error);
+      setUser(null);
+    } finally {
       setLoading(false);
-    });
-
-    return () => unsubscribe();
+    }
   }, []);
 
   useEffect(() => {
@@ -47,34 +47,40 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
 
   const logout = async () => {
-    // In a real app, call Firebase signOut
-    localStorage.removeItem('authUser'); // Mock logout
+    localStorage.removeItem('authUser');
     setUser(null);
-    router.push('/login');
+    // Use replace to prevent user from going back to a protected page
+    router.replace('/login');
   };
   
-  // This effect is to manually trigger re-check when local storage changes
+  // This effect listens for changes in localStorage from other tabs or from the login/logout flow
   useEffect(() => {
     const handleStorageChange = () => {
       try {
         const storedUser = localStorage.getItem('authUser');
         if (storedUser) {
-          setUser(JSON.parse(storedUser));
-        } else {
+          const freshUser = JSON.parse(storedUser);
+          // Only update if the user object is different
+          if (JSON.stringify(freshUser) !== JSON.stringify(user)) {
+             setUser(freshUser);
+          }
+        } else if (user !== null) {
           setUser(null);
         }
       } catch (e) {
         setUser(null);
       }
     };
+
     window.addEventListener('storage', handleStorageChange);
-    window.addEventListener('authChange', handleStorageChange); // Custom event for same-tab changes
+    // Custom event for same-tab changes (e.g., after login form submission)
+    window.addEventListener('authChange', handleStorageChange);
     
     return () => {
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('authChange', handleStorageChange);
     };
-  }, []);
+  }, [user]);
 
 
   if (loading) {
