@@ -13,7 +13,7 @@ import {
   getUserById
 } from "./auth.actions"; 
 
-const SUPER_ADMIN_EMAIL = "jesus@mobyland.com.ar";
+const SUPER_ADMIN_EMAIL = "superadmin@gori.app";
 
 export async function getUsers(): Promise<User[]> {
   await new Promise(resolve => setTimeout(resolve, 300)); 

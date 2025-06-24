@@ -9,52 +9,37 @@ import { getBranches } from "./branch.actions";
 
 // Mock database of users, structured for testing roles and sectors.
 let mockUsers: User[] = [
-  // 1. Superadmin
+  // --- Superadmin (Global) ---
   {
-    uid: "superadmin001",
-    name: "Administrador Global",
+    uid: "superadmin_global",
+    name: "Sergio Valente",
     email: "superadmin@gori.app",
-    avatarUrl: "https://i.pravatar.cc/150?u=superadmin001",
-    role: "admin",
-    assignments: [], // Global access, no specific assignments needed
+    avatarUrl: "https://i.pravatar.cc/150?u=superadmin_global",
+    role: "admin", // Superadmin has 'admin' role but global scope
+    assignments: [], // Empty assignments denote global access
     status: "active",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
-  // 2. Administrador de sucursal (Central)
+  // --- Sucursal Central ---
   {
-    uid: "admin_central001",
+    uid: "ana.lopez.admincen",
     name: "Ana López",
-    email: "admin_central@gori.app",
-    avatarUrl: "https://i.pravatar.cc/150?u=admin_central001",
-    role: "admin",
+    email: "ana.lopez.admincen@gori.app",
+    avatarUrl: "https://i.pravatar.cc/150?u=ana.lopez.admincen",
+    role: "admin", // Role is 'admin', but scoped to the branch
     assignments: [
-        { branchId: "B001", role: "admin", sector: "Administración y Supervisión" }
+        { branchId: "B001", role: "admin", sector: "Supervisión General, Administración" }
     ],
     status: "active",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
-  // 3. Administrador de sucursal (Norte)
   {
-    uid: "admin_norte001",
-    name: "Carlos Diaz",
-    email: "admin_norte@gori.app",
-    avatarUrl: "https://i.pravatar.cc/150?u=admin_norte001",
-    role: "admin",
-    assignments: [
-        { branchId: "B002", role: "admin", sector: "Administración y Supervisión" }
-    ],
-    status: "active",
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  // 4. Técnico Reparador (Hardware)
-  {
-    uid: "tech_hw001",
+    uid: "juan.perez.techhwcen",
     name: "Juan Pérez",
-    email: "tech_hw@gori.app",
-    avatarUrl: "https://i.pravatar.cc/150?u=tech_hw001",
+    email: "juan.perez.techhwcen@gori.app",
+    avatarUrl: "https://i.pravatar.cc/150?u=juan.perez.techhwcen",
     role: "tecnico",
     assignments: [
         { branchId: "B001", role: "tecnico", sector: "Laboratorio Hardware" }
@@ -63,12 +48,11 @@ let mockUsers: User[] = [
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
-  // 5. Técnico Reparador (Software)
   {
-    uid: "tech_sw001",
-    name: "Maria Garcia",
-    email: "tech_sw@gori.app",
-    avatarUrl: "https://i.pravatar.cc/150?u=tech_sw001",
+    uid: "laura.gil.techswcen",
+    name: "Laura Gil",
+    email: "laura.gil.techswcen@gori.app",
+    avatarUrl: "https://i.pravatar.cc/150?u=laura.gil.techswcen",
     role: "tecnico",
     assignments: [
         { branchId: "B001", role: "tecnico", sector: "Laboratorio Software" }
@@ -77,29 +61,80 @@ let mockUsers: User[] = [
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
-  // 6. Técnico Administrativo (mapped to 'recepcionista' role)
   {
-    uid: "recep_admin001",
-    name: "Luis Torres",
-    email: "tech_admin@gori.app",
-    avatarUrl: "https://i.pravatar.cc/150?u=recep_admin001",
-    role: "recepcionista",
+    uid: "carlos.ruiz.tecadmincen",
+    name: "Carlos Ruiz",
+    email: "carlos.ruiz.tecadmincen@gori.app",
+    avatarUrl: "https://i.pravatar.cc/150?u=carlos.ruiz.tecadmincen",
+    role: "recepcionista", // Mapping 'Técnico Administrativo'
     assignments: [
-        { branchId: "B001", role: "recepcionista", sector: "Administración" }
+        { branchId: "B001", role: "recepcionista", sector: "Administración y Presupuestos, Compras" }
     ],
     status: "active",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
-  // 7. Mostrador / Atención Presencial
   {
-    uid: "recep_front001",
-    name: "Sofia Gomez",
-    email: "mostrador@gori.app",
-    avatarUrl: "https://i.pravatar.cc/150?u=recep_front001",
+    uid: "sofia.diaz.mostcen",
+    name: "Sofía Díaz",
+    email: "sofia.diaz.mostcen@gori.app",
+    avatarUrl: "https://i.pravatar.cc/150?u=sofia.diaz.mostcen",
+    role: "recepcionista", // Mapping 'Mostrador'
+    assignments: [
+        { branchId: "B001", role: "recepcionista", sector: "Recepción / Mostrador" }
+    ],
+    status: "active",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  // --- Sucursal Norte ---
+  {
+    uid: "martin.gomez.adminnor",
+    name: "Martín Gómez",
+    email: "martin.gomez.adminnor@gori.app",
+    avatarUrl: "https://i.pravatar.cc/150?u=martin.gomez.adminnor",
+    role: "admin",
+    assignments: [
+        { branchId: "B002", role: "admin", sector: "Supervisión General, Administración" }
+    ],
+    status: "active",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    uid: "lucia.vega.technor",
+    name: "Lucía Vega",
+    email: "lucia.vega.technor@gori.app",
+    avatarUrl: "https://i.pravatar.cc/150?u=lucia.vega.technor",
+    role: "tecnico",
+    assignments: [
+        { branchId: "B002", role: "tecnico", sector: "Laboratorio Hardware, Laboratorio Software" }
+    ],
+    status: "active",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    uid: "david.ramos.tecadminnor",
+    name: "David Ramos",
+    email: "david.ramos.tecadminnor@gori.app",
+    avatarUrl: "https://i.pravatar.cc/150?u=david.ramos.tecadminnor",
     role: "recepcionista",
     assignments: [
-        { branchId: "B001", role: "recepcionista", sector: "Recepción" }
+        { branchId: "B002", role: "recepcionista", sector: "Administración y Presupuestos, Compras" }
+    ],
+    status: "active",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    uid: "elena.cano.mostnor",
+    name: "Elena Cano",
+    email: "elena.cano.mostnor@gori.app",
+    avatarUrl: "https://i.pravatar.cc/150?u=elena.cano.mostnor",
+    role: "recepcionista",
+    assignments: [
+        { branchId: "B002", role: "recepcionista", sector: "Recepción / Mostrador" }
     ],
     status: "active",
     createdAt: new Date().toISOString(),
@@ -110,13 +145,16 @@ let mockUsers: User[] = [
 
 // Mock password store
 let mockPasswords: Record<string, string> = {
-  "superadmin@gori.app": "Nexus360Pass!",
-  "admin_central@gori.app": "Nexus360Pass!",
-  "admin_norte@gori.app": "Nexus360Pass!",
-  "tech_hw@gori.app": "Nexus360Pass!",
-  "tech_sw@gori.app": "Nexus360Pass!",
-  "tech_admin@gori.app": "Nexus360Pass!",
-  "mostrador@gori.app": "Nexus360Pass!",
+  "superadmin@gori.app": "NexusPass2024!",
+  "ana.lopez.admincen@gori.app": "NexusPass2024!",
+  "juan.perez.techhwcen@gori.app": "NexusPass2024!",
+  "laura.gil.techswcen@gori.app": "NexusPass2024!",
+  "carlos.ruiz.tecadmincen@gori.app": "NexusPass2024!",
+  "sofia.diaz.mostcen@gori.app": "NexusPass2024!",
+  "martin.gomez.adminnor@gori.app": "NexusPass2024!",
+  "lucia.vega.technor@gori.app": "NexusPass2024!",
+  "david.ramos.tecadminnor@gori.app": "NexusPass2024!",
+  "elena.cano.mostnor@gori.app": "NexusPass2024!",
 };
 
 
