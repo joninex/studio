@@ -71,12 +71,12 @@ export const LEGAL_TEXTS = {
 };
 
 
-export const PART_CATEGORIES: Array<PartCategory> = ["Pantalla", "Batería", "Flex", "Cámara", "Placa", "Componente", "Carcasa", "Otro"];
+export const PART_CATEGORIES: PartCategory[] = ["Pantalla", "Batería", "Flex", "Cámara", "Placa", "Componente", "Carcasa", "Otro"];
 export const PART_UNITS: PartUnit[] = ["unidad", "metro", "kit"];
 
 export const USER_ROLES_VALUES: UserRole[] = ["admin", "tecnico", "recepcionista"];
 
-export const FISCAL_CONDITIONS: Array<FiscalCondition> = ["Consumidor Final", "Monotributista", "Responsable Inscripto", "Exento"];
+export const FISCAL_CONDITIONS: FiscalCondition[] = ["Consumidor Final", "Monotributista", "Responsable Inscripto", "Exento"];
 
 
 export const DEFAULT_STORE_SETTINGS = {

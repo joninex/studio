@@ -26,6 +26,8 @@ export interface StoreSettings {
     privacyPolicyText?: string;
     warrantyConditions: string;
     pickupConditions: string;
+    intakeConformityText: string;
+    clientVoucherLegalReminder: string;
 }
 
 export interface Branch {

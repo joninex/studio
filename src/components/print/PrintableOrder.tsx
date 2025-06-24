@@ -61,7 +61,7 @@ export function PrintableOrder({ order, branch }: PrintableOrderProps) {
         <div className="order-details">
           <h2>Orden de Recepción Técnica</h2>
           <p className="order-number">N° Orden: {order.orderNumber}</p>
-          <p>Fecha: {format(parseISO(order.entryDate as string), "dd/MM/yyyy HH:mm", { locale: es })}</p>
+          <p>Fecha: {order.entryDate ? format(parseISO(order.entryDate as string), "dd/MM/yyyy HH:mm", { locale: es }) : 'N/A'}</p>
         </div>
       </header>
 
@@ -160,7 +160,7 @@ export function PrintableOrder({ order, branch }: PrintableOrderProps) {
           <div className="order-details">
             <h2>Comprobante para Cliente</h2>
             <p className="order-number">N° Orden: {order.orderNumber}</p>
-            <p>Fecha Ingreso: {format(parseISO(order.entryDate as string), "dd/MM/yyyy HH:mm", { locale: es })}</p>
+            <p>Fecha Ingreso: {order.entryDate ? format(parseISO(order.entryDate as string), "dd/MM/yyyy HH:mm", { locale: es }) : 'N/A'}</p>
           </div>
         </header>
 

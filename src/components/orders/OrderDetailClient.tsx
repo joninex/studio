@@ -234,7 +234,7 @@ export function OrderDetailClient({ order: initialOrder, branch, technicians }: 
                         Orden de Servicio: {order.orderNumber}
                     </CardTitle>
                     <CardDescription>
-                        Fecha de Ingreso: {format(parseISO(order.entryDate as string), "dd MMM yyyy, HH:mm", { locale: es })}
+                        Fecha de Ingreso: {order.entryDate ? format(parseISO(order.entryDate as string), "dd MMM yyyy, HH:mm", { locale: es }) : 'N/A'}
                     </CardDescription>
                 </div>
                 <div className="flex items-center gap-2">
@@ -409,7 +409,7 @@ export function OrderDetailClient({ order: initialOrder, branch, technicians }: 
                 <div className="space-y-4 mb-4 max-h-48 overflow-y-auto">
                     {order.commentsHistory && order.commentsHistory.length > 0 ? order.commentsHistory.map((comment, index) => (
                     <div key={index} className="text-sm p-3 bg-muted rounded-md">
-                        <p className="font-semibold">{comment.userName} <span className="text-xs text-muted-foreground">- {format(parseISO(comment.timestamp as string), "dd MMM yyyy, HH:mm", { locale: es })}</span></p>
+                        <p className="font-semibold">{comment.userName} <span className="text-xs text-muted-foreground">- {comment.timestamp ? format(parseISO(comment.timestamp as string), "dd MMM yyyy, HH:mm", { locale: es }) : ''}</span></p>
                         <p>{comment.description}</p>
                     </div>
                     )) : (
@@ -437,7 +437,7 @@ export function OrderDetailClient({ order: initialOrder, branch, technicians }: 
                                     <div>
                                         <p className="text-muted-foreground">{log.description}</p>
                                         <p className="text-xs text-muted-foreground/70">
-                                            Por <span className="font-semibold">{log.userName}</span> el {format(parseISO(log.timestamp as string), "dd MMM yyyy, HH:mm", { locale: es })}
+                                            Por <span className="font-semibold">{log.userName}</span> el {log.timestamp ? format(parseISO(log.timestamp as string), "dd MMM yyyy, HH:mm", { locale: es }) : ''}
                                         </p>
                                     </div>
                                 </li>

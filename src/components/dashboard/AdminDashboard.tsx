@@ -12,7 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ListChecks, Users, BarChartIcon, AlertTriangle, Eye, ServerCrash } from "lucide-react";
+import { ListChecks, Users, BarChartIcon, AlertTriangle, Eye, ServerCrash, Wrench, PackageCheck, DollarSign } from "lucide-react";
 
 interface AdminDashboardProps {
     allOrders: Order[];
@@ -22,7 +22,7 @@ interface AdminDashboardProps {
 export function AdminDashboard({ allOrders, allUsers }: AdminDashboardProps) {
 
   const processedData = useMemo(() => {
-    if (!allOrders) return { stats: { activeOrders: 0, newOrdersToday: 0, monthlyRevenue: 0, pendingAlertsCount: 0 }, alertOrders: [], chartData: [] };
+    if (!allOrders) return { stats: { activeOrders: 0, newOrdersToday: 0, monthlyRevenue: 0, pendingAlertsCount: 0, inRepairCount: 0, readyForPickupCount: 0 }, alertOrders: [], chartData: [] };
 
     const inactiveStatuses: OrderStatus[] = ["Entregado", "Presupuesto Rechazado", "Sin Reparación"];
     const activeOrdersCount = allOrders.filter(o => !inactiveStatuses.includes(o.status)).length;
@@ -31,6 +31,9 @@ export function AdminDashboard({ allOrders, allUsers }: AdminDashboardProps) {
         try { return isToday(parseISO(o.entryDate as string)); } catch { return false; }
     }).length;
     
+    const inRepairCount = allOrders.filter(o => o.status === "En Reparación").length;
+    const readyForPickupCount = allOrders.filter(o => o.status === "Listo para Entrega").length;
+
     const revenueStatuses: OrderStatus[] = ["Reparado", "Listo para Entrega", "Entregado"];
     const monthlyRevenue = allOrders
       .filter(o => {
@@ -74,6 +77,8 @@ export function AdminDashboard({ allOrders, allUsers }: AdminDashboardProps) {
           newOrdersToday: newOrdersTodayCount,
           monthlyRevenue: monthlyRevenue,
           pendingAlertsCount: alertOrders.length,
+          inRepairCount: inRepairCount,
+          readyForPickupCount: readyForPickupCount,
         },
         alertOrders,
         chartData
@@ -93,7 +98,7 @@ export function AdminDashboard({ allOrders, allUsers }: AdminDashboardProps) {
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         <DashboardStatCard 
             title="Órdenes Activas" 
             value={processedData.stats.activeOrders}
@@ -101,6 +106,25 @@ export function AdminDashboard({ allOrders, allUsers }: AdminDashboardProps) {
             icon={ListChecks}
         />
         <DashboardStatCard 
+            title="En Reparación" 
+            value={processedData.stats.inRepairCount}
+            description="Órdenes siendo reparadas ahora"
+            icon={Wrench}
+        />
+        <DashboardStatCard 
+            title="Listas para Retiro" 
+            value={processedData.stats.readyForPickupCount}
+            description="Equipos esperando al cliente"
+            icon={PackageCheck}
+        />
+        <DashboardStatCard 
+            title="Alertas Pendientes" 
+            value={processedData.stats.pendingAlertsCount}
+            description="Órdenes que requieren acción"
+            icon={AlertTriangle}
+            isWarning
+        />
+         <DashboardStatCard 
             title="Ingresos Hoy" 
             value={`+${processedData.stats.newOrdersToday}`}
             description="Nuevas órdenes registradas hoy"
@@ -110,14 +134,7 @@ export function AdminDashboard({ allOrders, allUsers }: AdminDashboardProps) {
             title="Ingresos (Mes)" 
             value={`$${processedData.stats.monthlyRevenue.toFixed(2)}`}
             description="Basado en órdenes finalizadas"
-            icon={BarChartIcon}
-        />
-        <DashboardStatCard 
-            title="Alertas Pendientes" 
-            value={processedData.stats.pendingAlertsCount}
-            description="Órdenes que requieren acción"
-            icon={AlertTriangle}
-            isWarning
+            icon={DollarSign}
         />
       </div>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">

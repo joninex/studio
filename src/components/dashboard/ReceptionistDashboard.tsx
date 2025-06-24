@@ -9,8 +9,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { PackageCheck, FileClock, Eye, UserCheck } from "lucide-react";
-import { format, differenceInDays, parseISO } from "date-fns";
+import { PackageCheck, FileClock, Eye, UserCheck, FilePlus2, Search, ArrowDownCircle, ArrowUpCircle } from "lucide-react";
+import { format, differenceInDays, parseISO, isToday } from "date-fns";
 import { es } from "date-fns/locale";
 
 interface ReceptionistDashboardProps {
@@ -22,11 +22,22 @@ export function ReceptionistDashboard({ allOrders }: ReceptionistDashboardProps)
     const receptionistData = useMemo(() => {
         const readyForPickupOrders = allOrders.filter(o => o.status === "Listo para Entrega");
         const pendingApprovalOrders = allOrders.filter(o => o.status === "Presupuestado");
+        
+        const ingresadasHoy = allOrders.filter(o => {
+            try { return isToday(parseISO(o.entryDate as string)); } catch { return false; }
+        }).length;
+
+        const entregadasHoy = allOrders.filter(o => {
+            try { return o.deliveryDate && isToday(parseISO(o.deliveryDate as string)); } catch { return false; }
+        }).length;
+
 
         return {
             stats: {
                 readyForPickup: readyForPickupOrders.length,
                 pendingApproval: pendingApprovalOrders.length,
+                ingresadasHoy,
+                entregadasHoy,
             },
             readyForPickupOrders,
             pendingApprovalOrders,
@@ -34,14 +45,57 @@ export function ReceptionistDashboard({ allOrders }: ReceptionistDashboardProps)
     }, [allOrders]);
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="space-y-6">
-                 <DashboardStatCard 
+        <div className="space-y-6">
+            
+            <Card>
+                <CardHeader>
+                    <CardTitle>Acciones Rápidas</CardTitle>
+                </CardHeader>
+                <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <Button asChild size="lg" className="h-20 text-lg">
+                        <Link href="/orders/new">
+                            <FilePlus2 className="mr-4 h-8 w-8"/>
+                            Nueva Orden de Ingreso
+                        </Link>
+                    </Button>
+                    <Button asChild variant="outline" size="lg" className="h-20 text-lg">
+                        <Link href="/orders">
+                            <Search className="mr-4 h-8 w-8"/>
+                            Buscar Cliente / Orden
+                        </Link>
+                    </Button>
+                </CardContent>
+            </Card>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <DashboardStatCard 
+                    title="Ingresadas Hoy"
+                    value={receptionistData.stats.ingresadasHoy}
+                    description="Nuevas órdenes registradas en el día"
+                    icon={ArrowDownCircle}
+                />
+                <DashboardStatCard 
+                    title="Entregadas Hoy"
+                    value={receptionistData.stats.entregadasHoy}
+                    description="Equipos retirados por clientes hoy"
+                    icon={ArrowUpCircle}
+                />
+                <DashboardStatCard 
                     title="Listos para Retirar"
                     value={receptionistData.stats.readyForPickup}
-                    description="Equipos esperando ser retirados por el cliente"
+                    description="Equipos esperando ser retirados"
                     icon={PackageCheck}
                 />
+                 <DashboardStatCard 
+                    title="Esperando Aprobación"
+                    value={receptionistData.stats.pendingApproval}
+                    description="Presupuestos pendientes de aprobación"
+                    icon={FileClock}
+                    isWarning={receptionistData.stats.pendingApproval > 0}
+                />
+            </div>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                  <Card>
                     <CardHeader>
                         <CardTitle>Equipos Listos para Retirar</CardTitle>
@@ -68,15 +122,7 @@ export function ReceptionistDashboard({ allOrders }: ReceptionistDashboardProps)
                         ) : <p className="text-sm text-muted-foreground text-center py-4">No hay equipos listos para retirar.</p>}
                     </CardContent>
                  </Card>
-            </div>
-             <div className="space-y-6">
-                 <DashboardStatCard 
-                    title="Esperando Aprobación"
-                    value={receptionistData.stats.pendingApproval}
-                    description="Presupuestos pendientes de aprobación del cliente"
-                    icon={FileClock}
-                    isWarning={receptionistData.stats.pendingApproval > 0}
-                />
+            
                  <Card>
                     <CardHeader>
                         <CardTitle>Órdenes Pendientes de Aprobación</CardTitle>

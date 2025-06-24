@@ -9,8 +9,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { Briefcase, Wrench, PackageSearch, Eye } from "lucide-react";
-import { format } from "date-fns";
+import { Briefcase, Wrench, PackageSearch, Eye, CheckCircle } from "lucide-react";
+import { format, isToday, isThisWeek, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 
 interface TechnicianDashboardProps {
@@ -26,14 +26,21 @@ export function TechnicianDashboard({ allOrders, currentUser }: TechnicianDashbo
         const myActiveOrders = myOrders.filter(o => !inactiveStatuses.includes(o.status));
         const awaitingParts = myActiveOrders.filter(o => o.status === "En Espera de Repuestos");
         
-        // Example: Completed last 7 days - more complex logic can be added
-        const completedRecently = myOrders.filter(o => o.status === 'Entregado' || o.status === 'Reparado').length;
+        const completedThisWeek = myOrders.filter(o => 
+            (o.status === 'Entregado' || o.status === 'Reparado') && o.deliveryDate && isThisWeek(parseISO(o.deliveryDate as string), { weekStartsOn: 1 })
+        ).length;
+        
+        const completedToday = myOrders.filter(o => 
+            (o.status === 'Entregado' || o.status === 'Reparado') && o.deliveryDate && isToday(parseISO(o.deliveryDate as string))
+        ).length;
+
 
         return {
             stats: {
                 active: myActiveOrders.length,
                 awaitingParts: awaitingParts.length,
-                completed: completedRecently,
+                completedToday,
+                completedThisWeek,
             },
             activeOrders: myActiveOrders,
         };
@@ -41,7 +48,7 @@ export function TechnicianDashboard({ allOrders, currentUser }: TechnicianDashbo
 
     return (
         <div className="space-y-6">
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <DashboardStatCard 
                     title="Mis Órdenes Activas"
                     value={technicianData.stats.active}
@@ -55,10 +62,16 @@ export function TechnicianDashboard({ allOrders, currentUser }: TechnicianDashbo
                     icon={PackageSearch}
                     isWarning={technicianData.stats.awaitingParts > 0}
                 />
+                 <DashboardStatCard 
+                    title="Completadas Hoy"
+                    value={technicianData.stats.completedToday}
+                    description="Órdenes finalizadas en el día"
+                    icon={CheckCircle}
+                />
                 <DashboardStatCard 
-                    title="Reparaciones Completadas"
-                    value={technicianData.stats.completed}
-                    description="Total de órdenes finalizadas"
+                    title="Completadas (Semana)"
+                    value={technicianData.stats.completedThisWeek}
+                    description="Total de órdenes finalizadas esta semana"
                     icon={Wrench}
                 />
             </div>

@@ -5,13 +5,13 @@ import type { Order, AuditLogEntry, Comment as OrderCommentType, OrderStatus, Or
 import { OrderSchema } from "@/lib/schemas";
 import type { z } from "zod";
 import { suggestRepairSolutions } from "@/ai/flows/suggest-repair-solutions";
-import { getMockClients, getClientById } from "./client.actions";
+import { getClientById } from "./client.actions";
 import { DEFAULT_STORE_SETTINGS } from "../constants";
 import { updatePartStock } from "./part.actions";
 import { getUsersByRole } from './user.actions';
 import { getUserById } from './auth.actions';
 import { createNotification } from './notification.actions';
-import { PackageCheck, PackageSearch, Briefcase } from 'lucide-react';
+import { PackageCheck, PackageSearch, Briefcase, MessageCircle } from 'lucide-react';
 
 let mockOrders: Order[] = [
   {
@@ -171,15 +171,17 @@ export async function createOrder(
 
 export async function getOrders(filters?: { client?: string, orderNumber?: string, imei?: string, status?: string }): Promise<Order[]> {
   await new Promise(resolve => setTimeout(resolve, 500));
-  const clients = await getMockClients();
-
+  
   let filteredOrders = mockOrders;
 
   if (filters) {
     if (filters.client) {
       const clientLower = filters.client.toLowerCase();
-      const matchingClientIds = clients.filter(c => `${c.name} ${c.lastName}`.toLowerCase().includes(clientLower) || c.id.toLowerCase().includes(clientLower)).map(c => c.id);
-      filteredOrders = filteredOrders.filter(o => matchingClientIds.includes(o.clientId));
+      filteredOrders = filteredOrders.filter(o => 
+          (o.clientName?.toLowerCase().includes(clientLower)) ||
+          (o.clientLastName?.toLowerCase().includes(clientLower)) ||
+          (o.clientId?.toLowerCase().includes(clientLower))
+      );
     }
     if (filters.orderNumber) {
       filteredOrders = filteredOrders.filter(o => o.orderNumber.toLowerCase().includes(filters.orderNumber!.toLowerCase()));
@@ -192,17 +194,7 @@ export async function getOrders(filters?: { client?: string, orderNumber?: strin
     }
   }
 
-  const ordersWithClientNames = filteredOrders.map(order => {
-    const client = clients.find(c => c.id === order.clientId);
-    return {
-      ...order,
-      clientName: client?.name || 'N/D',
-      clientLastName: client?.lastName || '',
-      clientPhone: client?.phone || '',
-    };
-  });
-
-  return ordersWithClientNames.sort((a, b) => new Date(b.entryDate).getTime() - new Date(a.entryDate).getTime());
+  return filteredOrders.sort((a, b) => new Date(b.entryDate as string).getTime() - new Date(a.entryDate as string).getTime());
 }
 
 export async function getOrderById(id: string): Promise<Order | null> {
