@@ -76,7 +76,7 @@ export const OrderSchema = z.object({
 export type OrderFormData = z.infer<typeof OrderSchema>;
 
 
-const validPartCategories = PART_CATEGORIES.filter(cat => cat !== "") as [PartCategory, ...PartCategory[]];
+const validPartCategories = PART_CATEGORIES.filter(cat => cat !== undefined) as [PartCategory, ...PartCategory[]];
 const validPartUnits = PART_UNITS;
 
 export const PartSchema = z.object({
@@ -114,7 +114,7 @@ export const ResetPasswordSchema = z.object({
   email: z.string().email({ message: "Por favor ingrese un email válido." }),
 });
 
-const validFiscalConditions = FISCAL_CONDITIONS.filter(fc => fc !== "") as [FiscalCondition, ...FiscalCondition[]];
+const validFiscalConditions = FISCAL_CONDITIONS.filter(fc => fc !== undefined) as [FiscalCondition, ...FiscalCondition[]];
 
 export const ClientSchema = z.object({
     name: z.string().min(2, "El nombre es requerido."),
@@ -172,6 +172,8 @@ export const StoreSettingsSchema = z.object({
 export const BranchSchema = z.object({
   name: z.string().min(3, "El nombre de la sucursal es requerido."),
   address: z.string().min(5, "La dirección es requerida."),
+  phone: z.string().min(1, "El teléfono es requerido."),
+  email: z.string().email("Debe ser un email válido."),
   status: z.enum(['active', 'inactive']).default('active'),
 });
 export type BranchFormData = z.infer<typeof BranchSchema>;

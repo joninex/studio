@@ -32,6 +32,8 @@ export interface Branch {
   id: string;
   name: string;
   address: string;
+  phone: string;
+  email: string;
   status: 'active' | 'inactive';
   settings: StoreSettings;
   createdAt?: string | Date;
@@ -41,7 +43,7 @@ export interface Branch {
 export interface UserAssignment {
     branchId: string;
     role: UserRole;
-    sector?: string;
+    sector: string;
 }
 
 export interface User {

@@ -9,8 +9,10 @@ import { DEFAULT_STORE_SETTINGS } from "@/lib/constants";
 let mockBranches: Branch[] = [
     {
         id: "B001",
-        name: "Taller Central",
+        name: "Sucursal Central",
         address: "Av. Corrientes 1234, CABA",
+        phone: "(011) 4123-5678",
+        email: "central@gori.app",
         status: 'active',
         settings: {
             ...DEFAULT_STORE_SETTINGS,
@@ -28,6 +30,8 @@ let mockBranches: Branch[] = [
         id: "B002",
         name: "Sucursal Norte",
         address: "Av. Maipú 500, Vicente López",
+        phone: "(011) 4798-1234",
+        email: "norte@gori.app",
         status: 'active',
         settings: {
             ...DEFAULT_STORE_SETTINGS,
@@ -45,6 +49,8 @@ let mockBranches: Branch[] = [
         id: "B003",
         name: "Depósito y Taller Avanzado",
         address: "Parque Industrial, Lote 15",
+        phone: "N/A",
+        email: "deposito@gori.app",
         status: 'inactive',
         settings: {
             ...DEFAULT_STORE_SETTINGS,

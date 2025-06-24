@@ -62,7 +62,7 @@ export async function createUser(data: z.infer<typeof UserSchema>): Promise<{ su
     status: "active", // New users created by admin are active by default
     createdAt: new Date().toISOString(), 
     updatedAt: new Date().toISOString(),
-    assignments: [{ branchId: 'B001', role: role }] // Assign to default branch
+    assignments: [{ branchId: 'B001', role: role, sector: 'Asignación General' }] // Assign to default branch and sector
   };
   const updatedUsers = [...currentUsers, newUser];
   await updateAllMockUsers(updatedUsers);

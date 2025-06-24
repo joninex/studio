@@ -217,6 +217,7 @@ export function UserManagementClient() {
                 <TableHead>Nombre</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Rol</TableHead>
+                <TableHead>Sector(es)</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
@@ -241,6 +242,12 @@ export function UserManagementClient() {
                         {getRoleDisplayName(user.role)}
                      </Badge>
                   </TableCell>
+                  <TableCell>
+                    {user.assignments && user.assignments.length > 0
+                      ? user.assignments.map(a => a.sector).join(', ')
+                      : 'N/A'
+                    }
+                  </TableCell>
                   <TableCell>{getStatusBadge(user.status)}</TableCell>
                   <TableCell className="text-right space-x-1">
                     {user.status === 'pending' && (
@@ -254,7 +261,7 @@ export function UserManagementClient() {
                       </>
                     )}
                     <Button variant="ghost" size="icon" onClick={() => handleEditUser(user)} title="Editar Usuario"><Edit className="h-4 w-4" /></Button>
-                    <Button variant="ghost" size="icon" onClick={() => confirmDeleteUser(user)} disabled={user.email === 'jesus@mobyland.com.ar'} title="Eliminar Usuario">
+                    <Button variant="ghost" size="icon" onClick={() => confirmDeleteUser(user)} disabled={user.email === 'superadmin@gori.app'} title="Eliminar Usuario">
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                   </TableCell>

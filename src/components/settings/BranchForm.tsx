@@ -15,7 +15,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
-import { Building, MapPin } from "lucide-react";
+import { Building, MapPin, Phone, Mail } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface BranchFormProps {
@@ -33,6 +33,8 @@ export function BranchForm({ branchId, initialData }: BranchFormProps) {
     defaultValues: initialData || {
       name: "",
       address: "",
+      phone: "",
+      email: "",
       status: "active",
     },
   });
@@ -96,6 +98,32 @@ export function BranchForm({ branchId, initialData }: BranchFormProps) {
                   <FormLabel className="flex items-center gap-1"><MapPin className="h-4 w-4" />Dirección</FormLabel>
                   <FormControl>
                     <Input placeholder="Ej: Av. Corrientes 1234, CABA" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+             <FormField
+              control={form.control}
+              name="phone"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center gap-1"><Phone className="h-4 w-4" />Teléfono de Contacto</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Ej: (011) 4123-5678" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+             <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center gap-1"><Mail className="h-4 w-4" />Email de Contacto</FormLabel>
+                  <FormControl>
+                    <Input type="email" placeholder="Ej: contacto@sucursal.com" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
