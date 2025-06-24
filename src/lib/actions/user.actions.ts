@@ -61,6 +61,19 @@ let gori_db_passwords: Record<string, string> = {
 
 // --- GORI Data Access Functions ---
 
+export async function verifyUserPassword(
+    username: string, 
+    password_plaintext: string
+): Promise<boolean> {
+  // En un sistema real, el servicio GORI buscaría el hash y lo compararía.
+  await new Promise(resolve => setTimeout(resolve, 50));
+  if (gori_db_passwords[username] && gori_db_passwords[username] === password_plaintext) {
+      return true;
+  }
+  return false;
+}
+
+
 export async function getUsers(): Promise<User[]> {
   // GORI retrieves all users from its persistent store.
   return JSON.parse(JSON.stringify(gori_db_usuarios));
@@ -81,8 +94,9 @@ export async function getUserById(uid: string): Promise<User | undefined> {
   return user ? JSON.parse(JSON.stringify(user)) : undefined;
 }
 
-export async function getUserByEmail(email: string): Promise<User | undefined> {
-  const user = gori_db_usuarios.find(u => u.email === email);
+export async function getUserByUsername(username: string): Promise<User | undefined> {
+  // The username in this system corresponds to the email field.
+  const user = gori_db_usuarios.find(u => u.email === username);
   return user ? JSON.parse(JSON.stringify(user)) : undefined;
 }
 
@@ -214,16 +228,4 @@ export async function updateUserStatus(uid: string, status: UserStatus): Promise
                   'Estado de usuario actualizado.';
   
   return { success: true, message, user: JSON.parse(JSON.stringify(user)) };
-}
-
-export async function verifyUserPassword(
-    email: string, 
-    password_plaintext: string
-): Promise<boolean> {
-  // Simulate a quick async check
-  await new Promise(resolve => setTimeout(resolve, 50));
-  if (gori_db_passwords[email] && gori_db_passwords[email] === password_plaintext) {
-      return true;
-  }
-  return false;
 }

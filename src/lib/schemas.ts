@@ -3,7 +3,7 @@ import { CLASSIFICATION_OPTIONS, ORDER_STATUSES, CHECKLIST_ITEMS, PART_CATEGORIE
 import type { OrderStatus, Classification, Checklist, PartCategory, PartUnit, UserRole, FiscalCondition } from '@/types';
 
 export const LoginSchema = z.object({
-  email: z.string().email({ message: "Por favor ingrese un email válido." }),
+  username: z.string().min(1, { message: "El nombre de usuario es requerido." }),
   password: z.string().min(6, { message: "La contraseña debe tener al menos 6 caracteres." }),
 });
 
@@ -101,7 +101,7 @@ export type SupplierFormData = z.infer<typeof SupplierSchema>;
 
 
 export const ResetPasswordSchema = z.object({
-  email: z.string().email({ message: "Por favor ingrese un email válido." }),
+  username: z.string().min(1, { message: "El nombre de usuario es requerido." }),
 });
 
 const validFiscalConditions = FISCAL_CONDITIONS.filter(fc => fc !== undefined) as [FiscalCondition, ...FiscalCondition[]];

@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/form";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Eye, EyeOff, KeyRound, Mail, LogIn } from "lucide-react";
+import { Eye, EyeOff, KeyRound, User, LogIn } from "lucide-react";
 import { LoadingSpinner } from "../shared/LoadingSpinner";
 
 
@@ -36,7 +36,7 @@ export function LoginForm() {
   const form = useForm<z.infer<typeof LoginSchema>>({
     resolver: zodResolver(LoginSchema),
     defaultValues: {
-      email: "",
+      username: "",
       password: "",
     },
   });
@@ -67,14 +67,14 @@ export function LoginForm() {
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <FormField
               control={form.control}
-              name="email"
+              name="username"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Email</FormLabel>
+                  <FormLabel>Usuario</FormLabel>
                   <FormControl>
                     <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                      <Input type="email" placeholder="usuario@ejemplo.com" {...field} className="pl-10" />
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                      <Input type="text" placeholder="nombre.usuario" {...field} className="pl-10" />
                     </div>
                   </FormControl>
                   <FormMessage />

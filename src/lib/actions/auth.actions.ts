@@ -5,7 +5,7 @@ import type { User } from "@/types";
 import { LoginSchema, ResetPasswordSchema } from "@/lib/schemas";
 import type { z } from "zod";
 import { 
-    getUserByEmail, 
+    getUserByUsername, 
     verifyUserPassword
 } from "./user.actions";
 
@@ -18,8 +18,8 @@ export async function login(
     return { success: false, message: "Campos inválidos." };
   }
 
-  const { email, password } = validatedFields.data;
-  const user = await getUserByEmail(email);
+  const { username, password } = validatedFields.data;
+  const user = await getUserByUsername(username);
 
   if (!user) {
     return { success: false, message: "Usuario no encontrado." };
@@ -32,7 +32,7 @@ export async function login(
     return { success: false, message: statusMessage };
   }
 
-  const isPasswordValid = await verifyUserPassword(email, password);
+  const isPasswordValid = await verifyUserPassword(username, password);
   if (!isPasswordValid) {
     return { success: false, message: "Contraseña incorrecta." };
   }
@@ -49,15 +49,15 @@ export async function resetPassword(
     return { success: false, message: "Campos inválidos." };
   }
 
-  const { email } = validatedFields.data;
-  const userExists = await getUserByEmail(email);
+  const { username } = validatedFields.data;
+  const userExists = await getUserByUsername(username);
 
   if (!userExists) {
     // No revelamos si el usuario existe o no por seguridad.
-    return { success: true, message: "Si este correo está registrado, se enviará un enlace de restablecimiento." };
+    return { success: true, message: "Si este usuario está registrado, se enviará un enlace de restablecimiento al email asociado." };
   }
 
   // Lógica de GORI para enviar el correo de restablecimiento.
-  console.log(`Password reset email sent to ${email} (mock)`);
-  return { success: true, message: "Si este correo está registrado, se enviará un enlace de restablecimiento." };
+  console.log(`Password reset for user ${username} sent to ${userExists.email} (mock)`);
+  return { success: true, message: "Si este usuario está registrado, se enviará un enlace de restablecimiento al email asociado." };
 }
