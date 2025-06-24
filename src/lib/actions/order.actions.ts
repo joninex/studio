@@ -8,9 +8,9 @@ import { suggestRepairSolutions } from "@/ai/flows/suggest-repair-solutions";
 import { getMockClients, getClientById } from "./client.actions";
 import { DEFAULT_STORE_SETTINGS } from "../constants";
 import { updatePartStock } from "./part.actions";
-import { getUsersByRole } from './user.actions';
+import { getUsersByRole, getUserById } from './user.actions';
 import { createNotification } from './notification.actions';
-import { PackageCheck, PackageSearch } from 'lucide-react';
+import { PackageCheck, PackageSearch, Briefcase } from 'lucide-react';
 
 let mockOrders: Order[] = [
   {
@@ -44,6 +44,8 @@ let mockOrders: Order[] = [
     estimatedCompletionTime: "18:00hs",
     intakeFormSigned: true,
     pickupFormSigned: false,
+    assignedTechnicianId: "juan.perez.techhwcen",
+    assignedTechnicianName: "Juan Pérez",
     auditLog: [
        { id: 'log-1', userId: 'tech123', userName: 'Tech User', description: 'Orden creada.', timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()},
        { id: 'log-2', userId: 'tech123', userName: 'Tech User', description: 'Confirmado: Comprobante de Ingreso firmado.', timestamp: new Date(Date.now() - 1.9 * 24 * 60 * 60 * 1000).toISOString()},
@@ -458,4 +460,36 @@ export async function logWhatsAppAttempt(
   mockOrders[orderIndex].auditLog.push(createAuditLogEntry(userName, userName, logDescription));
 
   return { success: true, message: "Intento de envío registrado.", order: mockOrders[orderIndex] };
+}
+
+export async function assignTechnicianToOrder(
+  orderId: string,
+  technicianId: string,
+  assignerName: string
+): Promise<{ success: boolean; message: string; order?: Order }> {
+  const orderIndex = mockOrders.findIndex(o => o.id === orderId);
+  if (orderIndex === -1) {
+    return { success: false, message: "Orden no encontrada." };
+  }
+
+  const technician = await getUserById(technicianId);
+  if (!technician || technician.role !== 'tecnico') {
+      return { success: false, message: "Técnico no válido." };
+  }
+
+  mockOrders[orderIndex].assignedTechnicianId = technician.uid;
+  mockOrders[orderIndex].assignedTechnicianName = technician.name;
+  
+  const logDescription = `Orden asignada al técnico: ${technician.name}.`;
+  mockOrders[orderIndex].auditLog.push(createAuditLogEntry(assignerName, assignerName, logDescription));
+  
+  // Notify the assigned technician
+  await createNotification({
+    userId: technician.uid,
+    message: `Te han asignado la orden ${mockOrders[orderIndex].orderNumber} (${mockOrders[orderIndex].deviceModel}).`,
+    link: `/orders/${orderId}`,
+    icon: Briefcase,
+  });
+
+  return { success: true, message: "Técnico asignado exitosamente.", order: mockOrders[orderIndex] };
 }

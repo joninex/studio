@@ -15,12 +15,12 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/providers/AuthProvider";
-import { addOrderComment, updateOrderStatus, updateOrderConfirmations, updateOrderImei, logIntakeDocumentPrint, logWhatsAppAttempt } from "@/lib/actions/order.actions";
+import { addOrderComment, updateOrderStatus, updateOrderConfirmations, updateOrderImei, logIntakeDocumentPrint, logWhatsAppAttempt, assignTechnicianToOrder } from "@/lib/actions/order.actions";
 import { ORDER_STATUSES, CHECKLIST_ITEMS } from "@/lib/constants";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { AlertCircle, CalendarDays, DollarSign, FileText, Info, ListChecks, MessageSquare, Printer, User as UserIcon, Wrench, Package, CreditCard, Pencil, CheckCircle, Clock, ShieldCheck, FileSignature, History, MessageCircle } from "lucide-react";
+import { AlertCircle, CalendarDays, DollarSign, FileText, Info, ListChecks, MessageSquare, Printer, User as UserIcon, Wrench, Package, CreditCard, Pencil, CheckCircle, Clock, ShieldCheck, FileSignature, History, MessageCircle, Briefcase } from "lucide-react";
 import { LoadingSpinner } from "../shared/LoadingSpinner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
@@ -29,9 +29,10 @@ const validOrderStatusOptions = ORDER_STATUSES.filter(status => status !== "") a
 interface OrderDetailClientProps {
   order: Order;
   branch: Branch | null;
+  technicians: User[];
 }
 
-export function OrderDetailClient({ order: initialOrder, branch }: OrderDetailClientProps) {
+export function OrderDetailClient({ order: initialOrder, branch, technicians }: OrderDetailClientProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [isTransitioning, startTransition] = useTransition();
@@ -40,6 +41,7 @@ export function OrderDetailClient({ order: initialOrder, branch }: OrderDetailCl
   const [newComment, setNewComment] = useState("");
   const [newStatus, setNewStatus] = useState<OrderStatus>(order?.status);
   const [newImei, setNewImei] = useState(order?.deviceIMEI || "");
+  const [selectedTechnician, setSelectedTechnician] = useState<string>("");
 
   const handleStatusChange = async () => {
     if (!user || !newStatus || newStatus === order.status) return;
@@ -51,6 +53,20 @@ export function OrderDetailClient({ order: initialOrder, branch }: OrderDetailCl
       } else {
         toast({ variant: "destructive", title: "Error", description: result.message });
       }
+    });
+  };
+  
+  const handleAssignTechnician = async () => {
+    if (!user || !selectedTechnician) return;
+    startTransition(async () => {
+        const result = await assignTechnicianToOrder(order.id, selectedTechnician, user.name);
+        if (result.success && result.order) {
+            setOrder(result.order);
+            setSelectedTechnician(""); // Reset selection
+            toast({ title: "Éxito", description: "Técnico asignado exitosamente." });
+        } else {
+            toast({ variant: "destructive", title: "Error", description: result.message });
+        }
     });
   };
 
@@ -347,24 +363,30 @@ export function OrderDetailClient({ order: initialOrder, branch }: OrderDetailCl
                 </CardContent>
             </Card>
 
-            <Card>
-                <CardHeader><CardTitle className="flex items-center gap-2"><FileSignature/>Confirmaciones Legales</CardTitle></CardHeader>
-                <CardContent className="space-y-4">
-                    <div className="flex items-center space-x-2">
-                        <Checkbox id="intakeSigned" checked={order.intakeFormSigned} onCheckedChange={(checked) => handleConfirmationChange('intake', !!checked)} disabled={isTransitioning}/>
-                        <label htmlFor="intakeSigned" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                        Comprobante de Ingreso firmado en físico
-                        </label>
-                    </div>
-                     <div className="flex items-center space-x-2">
-                        <Checkbox id="pickupSigned" checked={order.pickupFormSigned} onCheckedChange={(checked) => handleConfirmationChange('pickup', !!checked)} disabled={isTransitioning}/>
-                        <label htmlFor="pickupSigned" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                        Comprobante de Retiro firmado en físico
-                        </label>
+             <Card>
+                <CardHeader><CardTitle className="flex items-center gap-2"><Briefcase/>Asignar Técnico</CardTitle></CardHeader>
+                <CardContent>
+                    <p className="text-sm text-muted-foreground mb-2">
+                        Técnico Actual: <span className="font-semibold">{order.assignedTechnicianName || 'Sin Asignar'}</span>
+                    </p>
+                    <div className="flex flex-col sm:flex-row gap-4 items-end">
+                        <div className="flex-grow">
+                            <label htmlFor="techSelect" className="text-sm font-medium">Asignar a</label>
+                            <Select value={selectedTechnician} onValueChange={setSelectedTechnician}>
+                            <SelectTrigger id="techSelect"><SelectValue placeholder="Seleccionar técnico..." /></SelectTrigger>
+                            <SelectContent>
+                                {technicians.map(t => <SelectItem key={t.uid} value={t.uid}>{t.name}</SelectItem>)}
+                            </SelectContent>
+                            </Select>
+                        </div>
+                        <Button onClick={handleAssignTechnician} disabled={isTransitioning || !selectedTechnician || selectedTechnician === order.assignedTechnicianId}>
+                            {isTransitioning && <LoadingSpinner size={16} className="mr-2"/>}
+                            Asignar
+                        </Button>
                     </div>
                 </CardContent>
             </Card>
-
+            
              <Card>
                 <CardHeader><CardTitle className="flex items-center gap-2"><Wrench/>Actualizar IMEI/Serie</CardTitle></CardHeader>
                 <CardContent className="flex flex-col sm:flex-row gap-4 items-end">
@@ -427,6 +449,24 @@ export function OrderDetailClient({ order: initialOrder, branch }: OrderDetailCl
                 </CardContent>
             </Card>
       </div>
+
+       <Card>
+        <CardHeader><CardTitle className="flex items-center gap-2"><FileSignature/>Confirmaciones Legales</CardTitle></CardHeader>
+        <CardContent className="space-y-4">
+            <div className="flex items-center space-x-2">
+                <Checkbox id="intakeSigned" checked={order.intakeFormSigned} onCheckedChange={(checked) => handleConfirmationChange('intake', !!checked)} disabled={isTransitioning}/>
+                <label htmlFor="intakeSigned" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                Comprobante de Ingreso firmado en físico
+                </label>
+            </div>
+             <div className="flex items-center space-x-2">
+                <Checkbox id="pickupSigned" checked={order.pickupFormSigned} onCheckedChange={(checked) => handleConfirmationChange('pickup', !!checked)} disabled={isTransitioning}/>
+                <label htmlFor="pickupSigned" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                Comprobante de Retiro firmado en físico
+                </label>
+            </div>
+        </CardContent>
+    </Card>
 
     </div>
   );

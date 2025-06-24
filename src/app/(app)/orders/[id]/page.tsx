@@ -11,7 +11,8 @@ import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import { OrderForm } from "@/components/orders/OrderForm";
 import { Card, CardContent } from "@/components/ui/card";
 import { getBranchById } from "@/lib/actions/branch.actions";
-import type { Branch } from "@/types";
+import type { Branch, User } from "@/types";
+import { getTechnicians } from "@/lib/actions/user.actions";
 
 export const revalidate = 0; // Revalidate on every request
 
@@ -32,6 +33,7 @@ export default async function OrderDetailPage({
   }
   
   const branch = await getBranchById(order.branchId);
+  const technicians: User[] = await getTechnicians();
 
   return (
     <div className="space-y-6">
@@ -62,7 +64,7 @@ export default async function OrderDetailPage({
             </CardContent>
           </Card>
         ) : (
-          <OrderDetailClient order={order} branch={branch as Branch | null} />
+          <OrderDetailClient order={order} branch={branch as Branch | null} technicians={technicians} />
         )}
       </Suspense>
     </div>
