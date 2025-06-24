@@ -2,11 +2,10 @@
 "use server";
 
 import type { User } from "@/types";
-import { LoginSchema, ResetPasswordSchema, RegisterSchema } from "@/lib/schemas";
+import { LoginSchema, ResetPasswordSchema } from "@/lib/schemas";
 import type { z } from "zod";
 import { 
     getUserByEmail, 
-    createUser as createGoriUser,
     verifyUserPassword
 } from "./user.actions";
 
@@ -33,41 +32,12 @@ export async function login(
     return { success: false, message: statusMessage };
   }
 
-  // En un sistema real, GORI's auth service haría la comparación de hash.
   const isPasswordValid = await verifyUserPassword(email, password);
   if (!isPasswordValid) {
     return { success: false, message: "Contraseña incorrecta." };
   }
   
   return { success: true, message: "Inicio de sesión exitoso.", user };
-}
-
-export async function registerUser(
-  values: z.infer<typeof RegisterSchema>
-): Promise<{ success: boolean; message: string; user?: Partial<User> }> {
-  const validatedFields = RegisterSchema.safeParse(values);
-
-  if (!validatedFields.success) {
-    return { success: false, message: "Datos de registro inválidos." };
-  }
-
-  const { email, password, name } = validatedFields.data;
-
-  // Delegar la creación del usuario y la validación de email duplicado al servicio de usuarios de GORI
-  const newUserResult = await createGoriUser({
-    name,
-    email,
-    password, // La función createUser se encarga del hashing conceptual y almacenamiento.
-    role: 'recepcionista', // Rol por defecto para auto-registro.
-    status: "pending",
-  });
-  
-  if (!newUserResult.success) {
-    return newUserResult; // Devuelve el mensaje de error de createUser (ej. "email duplicado")
-  }
-
-  console.log(`New user pending approval: ${email}`);
-  return { success: true, message: "Registro exitoso. Su cuenta está pendiente de aprobación por un administrador." };
 }
 
 export async function resetPassword(
