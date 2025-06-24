@@ -48,19 +48,38 @@ import { useAuth } from "@/providers/AuthProvider";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ThemeToggle } from "@/components/shared/ThemeToggle";
 
-const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/orders", label: "Órdenes", icon: FileText },
-  { href: "/clients", label: "Clientes", icon: Contact },
-  { href: "/inventory/parts", label: "Repuestos", icon: Package },
-  { href: "/inventory/suppliers", label: "Proveedores", icon: Truck },
-  { href: "/ai-guides", label: "Guías IA", icon: Lightbulb },
-  { href: "/reports", label: "Reportes", icon: BarChart },
-  { href: "/finance/income-report", label: "Reporte Ingresos", icon: TrendingUp },
-  { href: "/finance/cashflow", label: "Flujo de Caja", icon: ArrowRightLeft },
-  { href: "/users", label: "Usuarios", icon: Users, adminOnly: true },
-  { href: "/settings", label: "Configuración", icon: Settings },
-  { href: "/settings/branches", label: "Sucursales", icon: Building, adminOnly: true },
+const navSections = [
+    {
+        items: [
+            { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+        ]
+    },
+    {
+        title: "Gestión Principal",
+        items: [
+            { href: "/orders", label: "Órdenes", icon: FileText },
+            { href: "/clients", label: "Clientes", icon: Contact },
+        ]
+    },
+    {
+        title: "Inventario y Finanzas",
+        items: [
+            { href: "/inventory/parts", label: "Repuestos", icon: Package },
+            { href: "/inventory/suppliers", label: "Proveedores", icon: Truck },
+            { href: "/finance/income-report", label: "Reporte Ingresos", icon: TrendingUp },
+            { href: "/finance/cashflow", label: "Flujo de Caja", icon: ArrowRightLeft },
+        ]
+    },
+    {
+        title: "Herramientas y Admin",
+        items: [
+            { href: "/ai-guides", label: "Guías IA", icon: Lightbulb },
+            { href: "/reports", label: "Reportes", icon: BarChart },
+            { href: "/users", label: "Usuarios", icon: Users, adminOnly: true },
+            { href: "/settings", label: "Configuración", icon: Settings },
+            { href: "/settings/branches", label: "Sucursales", icon: Building, adminOnly: true },
+        ]
+    },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -87,31 +106,47 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </SidebarHeader>
         <SidebarContent>
           <SidebarMenu>
-            {navItems
-              .filter(item => !item.adminOnly || (user?.role === 'admin'))
-              .map((item) => {
-                const Icon = item.icon;
-                return (
-                  <SidebarMenuItem key={item.href}>
-                    <Link href={item.href}>
-                      <SidebarMenuButton
-                        asChild={false}
-                        isActive={pathname.startsWith(item.href)}
-                      >
-                         <Icon />
-                        <span>{item.label}</span>
-                      </SidebarMenuButton>
-                    </Link>
-                  </SidebarMenuItem>
-                );
-              })}
+            {navSections
+              .filter(section => !section.adminOnly || (user?.role === 'admin'))
+              .map((section, sectionIndex) => (
+                <React.Fragment key={section.title || `section-${sectionIndex}`}>
+                    {section.title && (
+                        <li className="px-4 my-4">
+                           <span className="flex font-medium text-sm text-muted-foreground uppercase group-data-[collapsible=icon]:hidden">
+                            {section.title}
+                           </span>
+                        </li>
+                    )}
+                    {section.items.filter(item => !item.adminOnly || (user?.role === 'admin')).map((item) => {
+                        const Icon = item.icon;
+                        return (
+                        <SidebarMenuItem key={item.href} className="my-px">
+                            <Link href={item.href}>
+                            <SidebarMenuButton
+                                asChild={false}
+                                isActive={pathname.startsWith(item.href)}
+                                tooltip={{children: item.label}}
+                            >
+                                <Icon />
+                                <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
+                            </SidebarMenuButton>
+                            </Link>
+                        </SidebarMenuItem>
+                        );
+                    })}
+                </React.Fragment>
+            ))}
           </SidebarMenu>
         </SidebarContent>
         <SidebarFooter>
-          <Button variant="ghost" className="w-full justify-start" onClick={handleLogout}>
-            <LogOut className="mr-2 h-4 w-4" />
-            <span className="group-data-[collapsible=icon]:hidden">Cerrar Sesión</span>
-          </Button>
+          <SidebarMenu>
+            <SidebarMenuItem className="my-px">
+                 <SidebarMenuButton onClick={handleLogout} tooltip={{children: "Cerrar Sesión"}}>
+                    <LogOut className="text-red-500" />
+                    <span className="group-data-[collapsible=icon]:hidden text-red-500">Cerrar Sesión</span>
+                </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
         </SidebarFooter>
       </Sidebar>
 
