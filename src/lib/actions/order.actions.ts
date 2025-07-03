@@ -1,284 +1,484 @@
 // src/lib/actions/order.actions.ts
 "use server";
 
-import type { Order, AuditLogEntry, Comment as OrderCommentType, OrderStatus, OrderPartItem, PaymentItem, UserRole, MessageTemplateKey, Branch, User } from "@/types";
+import type { Order, AuditLogEntry, Comment as OrderCommentType, OrderStatus, OrderPartItem, PaymentItem, UserRole, MessageTemplateKey, Branch, User, OrderFormData } from "@/types";
 import { OrderSchema } from "@/lib/schemas";
-import type { z } from "zod";
 import { getClientById } from "./client.actions";
 import { DEFAULT_STORE_SETTINGS } from "../constants";
-import { updatePartStock } from "./part.actions";
-import { getUsersByRole, getUserById, getUsers } from './user.actions';
+import { updatePartStock, getPartById } from "./part.actions";
+import { getUsersByRole, getUserById } from './user.actions';
 import { createNotification } from './notification.actions';
 import { PackageCheck, PackageSearch, Briefcase, MessageCircle } from 'lucide-react';
 import { getBranchById } from "./branch.actions";
 import { getWhatsAppMessage } from "./communication.actions";
 
-let mockOrders: Order[] = [];
-let orderCounter = mockOrders.length;
+import { adminDb } from "@/lib/firebase/admin";
+import { Timestamp, FieldValue } from 'firebase-admin/firestore'; // Asegurar que FieldValue esté importado
 
-function generateOrderNumber(): string {
-  orderCounter += 1;
-  return `ORD${String(orderCounter).padStart(3, '0')}`;
-}
+type OrderFirestoreData = Omit<Order, 'id' | 'auditLog' | 'commentsHistory' | 'paymentHistory' | 'entryDate' | 'createdAt' | 'updatedAt' | 'readyForPickupDate' | 'deliveryDate'> &
+{
+  entryDate: FirebaseFirestore.Timestamp;
+  createdAt: FirebaseFirestore.Timestamp;
+  updatedAt: FirebaseFirestore.Timestamp;
+  readyForPickupDate?: FirebaseFirestore.Timestamp | null;
+  deliveryDate?: FirebaseFirestore.Timestamp | null;
+};
 
-// --- Funciones para Backup y Restauración ---
-export async function getRawOrderData() {
-  return {
-    orders: mockOrders,
-    counter: orderCounter,
+async function addAuditLogToOrderDB(
+  orderRef: FirebaseFirestore.DocumentReference<FirebaseFirestore.DocumentData>,
+  userName: string,
+  description: string,
+  transaction?: FirebaseFirestore.Transaction
+): Promise<void> {
+  const auditLogRef = orderRef.collection('auditLog').doc();
+  const auditEntry: Omit<AuditLogEntry, 'id' | 'timestamp'> & { timestamp: FirebaseFirestore.Timestamp } = {
+    userId: userName,
+    userName,
+    description,
+    timestamp: Timestamp.now(),
   };
+  if (transaction) {
+    transaction.set(auditLogRef, auditEntry);
+  } else {
+    await auditLogRef.set(auditEntry);
+  }
 }
-
-export async function restoreOrderData(data: { orders: Order[]; counter: number }) {
-  mockOrders = data.orders || [];
-  orderCounter = data.counter || (data.orders?.length ?? 0);
-}
-// --- Fin Funciones para Backup y Restauración ---
-
-
-function createAuditLogEntry(userName: string, description: string): Omit<AuditLogEntry, 'id' | 'userId'> {
-    return {
-        userName,
-        description,
-        timestamp: new Date().toISOString(),
-    };
-}
-
-function addAuditLog(order: Order, userName: string, description: string) {
-    const newLogEntry: AuditLogEntry = {
-        id: `log-${Date.now()}-${Math.random()}`,
-        userId: userName, // Using name for simplicity in mock
-        userName,
-        description,
-        timestamp: new Date().toISOString(),
-    };
-    order.auditLog.push(newLogEntry);
-}
-
 
 export async function createOrder(
-  values: z.infer<typeof OrderSchema>,
+  values: OrderFormData,
   userName: string,
-  branchId: string, // Branch context is now required
+  branchIdFromUserContext: string,
 ): Promise<{ success: boolean; message: string; order?: Order }> {
   const validatedFields = OrderSchema.safeParse(values);
 
   if (!validatedFields.success) {
-    console.error("Validation Errors:", validatedFields.error.flatten().fieldErrors);
+    console.error("Validation Errors for createOrder:", validatedFields.error.flatten().fieldErrors);
     return { success: false, message: "Campos inválidos. Por favor revise el formulario." };
   }
   
   const data = validatedFields.data;
 
-  if (data.branchId !== branchId) {
-      return { success: false, message: "Error de permisos: La sucursal no coincide." };
+  if (data.branchId !== branchIdFromUserContext) {
+      return { success: false, message: "Error de permisos: La sucursal de la orden no coincide con la del usuario." };
   }
 
   const client = await getClientById(data.clientId);
   if (!client) {
-      return { success: false, message: "El cliente seleccionado no es válido." };
+      return { success: false, message: "El cliente seleccionado no es válido o no fue encontrado." };
   }
 
-  const newOrderNumber = generateOrderNumber();
-  const newOrder: Order = {
-    id: newOrderNumber,
-    orderNumber: newOrderNumber,
-    ...data,
-    clientName: client.name,
-    clientLastName: client.lastName,
-    clientPhone: client.phone,
-    branchId: branchId,
-    entryDate: new Date().toISOString(),
-    status: "Recibido",
-    intakeFormSigned: false,
-    pickupFormSigned: false,
-    auditLog: [],
-    commentsHistory: [],
-  };
+  const orderNumber = `ORD-${Date.now()}`;
+  const now = Timestamp.now();
+  const orderRef = adminDb.collection('orders').doc();
 
-  addAuditLog(newOrder, userName, 'Orden creada en el sistema.');
-
-  if (data.partsUsed && data.partsUsed.length > 0) {
-    for (const part of data.partsUsed) {
-      const stockResult = await updatePartStock(part.partId, -part.quantity);
-      if (!stockResult.success) {
-        return { success: false, message: stockResult.message || "Error de stock." };
+  try {
+    await adminDb.runTransaction(async (transaction) => {
+      if (data.partsUsed && data.partsUsed.length > 0) {
+        for (const partUsed of data.partsUsed) {
+          const partRefDb = adminDb.collection('parts').doc(partUsed.partId);
+          const partDoc = await transaction.get(partRefDb);
+          if (!partDoc.exists) {
+            throw new Error(`Repuesto con ID ${partUsed.partId} (${partUsed.partName}) no encontrado.`);
+          }
+          const currentStock = partDoc.data()?.stock || 0;
+          if (currentStock < partUsed.quantity) {
+            throw new Error(`Stock insuficiente para ${partUsed.partName}. Stock actual: ${currentStock}, se necesitan ${partUsed.quantity}.`);
+          }
+          transaction.update(partRefDb, {
+            stock: currentStock - partUsed.quantity,
+            updatedAt: now,
+          });
+        }
       }
-    }
-    addAuditLog(newOrder, userName, `${data.partsUsed.length} repuesto(s) asignado(s) y descontado(s) del stock.`);
-  }
 
-  mockOrders.push(newOrder);
-  return { success: true, message: `Orden ${newOrderNumber} creada exitosamente.`, order: newOrder };
+      const newOrderData: OrderFirestoreData = {
+        branchId: data.branchId,
+        clientId: data.clientId,
+        clientName: client.name,
+        clientLastName: client.lastName,
+        clientPhone: client.phone,
+        assignedTechnicianId: data.assignedTechnicianId || null,
+        assignedTechnicianName: data.assignedTechnicianName || null,
+        deviceBrand: data.deviceBrand,
+        deviceModel: data.deviceModel,
+        deviceColor: data.deviceColor || null,
+        deviceIMEI: data.deviceIMEI || null,
+        imeiNotVisible: data.imeiNotVisible,
+        accessories: data.accessories || null,
+        declaredFault: data.declaredFault,
+        unlockPatternProvided: data.unlockPatternProvided,
+        checklist: data.checklist,
+        damageRisk: data.damageRisk || null,
+        costSparePart: data.costSparePart,
+        costLabor: data.costLabor,
+        observations: data.observations || null,
+        partsUsed: data.partsUsed || [],
+        estimatedCompletionTime: data.estimatedCompletionTime || null,
+        status: "Recibido",
+        classification: data.classification || null,
+        intakeFormSigned: false,
+        pickupFormSigned: false,
+        orderNumber: orderNumber,
+        entryDate: now,
+        createdAt: now,
+        updatedAt: now,
+        readyForPickupDate: null,
+        deliveryDate: null,
+      };
+      transaction.set(orderRef, newOrderData);
+      await addAuditLogToOrderDB(orderRef, userName, 'Orden creada en el sistema.', transaction);
+      if (data.partsUsed && data.partsUsed.length > 0) {
+        await addAuditLogToOrderDB(orderRef, userName, `${data.partsUsed.length} repuesto(s) asignado(s) y descontado(s) del stock.`, transaction);
+      }
+    });
+
+    const createdOrderDoc = await orderRef.get();
+    const orderToReturn = mapFirestoreDocToOrder(createdOrderDoc);
+    if (!orderToReturn) {
+        throw new Error("No se pudo mapear la orden creada.");
+    }
+
+    return { success: true, message: `Orden ${orderNumber} creada exitosamente.`, order: orderToReturn };
+
+  } catch (error: any) {
+    console.error("Error al crear la orden:", error);
+    return { success: false, message: error.message || "Ocurrió un error al crear la orden." };
+  }
 }
 
-export async function getOrders(filters?: { client?: string, orderNumber?: string, imei?: string, status?: string }): Promise<Order[]> {
-  await new Promise(resolve => setTimeout(resolve, 500));
-  
-  let filteredOrders = mockOrders;
+function mapFirestoreDocToOrder(doc: FirebaseFirestore.DocumentSnapshot): Order | null {
+    if (!doc.exists) return null;
+    const data = doc.data() as any;
 
-  if (filters) {
-    if (filters.client) {
-      const clientLower = filters.client.toLowerCase();
-      filteredOrders = filteredOrders.filter(o => 
-          (o.clientName?.toLowerCase().includes(clientLower)) ||
-          (o.clientLastName?.toLowerCase().includes(clientLower)) ||
-          (o.clientId?.toLowerCase().includes(clientLower))
-      );
-    }
-    if (filters.orderNumber) {
-      filteredOrders = filteredOrders.filter(o => o.orderNumber.toLowerCase().includes(filters.orderNumber!.toLowerCase()));
-    }
-    if (filters.imei) {
-      filteredOrders = filteredOrders.filter(o => o.deviceIMEI && o.deviceIMEI.includes(filters.imei!));
-    }
-    if (filters.status) {
-      filteredOrders = filteredOrders.filter(o => o.status === filters.status);
-    }
-  }
+    const partsUsed = data.partsUsed ? data.partsUsed.map((p: OrderPartItem) => ({...p})) : [];
+    const checklist = data.checklist ? {...data.checklist} : {};
 
-  return filteredOrders.sort((a, b) => new Date(b.entryDate as string).getTime() - new Date(a.entryDate as string).getTime());
+    return {
+        id: doc.id,
+        orderNumber: data.orderNumber,
+        branchId: data.branchId,
+        clientId: data.clientId,
+        clientName: data.clientName,
+        clientLastName: data.clientLastName,
+        clientPhone: data.clientPhone,
+        deviceBrand: data.deviceBrand,
+        deviceModel: data.deviceModel,
+        deviceColor: data.deviceColor,
+        accessories: data.accessories,
+        deviceIMEI: data.deviceIMEI,
+        imeiNotVisible: data.imeiNotVisible,
+        declaredFault: data.declaredFault,
+        unlockPatternProvided: data.unlockPatternProvided,
+        checklist: checklist,
+        damageRisk: data.damageRisk,
+        costSparePart: data.costSparePart,
+        costLabor: data.costLabor,
+        observations: data.observations,
+        status: data.status,
+        classification: data.classification,
+        entryDate: data.entryDate instanceof Timestamp ? data.entryDate.toDate().toISOString() : data.entryDate,
+        estimatedCompletionTime: data.estimatedCompletionTime,
+        readyForPickupDate: data.readyForPickupDate instanceof Timestamp ? data.readyForPickupDate.toDate().toISOString() : (data.readyForPickupDate === null ? undefined : data.readyForPickupDate),
+        deliveryDate: data.deliveryDate instanceof Timestamp ? data.deliveryDate.toDate().toISOString() : (data.deliveryDate === null ? undefined : data.deliveryDate),
+        commentsHistory: [],
+        auditLog: [],
+        intakeFormSigned: data.intakeFormSigned,
+        pickupFormSigned: data.pickupFormSigned,
+        assignedTechnicianId: data.assignedTechnicianId,
+        assignedTechnicianName: data.assignedTechnicianName,
+        partsUsed: partsUsed,
+        paymentHistory: data.paymentHistory || [],
+        createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate().toISOString() : data.createdAt,
+        updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toDate().toISOString() : data.updatedAt,
+    };
 }
 
 export async function getOrderById(id: string): Promise<Order | null> {
-  await new Promise(resolve => setTimeout(resolve, 300));
-  const order = mockOrders.find(o => o.id === id);
-  if (!order) return null;
-
-  const client = await getClientById(order.clientId);
-  return {
-    ...order,
-    clientName: client?.name || 'N/D',
-    clientLastName: client?.lastName || '',
-    clientPhone: client?.phone || '',
-  };
+  if (!id) {
+    console.log("getOrderById: orderId is undefined or empty.");
+    return null;
+  }
+  try {
+    const orderRef = adminDb.collection('orders').doc(id);
+    const docSnap = await orderRef.get();
+    return mapFirestoreDocToOrder(docSnap);
+  } catch (error) {
+    console.error(`Error al obtener orden por ID ${id}:`, error);
+    return null;
+  }
 }
 
+export async function getOrders(filters?: {
+  branchId?: string;
+  client?: string;
+  orderNumber?: string;
+  imei?: string;
+  status?: string;
+  limitCount?: number;
+  startAfterDocId?: string;
+}): Promise<Order[]> {
+  try {
+    let query: admin.firestore.Query = adminDb.collection('orders');
+
+    if (filters?.branchId) {
+      query = query.where('branchId', '==', filters.branchId);
+    }
+
+    if (filters?.status) {
+      query = query.where('status', '==', filters.status);
+    }
+
+    if (filters?.orderNumber) {
+      query = query.where('orderNumber', '>=', filters.orderNumber)
+                   .where('orderNumber', '<=', filters.orderNumber + '\uf8ff');
+    }
+
+    if (filters?.imei) {
+      query = query.where('deviceIMEI', '==', filters.imei);
+    }
+
+    if (filters?.client) {
+      const clientSearch = filters.client;
+      query = query.where('clientName', '>=', clientSearch)
+                   .where('clientName', '<=', clientSearch + '\uf8ff');
+    }
+
+    query = query.orderBy('entryDate', 'desc');
+
+    if (filters?.startAfterDocId) {
+      const startAfterDoc = await adminDb.collection('orders').doc(filters.startAfterDocId).get();
+      if (startAfterDoc.exists) {
+        query = query.startAfter(startAfterDoc);
+      }
+    }
+
+    query = query.limit(filters?.limitCount || 10);
+
+    const snapshot = await query.get();
+    if (snapshot.empty) {
+      return [];
+    }
+
+    return snapshot.docs.map(doc => mapFirestoreDocToOrder(doc)).filter(Boolean) as Order[];
+  } catch (error) {
+    console.error("Error al obtener órdenes:", error);
+    return [];
+  }
+}
 
 export async function updateOrder(
   orderId: string,
-  values: z.infer<typeof OrderSchema>,
+  values: OrderFormData,
   userName: string
 ): Promise<{ success: boolean; message: string; order?: Order }> {
   const validatedFields = OrderSchema.safeParse(values);
   if (!validatedFields.success) {
-    console.log("Validation Errors:", validatedFields.error.flatten().fieldErrors);
-    return { success: false, message: "Datos inválidos para actualizar." };
+    console.error("Validation Errors for updateOrder:", validatedFields.error.flatten().fieldErrors);
+    return { success: false, message: "Datos inválidos para actualizar la orden." };
   }
 
-  const orderIndex = mockOrders.findIndex(o => o.id === orderId);
-  if (orderIndex === -1) {
-    return { success: false, message: "Orden no encontrada." };
-  }
-  
-  const originalOrder = mockOrders[orderIndex];
   const data = validatedFields.data;
-  
-  let clientName = originalOrder.clientName;
-  let clientLastName = originalOrder.clientLastName;
-  let clientPhone = originalOrder.clientPhone;
+  const orderRef = adminDb.collection('orders').doc(orderId);
+  const now = Timestamp.now();
 
+  try {
+    await adminDb.runTransaction(async (transaction) => {
+      const orderDoc = await transaction.get(orderRef);
+      if (!orderDoc.exists) {
+        throw new Error("Orden no encontrada.");
+      }
+      const originalOrderData = orderDoc.data() as OrderFirestoreData;
 
-  if (data.clientId && data.clientId !== originalOrder.clientId) {
-    const client = await getClientById(data.clientId);
-    if (!client) {
-        return { success: false, message: "El nuevo cliente seleccionado no es válido." };
-    }
-    clientName = client.name;
-    clientLastName = client.lastName;
-    clientPhone = client.phone;
-    addAuditLog(originalOrder, userName, `Cliente cambiado a: ${client.name} ${client.lastName}.`);
-  }
-  
-  const originalParts = originalOrder.partsUsed || [];
-  const newParts = data.partsUsed || [];
+      let clientName = originalOrderData.clientName;
+      let clientLastName = originalOrderData.clientLastName;
+      let clientPhone = originalOrderData.clientPhone;
+      let auditLogDescription = "Orden actualizada.";
 
-  const stockAdjustments = new Map<string, number>();
-
-  originalParts.forEach(part => {
-      stockAdjustments.set(part.partId, (stockAdjustments.get(part.partId) || 0) + part.quantity);
-  });
-
-  newParts.forEach(part => {
-      stockAdjustments.set(part.partId, (stockAdjustments.get(part.partId) || 0) - part.quantity);
-  });
-
-  for (const [partId, quantityDelta] of stockAdjustments.entries()) {
-    if (quantityDelta !== 0) {
-        const stockResult = await updatePartStock(partId, -quantityDelta);
-        if (!stockResult.success) {
-            return { success: false, message: `Error de stock al actualizar: ${stockResult.message}` };
+      if (data.clientId && data.clientId !== originalOrderData.clientId) {
+        const client = await getClientById(data.clientId);
+        if (!client) {
+          throw new Error("El nuevo cliente seleccionado no es válido o no fue encontrado.");
         }
+        clientName = client.name;
+        clientLastName = client.lastName;
+        clientPhone = client.phone;
+        await addAuditLogToOrderDB(orderRef, userName, `Cliente cambiado de ${originalOrderData.clientName} ${originalOrderData.clientLastName} a ${clientName} ${clientLastName}.`, transaction);
+        auditLogDescription += " Cliente actualizado.";
+      }
+
+      const originalParts = originalOrderData.partsUsed || [];
+      const newParts = data.partsUsed || [];
+      const stockAdjustments = new Map<string, { change: number, name: string }>();
+
+      originalParts.forEach(p => {
+        stockAdjustments.set(p.partId, {
+          change: (stockAdjustments.get(p.partId)?.change || 0) + p.quantity,
+          name: p.partName
+        });
+      });
+
+      newParts.forEach(p => {
+        stockAdjustments.set(p.partId, {
+          change: (stockAdjustments.get(p.partId)?.change || 0) - p.quantity,
+          name: p.partName
+        });
+      });
+
+      let partsChangedDescription = "";
+      for (const [partId, { change, name }] of stockAdjustments.entries()) {
+        if (change !== 0) {
+          const partRefDb = adminDb.collection('parts').doc(partId);
+          const partDoc = await transaction.get(partRefDb);
+          if (!partDoc.exists) {
+            throw new Error(`Repuesto con ID ${partId} (${name}) no encontrado durante la actualización de la orden.`);
+          }
+          const currentStock = partDoc.data()?.stock || 0;
+          const newStock = currentStock + change;
+
+          if (newStock < 0) {
+            throw new Error(`Stock insuficiente para ${name}. Stock actual: ${currentStock}, se necesitan ${Math.abs(change)}.`);
+          }
+          transaction.update(partRefDb, { stock: newStock, updatedAt: now });
+          partsChangedDescription += ` Repuesto ${name} (${change > 0 ? '+' : ''}${change} unidades).`;
+        }
+      }
+      if (partsChangedDescription) {
+        await addAuditLogToOrderDB(orderRef, userName, `Ajuste de repuestos:${partsChangedDescription}`, transaction);
+        auditLogDescription += " Repuestos actualizados.";
+      }
+
+      const updatedOrderFields: Partial<OrderFirestoreData> = {
+        ...data,
+        clientName,
+        clientLastName,
+        clientPhone,
+        updatedAt: now,
+        assignedTechnicianId: data.assignedTechnicianId || null,
+        assignedTechnicianName: data.assignedTechnicianName || null,
+        deviceColor: data.deviceColor || null,
+        deviceIMEI: data.deviceIMEI || null,
+        accessories: data.accessories || null,
+        damageRisk: data.damageRisk || null,
+        observations: data.observations || null,
+        estimatedCompletionTime: data.estimatedCompletionTime || null,
+        classification: data.classification || null,
+      };
+
+      transaction.update(orderRef, updatedOrderFields);
+      await addAuditLogToOrderDB(orderRef, userName, auditLogDescription, transaction);
+    });
+
+    const updatedDoc = await orderRef.get();
+    const orderToReturn = mapFirestoreDocToOrder(updatedDoc);
+     if (!orderToReturn) {
+        throw new Error("No se pudo mapear la orden actualizada.");
     }
+
+    return { success: true, message: "Orden actualizada exitosamente.", order: orderToReturn };
+
+  } catch (error: any) {
+    console.error(`Error al actualizar la orden ${orderId}:`, error);
+    return { success: false, message: error.message || "Ocurrió un error al actualizar la orden." };
   }
-
-  mockOrders[orderIndex] = {
-    ...originalOrder,
-    ...data,
-    clientName,
-    clientLastName,
-    clientPhone,
-  };
-  
-  addAuditLog(mockOrders[orderIndex], userName, 'Datos de la orden y repuestos actualizados.');
-
-  return { success: true, message: "Orden actualizada.", order: mockOrders[orderIndex] };
 }
-
-// Helper to notify all users of a certain role
-async function notifyRole(role: UserRole, message: string, link: string, icon: any) {
-    const usersToNotify = await getUsersByRole(role);
-    for (const user of usersToNotify) {
-        await createNotification({ userId: user.uid, message, link, icon });
-    }
-}
-
 
 export async function updateOrderStatus(
   orderId: string,
   status: OrderStatus,
   userName: string
 ): Promise<{ success: boolean; message: string; order?: Order }> {
-  const orderIndex = mockOrders.findIndex(o => o.id === orderId);
-  if (orderIndex === -1) {
-    return { success: false, message: "Orden no encontrada." };
+  if (!orderId) {
+    return { success: false, message: "ID de orden no proporcionado." };
   }
+  const orderRef = adminDb.collection('orders').doc(orderId);
+  const now = Timestamp.now();
+  let auditDescription = "";
 
-  const order = mockOrders[orderIndex];
-  const oldStatus = order.status;
-  order.status = status;
-  addAuditLog(order, userName, `Estado cambiado de "${oldStatus}" a "${status}".`);
+  try {
+    const orderDoc = await orderRef.get();
+    if (!orderDoc.exists) {
+      return { success: false, message: "Orden no encontrada." };
+    }
+    const orderData = orderDoc.data();
+    const oldStatus = orderData?.status;
+    auditDescription = `Estado cambiado de "${oldStatus}" a "${status}".`;
 
-  // --- Notification Logic ---
-  const notificationLink = `/orders/${order.id}`;
-  
-  switch(status) {
-    case "Listo para Entrega":
-      order.readyForPickupDate = new Date().toISOString();
-      await notifyRole(
-        'recepcionista', 
-        `Orden ${order.orderNumber} (${order.deviceModel}) lista para entregar.`, 
-        notificationLink,
-        PackageCheck
-      );
-      break;
+    const updateData: { status: OrderStatus; updatedAt: FirebaseFirestore.Timestamp; readyForPickupDate?: FirebaseFirestore.Timestamp | null; deliveryDate?: FirebaseFirestore.Timestamp | null } = {
+      status: status,
+      updatedAt: now,
+    };
+
+    if (status === "Listo para Entrega") {
+      updateData.readyForPickupDate = now;
+      auditDescription += " Marcada como lista para entrega.";
+      if (orderData) await notifyRole('recepcionista', `Orden ${orderData.orderNumber} (${orderData.deviceModel}) lista para entregar.`, `/orders/${orderId}`, PackageCheck);
+    } else if (status === "Entregado") {
+      updateData.deliveryDate = now;
+      auditDescription += " Marcada como entregada.";
+    } else if (status === "En Espera de Repuestos") {
+      if (orderData) await notifyRole('admin', `Orden ${orderData.orderNumber} (${orderData.deviceModel}) necesita repuestos.`, `/orders/${orderId}`, PackageSearch);
+    }
+
+    await orderRef.update(updateData);
+    await addAuditLogToOrderDB(orderRef, userName, auditDescription);
     
-    case "Entregado":
-      order.deliveryDate = new Date().toISOString();
-      break;
+    const updatedOrderDoc = await orderRef.get();
+    const orderToReturn = mapFirestoreDocToOrder(updatedOrderDoc);
 
-    case "En Espera de Repuestos":
-      await notifyRole(
-        'admin', 
-        `Orden ${order.orderNumber} (${order.deviceModel}) necesita repuestos.`, 
-        notificationLink,
-        PackageSearch
-      );
-      break;
+    return { success: true, message: "Estado de la orden actualizado.", order: orderToReturn ?? undefined };
+  } catch (error: any) {
+    console.error(`Error al actualizar estado de la orden ${orderId}:`, error);
+    return { success: false, message: error.message || "Error al actualizar estado." };
   }
-  // --- End Notification Logic ---
+}
 
-  return { success: true, message: "Estado de la orden actualizado.", order: order };
+export async function addOrderComment(
+  orderId: string,
+  commentText: string,
+  userName: string
+): Promise<{ success: boolean; message: string; comment?: OrderCommentType; order?: Order }> {
+  if (!orderId) {
+    return { success: false, message: "ID de orden no proporcionado." };
+  }
+  if (!commentText.trim()) {
+    return { success: false, message: "El comentario no puede estar vacío." };
+  }
+
+  const orderRef = adminDb.collection('orders').doc(orderId);
+  const commentRef = orderRef.collection('commentsHistory').doc();
+  const now = Timestamp.now();
+
+  try {
+    const orderDoc = await orderRef.get();
+    if (!orderDoc.exists) {
+      return { success: false, message: "Orden no encontrada." };
+    }
+
+    const newCommentData: Omit<OrderCommentType, 'id' | 'timestamp'> & { timestamp: FirebaseFirestore.Timestamp } = {
+      description: commentText.trim(),
+      userId: userName,
+      userName: userName,
+      timestamp: now,
+    };
+
+    await commentRef.set(newCommentData);
+    await orderRef.update({ updatedAt: now });
+    await addAuditLogToOrderDB(orderRef, userName, `Comentario agregado: "${commentText.substring(0, 50)}..."`);
+
+    const updatedOrderDoc = await orderRef.get();
+    const orderToReturn = mapFirestoreDocToOrder(updatedOrderDoc);
+
+    const createdComment : OrderCommentType = {
+        id: commentRef.id,
+        ...newCommentData,
+        timestamp: newCommentData.timestamp.toDate().toISOString(),
+    };
+
+    return { success: true, message: "Comentario agregado.", comment: createdComment, order: orderToReturn ?? undefined };
+  } catch (error: any) {
+    console.error(`Error al agregar comentario a la orden ${orderId}:`, error);
+    return { success: false, message: error.message || "Error al agregar comentario." };
+  }
 }
 
 export async function updateOrderConfirmations(
@@ -287,21 +487,38 @@ export async function updateOrderConfirmations(
   isChecked: boolean,
   userName: string
 ): Promise<{ success: boolean; message: string; order?: Order }> {
-    const orderIndex = mockOrders.findIndex(o => o.id === orderId);
-    if (orderIndex === -1) {
-        return { success: false, message: "Orden no encontrada." };
+  if (!orderId) {
+    return { success: false, message: "ID de orden no proporcionado." };
+  }
+  const orderRef = adminDb.collection('orders').doc(orderId);
+  const now = Timestamp.now();
+
+  const fieldToUpdate = confirmationType === 'intake' ? 'intakeFormSigned' : 'pickupFormSigned';
+  const formName = confirmationType === 'intake' ? 'Ingreso' : 'Retiro';
+  const actionText = isChecked ? 'marcó como firmado' : 'desmarcó como no firmado';
+  const auditDescription = `Usuario ${actionText} el comprobante de ${formName}.`;
+
+  try {
+    const orderDoc = await orderRef.get();
+    if (!orderDoc.exists) {
+      return { success: false, message: "Orden no encontrada." };
     }
 
-    const fieldToUpdate = confirmationType === 'intake' ? 'intakeFormSigned' : 'pickupFormSigned';
-    const formName = confirmationType === 'intake' ? 'Ingreso' : 'Retiro';
-    const actionText = isChecked ? 'marcó como firmado' : 'desmarcó como firmado';
-    const logMessage = `Usuario ${actionText} el comprobante de ${formName}.`;
-        
-    const order = mockOrders[orderIndex];
-    order[fieldToUpdate] = isChecked;
-    addAuditLog(order, userName, logMessage);
+    await orderRef.update({
+      [fieldToUpdate]: isChecked,
+      updatedAt: now,
+    });
 
-    return { success: true, message: "Confirmación actualizada.", order: order };
+    await addAuditLogToOrderDB(orderRef, userName, auditDescription);
+
+    const updatedOrderDoc = await orderRef.get();
+    const orderToReturn = mapFirestoreDocToOrder(updatedOrderDoc);
+
+    return { success: true, message: "Confirmación actualizada.", order: orderToReturn ?? undefined };
+  } catch (error: any) {
+    console.error(`Error al actualizar confirmación para orden ${orderId}:`, error);
+    return { success: false, message: error.message || "Error al actualizar confirmación." };
+  }
 }
 
 export async function updateOrderImei(
@@ -309,70 +526,62 @@ export async function updateOrderImei(
     imei: string,
     userName: string
 ): Promise<{ success: boolean; message: string; order?: Order }> {
-    const orderIndex = mockOrders.findIndex(o => o.id === orderId);
-    if (orderIndex === -1) {
-        return { success: false, message: "Orden no encontrada." };
-    }
-    const order = mockOrders[orderIndex];
-    const oldImei = order.deviceIMEI || "N/A";
-    order.deviceIMEI = imei;
-    order.imeiNotVisible = false; // It's visible now
-    addAuditLog(order, userName, `IMEI/Serie actualizado de "${oldImei}" a "${imei}".`);
-    return { success: true, message: "IMEI actualizado.", order: order };
-}
-
-
-export async function addOrderComment(
-  orderId: string,
-  commentText: string,
-  userName: string
-): Promise<{ success: boolean; message: string; comment?: OrderCommentType; order?: Order }> {
-  const orderIndex = mockOrders.findIndex(o => o.id === orderId);
-  if (orderIndex === -1) {
-    return { success: false, message: "Orden no encontrada." };
+  if (!orderId) {
+    return { success: false, message: "ID de orden no proporcionado." };
   }
-  const order = mockOrders[orderIndex];
-  const commentId = `cmt-${Date.now()}`;
-  const newComment: OrderCommentType = {
-    id: commentId,
-    description: commentText,
-    timestamp: new Date().toISOString(),
-    userId: userName, // Use name for simplicity in mock
-    userName: userName,
-  };
+  if (!imei || imei.trim() === "") {
+    return { success: false, message: "IMEI/Serie no puede estar vacío."};
+  }
 
-  order.commentsHistory.push(newComment);
-  addAuditLog(order, userName, `Comentario agregado: "${commentText.substring(0, 30)}..."`);
+  const orderRef = adminDb.collection('orders').doc(orderId);
+  const now = Timestamp.now();
 
-  return { success: true, message: "Comentario agregado.", comment: newComment, order: order };
-}
+  try {
+    const orderDoc = await orderRef.get();
+    if (!orderDoc.exists) {
+      return { success: false, message: "Orden no encontrada." };
+    }
+    const oldImei = orderDoc.data()?.deviceIMEI || "N/A";
+    const auditDescription = `IMEI/Serie actualizado de "${oldImei}" a "${imei}".`;
 
-export async function addPartToOrder(orderId: string, part: OrderPartItem): Promise<{ success: boolean; message: string }> {
-    console.log(`Simulating adding part ${part.partId} to order ${orderId}`);
-    // In a real app, find the order and push the part to its partsUsed array.
-    return { success: true, message: "Parte agregada (simulado)." };
-}
+    await orderRef.update({
+      deviceIMEI: imei.trim(),
+      imeiNotVisible: false,
+      updatedAt: now,
+    });
 
-export async function recordPaymentForOrder(orderId: string, payment: PaymentItem): Promise<{ success: boolean; message: string }> {
-    console.log(`Simulating recording payment of ${payment.amount} for order ${orderId}`);
-    // In a real app, find the order and push the payment to its paymentHistory array.
-    return { success: true, message: "Pago registrado (simulado)." };
+    await addAuditLogToOrderDB(orderRef, userName, auditDescription);
+
+    const updatedOrderDoc = await orderRef.get();
+    const orderToReturn = mapFirestoreDocToOrder(updatedOrderDoc);
+
+    return { success: true, message: "IMEI/Serie actualizado.", order: orderToReturn ?? undefined };
+  } catch (error: any) {
+    console.error(`Error al actualizar IMEI para orden ${orderId}:`, error);
+    return { success: false, message: error.message || "Error al actualizar IMEI/Serie." };
+  }
 }
 
 export async function logIntakeDocumentPrint(
   orderId: string,
   userName: string
 ): Promise<{ success: boolean; message: string; order?: Order }> {
-  const orderIndex = mockOrders.findIndex(o => o.id === orderId);
-  if (orderIndex === -1) {
-    return { success: false, message: "Orden no encontrada." };
-  }
-  
-  const order = mockOrders[orderIndex];
-  const logDescription = `Documentos de ingreso (Interno y Cliente) impresos.`;
-  addAuditLog(order, userName, logDescription);
+  if (!orderId) return { success: false, message: "ID de orden no proporcionado." };
+  const orderRef = adminDb.collection('orders').doc(orderId);
+  try {
+    const orderDoc = await orderRef.get();
+    if (!orderDoc.exists) {
+      return { success: false, message: "Orden no encontrada." };
+    }
+    await addAuditLogToOrderDB(orderRef, userName, "Documentos de ingreso (Interno y Cliente) impresos.");
+    await orderRef.update({ updatedAt: Timestamp.now() });
 
-  return { success: true, message: "Acción registrada en la bitácora.", order: order };
+    const updatedDoc = await orderRef.get();
+    return { success: true, message: "Acción registrada en bitácora.", order: mapFirestoreDocToOrder(updatedDoc) ?? undefined };
+  } catch (error: any) {
+    console.error(`Error en logIntakeDocumentPrint para orden ${orderId}:`, error);
+    return { success: false, message: error.message || "Error al registrar impresión."};
+  }
 }
 
 export async function logWhatsAppAttempt(
@@ -380,75 +589,160 @@ export async function logWhatsAppAttempt(
   userName: string,
   message: string,
 ): Promise<{ success: boolean, message: string, order?: Order }> {
-  const orderIndex = mockOrders.findIndex(o => o.id === orderId);
-  if (orderIndex === -1) {
-    return { success: false, message: "Orden no encontrada para registrar el envío de WhatsApp." };
-  }
-  const order = mockOrders[orderIndex];
-  const logDescription = `Intento de envío de WhatsApp con mensaje: "${message.substring(0, 50)}..."`;
-  addAuditLog(order, userName, logDescription);
-
-  return { success: true, message: "Intento de envío registrado.", order: order };
-}
-
-export async function generateWhatsAppLink(
-  orderId: string,
-  templateKey: MessageTemplateKey,
-  userName: string,
-): Promise<{ success: boolean, message?: string, url?: string, order?: Order }> {
-    const order = await getOrderById(orderId);
-    const allUsers = await getUsers();
-    const user = allUsers.find(u => u.name === userName);
-
-    if (!order) return { success: false, message: "Orden no encontrada." };
-    if (!user) return { success: false, message: "Usuario no encontrado." };
-
-    const branch = await getBranchById(order.branchId);
-    const message = await getWhatsAppMessage(templateKey, order, branch, user);
-
-    const logResult = await logWhatsAppAttempt(orderId, userName, message);
-    if (!logResult.success) {
-      return { success: false, message: logResult.message };
+   if (!orderId) return { success: false, message: "ID de orden no proporcionado." };
+  const orderRef = adminDb.collection('orders').doc(orderId);
+  try {
+    const orderDoc = await orderRef.get();
+    if (!orderDoc.exists) {
+      return { success: false, message: "Orden no encontrada." };
     }
-    
-    const cleanedPhone = (order.clientPhone || '').replace(/[\s+()-]/g, '');
-    const whatsappUrl = `https://wa.me/${cleanedPhone}?text=${encodeURIComponent(message)}`;
-    
-    return { success: true, url: whatsappUrl, order: logResult.order };
+    await addAuditLogToOrderDB(orderRef, userName, `Intento de envío de WhatsApp: "${message.substring(0,150)}..."`);
+    await orderRef.update({ updatedAt: Timestamp.now() });
+
+    const updatedDoc = await orderRef.get();
+    return { success: true, message: "Intento de envío registrado.", order: mapFirestoreDocToOrder(updatedDoc) ?? undefined };
+  } catch (error: any) {
+    console.error(`Error en logWhatsAppAttempt para orden ${orderId}:`, error);
+    return { success: false, message: error.message || "Error al registrar intento de WhatsApp."};
+  }
 }
 
+async function notifyRole(role: UserRole, message: string, link: string, icon?: any): Promise<void> {
+    try {
+        const usersToNotify = await getUsersByRole(role);
+        if (usersToNotify && usersToNotify.length > 0) {
+            for (const user of usersToNotify) {
+                if (user.status === 'active') {
+                    await createNotification({
+                        userId: user.uid,
+                        message,
+                        link,
+                        icon: icon
+                    });
+                }
+            }
+        }
+    } catch (error) {
+        console.error(`Error en notifyRole para rol ${role}:`, error);
+    }
+}
 
 export async function assignTechnicianToOrder(
   orderId: string,
   technicianId: string,
   assignerName: string
 ): Promise<{ success: boolean; message: string; order?: Order }> {
-  const orderIndex = mockOrders.findIndex(o => o.id === orderId);
-  if (orderIndex === -1) {
-    return { success: false, message: "Orden no encontrada." };
+  if (!orderId || !technicianId) {
+    return { success: false, message: "ID de orden o técnico no proporcionado."};
   }
+  const orderRef = adminDb.collection('orders').doc(orderId);
+  const now = Timestamp.now();
 
-  const technician = await getUserById(technicianId);
-  if (!technician || technician.role !== 'tecnico') {
-      return { success: false, message: "Técnico no válido." };
+  try {
+    const technician = await getUserById(technicianId);
+    if (!technician) {
+        throw new Error("Técnico no encontrado.");
+    }
+    if (technician.role !== 'tecnico') {
+        throw new Error("El usuario seleccionado no es un técnico.");
+    }
+    if (technician.status !== 'active') {
+        throw new Error("El técnico seleccionado no está activo.");
+    }
+    const technicianName = technician.name;
+
+    const orderDoc = await orderRef.get();
+    if(!orderDoc.exists) {
+        throw new Error("Orden no encontrada.");
+    }
+    const orderData = orderDoc.data();
+    const oldTechnicianName = orderData?.assignedTechnicianName || "Nadie";
+
+    await orderRef.update({
+      assignedTechnicianId: technicianId,
+      assignedTechnicianName: technicianName,
+      updatedAt: now,
+    });
+
+    await addAuditLogToOrderDB(orderRef, assignerName, `Técnico reasignado de "${oldTechnicianName}" a "${technicianName}".`);
+
+    if (orderData) {
+        await createNotification({
+            userId: technicianId,
+            message: `Te han asignado la orden ${orderData.orderNumber} (${orderData.deviceModel}).`,
+            link: `/orders/${orderId}`,
+            icon: Briefcase
+        });
+    }
+
+    const updatedOrderDoc = await orderRef.get();
+    return { success: true, message: "Técnico asignado exitosamente.", order: mapFirestoreDocToOrder(updatedOrderDoc) ?? undefined };
+
+  } catch (error: any) {
+    console.error(`Error al asignar técnico a la orden ${orderId}:`, error);
+    return { success: false, message: error.message || "Error al asignar técnico." };
   }
-  
-  const order = mockOrders[orderIndex];
-  const oldTechnicianName = order.assignedTechnicianName || "Nadie";
+}
 
-  order.assignedTechnicianId = technician.uid;
-  order.assignedTechnicianName = technician.name;
-  
-  const logDescription = `Técnico reasignado de "${oldTechnicianName}" a "${technician.name}".`;
-  addAuditLog(order, assignerName, logDescription);
-  
-  // Notify the assigned technician
-  await createNotification({
-    userId: technician.uid,
-    message: `Te han asignado la orden ${order.orderNumber} (${order.deviceModel}).`,
-    link: `/orders/${orderId}`,
-    icon: Briefcase,
-  });
 
-  return { success: true, message: "Técnico asignado exitosamente.", order: order };
+export async function generateWhatsAppLink(
+  orderId: string,
+  templateKey: MessageTemplateKey,
+  userNamePerformingAction: string,
+  userIdPerformingAction: string
+): Promise<{ success: boolean, message?: string, url?: string, order?: Order }> {
+
+    const order = await getOrderById(orderId);
+    if (!order) return { success: false, message: "Orden no encontrada." };
+
+    const userActing = await getUserById(userIdPerformingAction);
+    if (!userActing) return {success: false, message: "Usuario que realiza la acción no encontrado."};
+
+    const branch = await getBranchById(order.branchId);
+    if (!branch) return { success: false, message: `Sucursal con ID ${order.branchId} no encontrada.`};
+
+    const messageText = await getWhatsAppMessage(templateKey, order, branch, userActing);
+
+    await logWhatsAppAttempt(orderId, userNamePerformingAction, messageText);
+    
+    const cleanedPhone = (order.clientPhone || '').replace(/[\s+()-]/g, '');
+    const whatsappUrl = `https://wa.me/${cleanedPhone}?text=${encodeURIComponent(messageText)}`;
+    
+    const currentOrderState = await getOrderById(orderId);
+    return { success: true, url: whatsappUrl, order: currentOrderState ?? undefined };
+}
+
+
+export async function addPartToOrder(orderId: string, part: OrderPartItem): Promise<{ success: boolean; message: string }> {
+    console.warn(`addPartToOrder (${orderId}) es probablemente redundante. La lógica de partes está en updateOrder/createOrder.`);
+    return { success: true, message: "Función no implementada (ver updateOrder)." };
+}
+
+export async function recordPaymentForOrder(orderId: string, payment: PaymentItem, userName: string = "Sistema"): Promise<{ success: boolean; message: string; order?: Order }> {
+    if (!orderId) return { success: false, message: "ID de orden no proporcionado."};
+
+    const orderRef = adminDb.collection('orders').doc(orderId);
+    const now = Timestamp.now();
+    try {
+        const orderDoc = await orderRef.get();
+        if (!orderDoc.exists) {
+            return { success: false, message: "Orden no encontrada." };
+        }
+
+        const paymentWithTimestamp = {
+            ...payment,
+            date: payment.date instanceof Date ? Timestamp.fromDate(payment.date) : (typeof payment.date === 'string' ? Timestamp.fromDate(new Date(payment.date)) : Timestamp.now())
+        };
+        await orderRef.update({
+            paymentHistory: FieldValue.arrayUnion(paymentWithTimestamp),
+            updatedAt: now,
+        });
+        await addAuditLogToOrderDB(orderRef, userName, `Pago registrado: ${payment.method} $${payment.amount.toFixed(2)}`);
+
+        const updatedOrderDoc = await orderRef.get();
+        return { success: true, message: "Pago registrado.", order: mapFirestoreDocToOrder(updatedOrderDoc) ?? undefined };
+    } catch (error: any) {
+        console.error(`Error al registrar pago para orden ${orderId}:`, error);
+        return { success: false, message: error.message || "Error al registrar pago." };
+    }
 }

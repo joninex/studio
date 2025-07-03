@@ -271,3 +271,24 @@ export interface FullBackupData {
   notificationsData: ReturnType<typeof import('@/lib/actions/notification.actions').getRawNotificationData>;
   backupDate: string;
 }
+
+export type ResourceCategory =
+  | "hosting-ci-cd"
+  | "technical-training"
+  | "ui-components-design"
+  | "documentation-pdf"
+  | "online-tools"
+  | "css-templates-generators"
+  | "browser-extensions"
+  | "images-videos-illustrations"
+  | "color-typography-inspiration";
+
+export interface ResourceItem {
+  id: string;
+  name: string;
+  description: string;
+  url: string;
+  category: ResourceCategory;
+  tags?: string[];
+  icon?: import('lucide-react').LucideIcon; // Referencia directa al tipo LucideIcon
+}

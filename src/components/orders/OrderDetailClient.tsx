@@ -1,26 +1,33 @@
 // src/components/orders/OrderDetailClient.tsx
 "use client";
 
-import type { Order, User, Comment as OrderComment, OrderStatus, OrderPartItem, PaymentItem, Branch, Checklist, AuditLogEntry } from "@/types";
-import { useState, useTransition, useRef, useEffect } from "react";
+import type { Order, User, Comment as OrderComment, OrderStatus, Branch, Checklist, AuditLogEntry } from "@/types";
+import { useState, useTransition } from "react";
 import { format, differenceInDays, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
-import Image from "next/image";
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/providers/AuthProvider";
-import { addOrderComment, updateOrderStatus, updateOrderConfirmations, updateOrderImei, logIntakeDocumentPrint, generateWhatsAppLink, assignTechnicianToOrder } from "@/lib/actions/order.actions";
+import {
+    addOrderComment,
+    updateOrderStatus,
+    updateOrderConfirmations,
+    updateOrderImei,
+    logIntakeDocumentPrint,
+    generateWhatsAppLink,
+    assignTechnicianToOrder,
+    // recordPaymentForOrder // Descomentar si se implementa UI para esto
+} from "@/lib/actions/order.actions";
 import { ORDER_STATUSES, CHECKLIST_ITEMS } from "@/lib/constants";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { AlertCircle, CalendarDays, DollarSign, FileText, Info, ListChecks, MessageSquare, Printer, User as UserIcon, Wrench, Package, CreditCard, Pencil, CheckCircle, Clock, ShieldCheck, FileSignature, History, MessageCircle, Briefcase } from "lucide-react";
+import { AlertCircle, Printer, User as UserIcon, Wrench, Package, CheckCircle, Clock, FileSignature, History, MessageCircle, Briefcase, DollarSign } from "lucide-react";
 import { LoadingSpinner } from "../shared/LoadingSpinner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
@@ -33,7 +40,7 @@ interface OrderDetailClientProps {
 }
 
 export function OrderDetailClient({ order: initialOrder, branch, technicians }: OrderDetailClientProps) {
-  const { user } = useAuth();
+  const { user, getIdToken } = useAuth();
   const { toast } = useToast();
   const [isTransitioning, startTransition] = useTransition();
   const [isPrinting, setIsPrinting] = useState(false);
@@ -43,10 +50,31 @@ export function OrderDetailClient({ order: initialOrder, branch, technicians }: 
   const [newImei, setNewImei] = useState(order?.deviceIMEI || "");
   const [selectedTechnician, setSelectedTechnician] = useState<string>("");
 
+  const getToken = async () => {
+    if (!user || !getIdToken) {
+      toast({ variant: "destructive", title: "Error de Autenticación", description: "Usuario no autenticado." });
+      return null;
+    }
+    try {
+      const token = await getIdToken();
+      if (!token) {
+        toast({ variant: "destructive", title: "Error de Autenticación", description: "No se pudo obtener el token. Intente re-iniciar sesión." });
+        return null;
+      }
+      return token;
+    } catch (error) {
+      toast({ variant: "destructive", title: "Error de Autenticación", description: "No se pudo obtener el token de usuario." });
+      return null;
+    }
+  };
+
   const handleStatusChange = async () => {
-    if (!user || !newStatus || newStatus === order.status) return;
+    if (!newStatus || newStatus === order.status) return;
+    const idToken = await getToken();
+    if (!idToken) return;
+
     startTransition(async () => {
-      const result = await updateOrderStatus(order.id, newStatus, user.name);
+      const result = await updateOrderStatus({ idToken, orderId: order.id, status: newStatus });
       if (result.success && result.order) {
         setOrder(result.order);
         toast({ title: "Éxito", description: "Estado de la orden actualizado." });
@@ -57,12 +85,15 @@ export function OrderDetailClient({ order: initialOrder, branch, technicians }: 
   };
   
   const handleAssignTechnician = async () => {
-    if (!user || !selectedTechnician) return;
+    if (!selectedTechnician) return;
+    const idToken = await getToken();
+    if (!idToken) return;
+
     startTransition(async () => {
-        const result = await assignTechnicianToOrder(order.id, selectedTechnician, user.name);
+        const result = await assignTechnicianToOrder({idToken, orderId: order.id, technicianId: selectedTechnician });
         if (result.success && result.order) {
             setOrder(result.order);
-            setSelectedTechnician(""); // Reset selection
+            setSelectedTechnician("");
             toast({ title: "Éxito", description: "Técnico asignado exitosamente." });
         } else {
             toast({ variant: "destructive", title: "Error", description: result.message });
@@ -71,13 +102,16 @@ export function OrderDetailClient({ order: initialOrder, branch, technicians }: 
   };
 
   const handleUpdateImei = async () => {
-    if (!user || !newImei || newImei === order.deviceIMEI) return;
-     if (newImei.length < 14 || newImei.length > 16) {
-        toast({ variant: "destructive", title: "Error", description: "El IMEI/Serie debe tener entre 14 y 16 caracteres."});
+    if (!newImei || newImei === order.deviceIMEI) return;
+     if (newImei.length > 0 && (newImei.length < 14 || newImei.length > 16)) {
+        toast({ variant: "destructive", title: "Error", description: "El IMEI/Serie debe tener entre 14 y 16 caracteres si se ingresa."});
         return;
     }
+    const idToken = await getToken();
+    if (!idToken) return;
+
     startTransition(async () => {
-        const result = await updateOrderImei(order.id, newImei, user.name);
+        const result = await updateOrderImei({idToken, orderId: order.id, imei: newImei });
         if (result.success && result.order) {
             setOrder(result.order);
             toast({ title: "Éxito", description: "IMEI/Serie actualizado."});
@@ -88,9 +122,11 @@ export function OrderDetailClient({ order: initialOrder, branch, technicians }: 
   };
 
   const handleConfirmationChange = async (confirmationType: 'intake' | 'pickup', isChecked: boolean) => {
-    if (!user) return;
+    const idToken = await getToken();
+    if (!idToken) return;
+
     startTransition(async () => {
-        const result = await updateOrderConfirmations(order.id, confirmationType, isChecked, user.name);
+        const result = await updateOrderConfirmations({idToken, orderId: order.id, confirmationType, isChecked });
         if (result.success && result.order) {
             setOrder(result.order);
             toast({ title: "Éxito", description: "Confirmación actualizada."});
@@ -101,9 +137,12 @@ export function OrderDetailClient({ order: initialOrder, branch, technicians }: 
   };
 
   const handleAddComment = async () => {
-    if (!user || !newComment.trim()) return;
+    if (!newComment.trim()) return;
+    const idToken = await getToken();
+    if (!idToken) return;
+
     startTransition(async () => {
-        const result = await addOrderComment(order.id, newComment, user.name);
+        const result = await addOrderComment({idToken, orderId: order.id, commentText: newComment });
         if (result.success && result.order) {
             setOrder(result.order);
             setNewComment("");
@@ -115,38 +154,39 @@ export function OrderDetailClient({ order: initialOrder, branch, technicians }: 
   };
 
   const handlePrint = async () => {
-    if (!user) {
-        toast({ variant: "destructive", title: "Error", description: "Debe iniciar sesión." });
-        return;
-    }
+    const idToken = await getToken();
+    if (!idToken) return;
+
     setIsPrinting(true);
     startTransition(async () => {
         try {
-            const result = await logIntakeDocumentPrint(order.id, user.name);
+            const result = await logIntakeDocumentPrint({idToken, orderId: order.id });
             if (result.success && result.order) {
-              setOrder(result.order); // Update order state with new audit log
+              setOrder(result.order);
               toast({ title: "Acción Registrada", description: "La impresión ha sido registrada." });
-              window.open(`/print/${order.id}`, '_blank');
             } else {
               toast({ variant: "destructive", title: "Error de registro", description: result.message });
-              window.open(`/print/${order.id}`, '_blank'); // Open print view even if logging fails
             }
+            window.open(`/print/${order.id}`, '_blank');
         } catch (error) {
             toast({ variant: "destructive", title: "Error", description: "No se pudo registrar la acción de impresión." });
             console.error("Failed to log document print:", error);
+            window.open(`/print/${order.id}`, '_blank');
         } finally {
             setIsPrinting(false);
         }
     });
   };
   
-  const handleWhatsAppContact = () => {
-      if (!user) {
-        toast({ variant: "destructive", title: "Error", description: "Usuario no autenticado." });
+  const handleWhatsAppContact = async () => {
+      const idToken = await getToken();
+      if (!idToken || !user?.uid) { // user.uid es necesario
+        if(!user?.uid) toast({variant: "destructive", title: "Error", description: "UID de usuario no disponible."})
         return;
       }
+
       startTransition(async () => {
-        const result = await generateWhatsAppLink(order.id, 'INITIAL_CONTACT', user.name);
+        const result = await generateWhatsAppLink({idToken, orderId: order.id, templateKey: 'INITIAL_CONTACT', userIdPerformingAction: user.uid});
         if (result.success && result.url) {
             if (result.order) {
                 setOrder(result.order);
@@ -168,7 +208,7 @@ export function OrderDetailClient({ order: initialOrder, branch, technicians }: 
     );
   }
 
-  const daysSinceReady = order.readyForPickupDate
+  const daysSinceReady = order.readyForPickupDate && order.status !== "Entregado"
     ? differenceInDays(new Date(), parseISO(order.readyForPickupDate as string))
     : null;
 
@@ -178,8 +218,8 @@ export function OrderDetailClient({ order: initialOrder, branch, technicians }: 
     if (value === 'si') return <span className="font-bold text-green-600">SÍ</span>;
     if (value === 'no') return <span className="font-bold text-red-600">NO</span>;
     if (value === 'sc') return <span className="font-bold text-yellow-600">S/C</span>;
-    if (value) return <span className="font-bold">{value}</span>;
-    return 'N/A';
+    if (value && typeof value === 'string' && value.trim() !== "") return <span className="font-bold">{value}</span>;
+    return <span className="text-muted-foreground italic">N/A</span>;
   }
 
   const checklistGroups = CHECKLIST_ITEMS.reduce((acc, item) => {
@@ -201,8 +241,8 @@ export function OrderDetailClient({ order: initialOrder, branch, technicians }: 
                           Enviar WhatsApp
                       </Button>
                     )}
-                    <Button onClick={handlePrint} disabled={isPrinting}>
-                        {isPrinting ? <LoadingSpinner size={16} className="mr-2"/> : <Printer className="mr-2 h-4 w-4" />}
+                    <Button onClick={handlePrint} disabled={isPrinting || isTransitioning}>
+                        {(isPrinting || isTransitioning) ? <LoadingSpinner size={16} className="mr-2"/> : <Printer className="mr-2 h-4 w-4" />}
                         Imprimir Documentos
                     </Button>
                  </div>
@@ -211,7 +251,7 @@ export function OrderDetailClient({ order: initialOrder, branch, technicians }: 
        
         <Card>
             <CardHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-2">
                 <div>
                     <CardTitle className="flex items-center gap-2">
                         <FileText className="h-6 w-6 text-primary" />
@@ -222,7 +262,7 @@ export function OrderDetailClient({ order: initialOrder, branch, technicians }: 
                     </CardDescription>
                 </div>
                 <div className="flex items-center gap-2">
-                    <Badge variant="secondary">{order.status}</Badge>
+                    <Badge variant={order.status === "Entregado" || order.status === "Listo para Entrega" ? "default" : "secondary"}>{order.status}</Badge>
                     {daysSinceReady !== null && daysSinceReady > 7 && (
                     <Badge variant="destructive" className="ml-2">
                         <AlertCircle className="mr-1 h-4 w-4" /> {daysSinceReady} días esperando retiro
@@ -237,7 +277,7 @@ export function OrderDetailClient({ order: initialOrder, branch, technicians }: 
                     <CardHeader><CardTitle className="text-lg flex items-center gap-2"><UserIcon/>Datos del Cliente</CardTitle></CardHeader>
                     <CardContent className="text-sm space-y-1">
                         <p><strong>Nombre:</strong> {order.clientName || 'N/A'} {order.clientLastName || ''}</p>
-                        <p><strong>ID Cliente:</strong> {order.clientId || 'N/A'}</p>
+                        <p><strong>ID Cliente:</strong> <span className="font-mono text-xs">{order.clientId || 'N/A'}</span></p>
                         <p><strong>Teléfono:</strong> {order.clientPhone || 'N/A'}</p>
                     </CardContent>
                 </Card>
@@ -246,7 +286,7 @@ export function OrderDetailClient({ order: initialOrder, branch, technicians }: 
                     <CardContent className="text-sm space-y-1">
                         <p><strong>Marca:</strong> {order.deviceBrand || 'N/A'}</p>
                         <p><strong>Modelo:</strong> {order.deviceModel || 'N/A'}</p>
-                        <p><strong>IMEI/Serial:</strong> {order.deviceIMEI || 'No visible al ingreso'}</p>
+                        <p><strong>IMEI/Serial:</strong> {order.deviceIMEI || (order.imeiNotVisible ? 'No visible al ingreso' : 'N/A')}</p>
                         <p><strong>Falla Declarada:</strong> {order.declaredFault || 'N/A'}</p>
                         <p><strong>Riesgos/Daños:</strong> {order.damageRisk || "Ninguno reportado."}</p>
                     </CardContent>
@@ -311,7 +351,7 @@ export function OrderDetailClient({ order: initialOrder, branch, technicians }: 
                         {Object.entries(checklistGroups).map(([groupName, items]) => (
                             <div key={groupName}>
                             <h4 className="font-semibold text-primary/90">{groupName}</h4>
-                            <ul className="list-disc list-inside columns-2 md:columns-3 text-sm text-muted-foreground">
+                            <ul className="list-disc list-inside columns-1 sm:columns-2 md:columns-3 text-sm text-muted-foreground">
                                 {items.map(item => (
                                     <li key={item.id}>
                                         {item.label}: {getChecklistValueDisplay(order.checklist[item.id as keyof Checklist])}
@@ -359,7 +399,7 @@ export function OrderDetailClient({ order: initialOrder, branch, technicians }: 
                             <Select value={selectedTechnician} onValueChange={setSelectedTechnician}>
                             <SelectTrigger id="techSelect"><SelectValue placeholder="Seleccionar técnico..." /></SelectTrigger>
                             <SelectContent>
-                                {technicians.map(t => <SelectItem key={t.uid} value={t.uid}>{t.name}</SelectItem>)}
+                                {technicians.map(t => <SelectItem key={t.uid} value={t.uid}>{t.name} ({t.email})</SelectItem>)}
                             </SelectContent>
                             </Select>
                         </div>
@@ -390,13 +430,13 @@ export function OrderDetailClient({ order: initialOrder, branch, technicians }: 
             <Card>
                 <CardHeader><CardTitle className="flex items-center gap-2"><MessageSquare/>Comentarios Internos</CardTitle></CardHeader>
                 <CardContent>
-                <div className="space-y-4 mb-4 max-h-48 overflow-y-auto">
-                    {order.commentsHistory && order.commentsHistory.length > 0 ? order.commentsHistory.map((comment, index) => (
-                    <div key={index} className="text-sm p-3 bg-muted rounded-md">
+                <div className="space-y-4 mb-4 max-h-60 overflow-y-auto"> {/* Aumentado max-h */}
+                    {order.commentsHistory && order.commentsHistory.length > 0 ? order.commentsHistory.map((comment) =>
+                    <div key={comment.id} className="text-sm p-3 bg-muted rounded-md">
                         <p className="font-semibold">{comment.userName} <span className="text-xs text-muted-foreground">- {comment.timestamp ? format(parseISO(comment.timestamp as string), "dd MMM yyyy, HH:mm", { locale: es }) : ''}</span></p>
-                        <p>{comment.description}</p>
+                        <p className="whitespace-pre-wrap">{comment.description}</p>
                     </div>
-                    )) : (
+                    ) : (
                         <p className="text-sm text-muted-foreground text-center py-4">No hay comentarios.</p>
                     )}
                 </div>
@@ -438,13 +478,13 @@ export function OrderDetailClient({ order: initialOrder, branch, technicians }: 
         <CardHeader><CardTitle className="flex items-center gap-2"><FileSignature/>Confirmaciones Legales</CardTitle></CardHeader>
         <CardContent className="space-y-4">
             <div className="flex items-center space-x-2">
-                <Checkbox id="intakeSigned" checked={order.intakeFormSigned} onCheckedChange={(checked) => handleConfirmationChange('intake', !!checked)} disabled={isTransitioning}/>
+                <Checkbox id="intakeSigned" checked={!!order.intakeFormSigned} onCheckedChange={(checked) => handleConfirmationChange('intake', !!checked)} disabled={isTransitioning}/>
                 <label htmlFor="intakeSigned" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                 Comprobante de Ingreso firmado en físico
                 </label>
             </div>
              <div className="flex items-center space-x-2">
-                <Checkbox id="pickupSigned" checked={order.pickupFormSigned} onCheckedChange={(checked) => handleConfirmationChange('pickup', !!checked)} disabled={isTransitioning}/>
+                <Checkbox id="pickupSigned" checked={!!order.pickupFormSigned} onCheckedChange={(checked) => handleConfirmationChange('pickup', !!checked)} disabled={isTransitioning}/>
                 <label htmlFor="pickupSigned" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                 Comprobante de Retiro firmado en físico
                 </label>

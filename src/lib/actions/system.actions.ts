@@ -1,76 +1,16 @@
 // src/lib/actions/system.actions.ts
 "use server";
 
-import { promises as fs } from 'fs';
-import path from 'path';
-import type { FullBackupData } from '@/types';
+// Las funciones de backup y restauración basadas en mocks han sido eliminadas
+// debido a la migración a Firebase Firestore.
+// Firestore proporciona sus propios mecanismos de backup y restauración a nivel de infraestructura.
 
-// Import all raw data getters and restorers
-import { getRawUserData, restoreUserData } from './user.actions';
-import { getRawClientData, restoreClientData } from './client.actions';
-import { getRawOrderData, restoreOrderData } from './order.actions';
-import { getRawPartData, restorePartData } from './part.actions';
-import { getRawSupplierData, restoreSupplierData } from './supplier.actions';
-import { getRawBranchData, restoreBranchData } from './branch.actions';
-import { getRawNotificationData, restoreNotificationData } from './notification.actions';
+// Si se necesita funcionalidad de exportación/importación de datos desde la aplicación,
+// se deberá implementar interactuando directamente con Firestore.
 
-const BACKUP_FILE_NAME = 'gori_backup.json';
-const backupFilePath = path.join(process.cwd(), BACKUP_FILE_NAME);
-
-export async function checkBackupExists(): Promise<boolean> {
-    try {
-        await fs.access(backupFilePath);
-        return true;
-    } catch {
-        return false;
-    }
-}
-
-export async function createBackup(): Promise<{ success: boolean; message: string }> {
-    try {
-        const backupData: FullBackupData = {
-            usersData: await getRawUserData(),
-            clientsData: await getRawClientData(),
-            ordersData: await getRawOrderData(),
-            partsData: await getRawPartData(),
-            suppliersData: await getRawSupplierData(),
-            branchesData: await getRawBranchData(),
-            notificationsData: await getRawNotificationData(),
-            backupDate: new Date().toISOString(),
-        };
-
-        const jsonString = JSON.stringify(backupData, null, 2);
-        await fs.writeFile(backupFilePath, jsonString, 'utf-8');
-
-        return { success: true, message: 'Backup creado exitosamente en `gori_backup.json`.' };
-    } catch (error) {
-        console.error("Error al crear el backup:", error);
-        return { success: false, message: 'No se pudo crear el archivo de backup.' };
-    }
-}
-
-
-export async function restoreBackup(): Promise<{ success: boolean; message: string }> {
-    try {
-        if (!(await checkBackupExists())) {
-            return { success: false, message: 'No se encontró el archivo de backup.' };
-        }
-
-        const jsonString = await fs.readFile(backupFilePath, 'utf-8');
-        const backupData: FullBackupData = JSON.parse(jsonString);
-
-        // Restore all data modules
-        await restoreUserData(backupData.usersData);
-        await restoreClientData(backupData.clientsData);
-        await restoreOrderData(backupData.ordersData);
-        await restorePartData(backupData.partsData);
-        await restoreSupplierData(backupData.suppliersData);
-        await restoreBranchData(backupData.branchesData);
-        await restoreNotificationData(backupData.notificationsData);
-
-        return { success: true, message: 'Datos restaurados exitosamente. La aplicación se recargará.' };
-    } catch (error: any) {
-        console.error("Error al restaurar el backup:", error);
-        return { success: false, message: `No se pudo restaurar el backup. Error: ${error.message}` };
-    }
+export async function placeholderSystemFunction(): Promise<{ success: boolean; message: string }> {
+  // Esta es una función placeholder para evitar que el archivo esté completamente vacío
+  // y para tener un punto de partida si se añaden funciones de sistema en el futuro.
+  console.log("PlaceholderSystemFunction llamada.");
+  return { success: true, message: "Función de sistema placeholder ejecutada." };
 }

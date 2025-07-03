@@ -3,217 +3,269 @@
 
 import type { User, UserStatus, UserRole } from "@/types";
 import { UserSchema } from "@/lib/schemas";
+import { adminDb, adminAuth } from "@/lib/firebase/admin";
+import { Timestamp } from 'firebase-admin/firestore';
 import type { z } from "zod";
 
-// --- GORI Persistent Data Store Simulation ---
-// En un sistema real, esto sería una conexión a una base de datos como Firestore o PostgreSQL.
+// Constantes y mocks eliminados
+// Funciones de backup/restore eliminadas.
+// verifyUserPassword eliminada.
 
-const GORI_SUPER_ADMIN_EMAIL = "jesus@mobyland.com.ar";
-
-// This represents the 'users' table/collection in GORI's database.
-let gori_db_usuarios: User[] = [
-    {
-        uid: "gori-user-uuid-001",
-        email: GORI_SUPER_ADMIN_EMAIL,
-        name: "Jesus (GORI Admin)",
-        avatarUrl: "https://i.pravatar.cc/150?u=superadmin_global",
-        role: 'admin',
-        status: 'active',
-        createdAt: new Date('2023-01-01T10:00:00Z').toISOString(),
-        updatedAt: new Date('2023-01-01T10:00:00Z').toISOString(),
-        assignments: [], // Super admin has global access
-    },
-];
-
-// This conceptually represents a separate, secure password store.
-// It is NOT exported to comply with "use server" module constraints.
-let gori_db_passwords: Record<string, string> = {
-    "jesus@mobyland.com.ar": "42831613aA@",
-};
-
-
-// --- Funciones para Backup y Restauración ---
-export async function getRawUserData() {
-  return {
-    users: gori_db_usuarios,
-    passwords: gori_db_passwords,
-  };
-}
-
-export async function restoreUserData(data: { users: User[]; passwords: Record<string, string> }) {
-  gori_db_usuarios = data.users || [];
-  gori_db_passwords = data.passwords || {};
-}
-// --- Fin Funciones para Backup y Restauración ---
-
-
-// --- GORI Data Access Functions ---
-
-export async function verifyUserPassword(
-    username: string, 
-    password_plaintext: string
-): Promise<boolean> {
-  // En un sistema real, el servicio GORI buscaría el hash y lo compararía.
-  await new Promise(resolve => setTimeout(resolve, 50));
-  if (gori_db_passwords[username] && gori_db_passwords[username] === password_plaintext) {
-      return true;
-  }
-  return false;
-}
-
-
-export async function getUsers(): Promise<User[]> {
-  // GORI retrieves all users from its persistent store.
-  return JSON.parse(JSON.stringify(gori_db_usuarios));
-}
-
-export async function getTechnicians(): Promise<User[]> {
-  const allUsers = await getUsers();
-  return allUsers.filter(user => user.role === 'tecnico' && user.status === 'active');
-}
-
-export async function getUsersByRole(role: UserRole): Promise<User[]> {
-    const allUsers = await getUsers();
-    return allUsers.filter(user => user.role === role && user.status === 'active');
+function mapFirestoreDocToUser(doc: FirebaseFirestore.DocumentSnapshot): User | null {
+    if (!doc.exists) return null;
+    const data = doc.data() as any;
+    return {
+        uid: doc.id,
+        email: data.email,
+        name: data.name,
+        avatarUrl: data.avatarUrl,
+        role: data.role,
+        status: data.status,
+        assignments: data.assignments || [],
+        createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate().toISOString() : data.createdAt,
+        updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toDate().toISOString() : data.updatedAt,
+    };
 }
 
 export async function getUserById(uid: string): Promise<User | undefined> {
-  const user = gori_db_usuarios.find(u => u.uid === uid);
-  return user ? JSON.parse(JSON.stringify(user)) : undefined;
+  if (!uid) {
+    console.warn("getUserById: uid no proporcionado.");
+    return undefined;
+  }
+  try {
+    const userDoc = await adminDb.collection('users').doc(uid).get();
+    return mapFirestoreDocToUser(userDoc) ?? undefined;
+  } catch (error) {
+    console.error(`Error fetching user by ID ${uid}:`, error);
+    return undefined;
+  }
 }
 
 export async function getUserByUsername(username: string): Promise<User | undefined> {
-  // The username in this system corresponds to the email field.
-  const user = gori_db_usuarios.find(u => u.email === username);
-  return user ? JSON.parse(JSON.stringify(user)) : undefined;
+  // Username en este sistema es el email.
+  if (!username) {
+    console.warn("getUserByUsername: username (email) no proporcionado.");
+    return undefined;
+  }
+  try {
+    const userRecord = await adminAuth.getUserByEmail(username);
+    if (!userRecord || !userRecord.uid) {
+      return undefined;
+    }
+    return await getUserById(userRecord.uid);
+  } catch (error: any) {
+    if (error.code === 'auth/user-not-found') {
+      // No es un error necesariamente, simplemente el usuario no existe en Auth.
+      // console.log(`User with email ${username} not found in Firebase Auth.`);
+    } else {
+      console.error(`Error fetching user by email ${username} from Firebase Auth:`, error);
+    }
+    return undefined;
+  }
 }
 
-export async function createUser(data: z.infer<typeof UserSchema>): Promise<{ success: boolean; message: string; user?: User }> {
-  const validatedFields = UserSchema.safeParse(data);
+export async function getUsers(): Promise<User[]> {
+  try {
+    const snapshot = await adminDb.collection('users').get();
+    if (snapshot.empty) {
+      return [];
+    }
+    return snapshot.docs.map(doc => mapFirestoreDocToUser(doc)).filter(Boolean) as User[];
+  } catch (error) {
+    console.error("Error fetching all users:", error);
+    return [];
+  }
+}
+
+export async function getTechnicians(): Promise<User[]> {
+  try {
+    const snapshot = await adminDb.collection('users')
+      .where('role', '==', 'tecnico')
+      .where('status', '==', 'active')
+      .get();
+    if (snapshot.empty) {
+      return [];
+    }
+    return snapshot.docs.map(doc => mapFirestoreDocToUser(doc)).filter(Boolean) as User[];
+  } catch (error) {
+    console.error("Error fetching technicians:", error);
+    return [];
+  }
+}
+
+export async function getUsersByRole(role: UserRole): Promise<User[]> {
+   try {
+    const snapshot = await adminDb.collection('users')
+      .where('role', '==', role)
+      .get();
+    if (snapshot.empty) {
+      return [];
+    }
+    return snapshot.docs.map(doc => mapFirestoreDocToUser(doc)).filter(Boolean) as User[];
+  } catch (error) {
+    console.error(`Error fetching users by role ${role}:`, error);
+    return [];
+  }
+}
+
+export async function createUser(values: z.infer<typeof UserSchema>): Promise<{ success: boolean; message: string; user?: User }> {
+  const validatedFields = UserSchema.safeParse(values);
   if (!validatedFields.success) {
+    console.error("Validation errors for createUser:", validatedFields.error.flatten().fieldErrors);
     return { success: false, message: "Datos de usuario inválidos." };
   }
 
   const { email, password, name, role, avatarUrl, sector } = validatedFields.data;
 
-  if (gori_db_usuarios.find(u => u.email === email)) {
-    return { success: false, message: "El email ya está registrado." };
-  }
   if (!password) { 
     return { success: false, message: "La contraseña es requerida para nuevos usuarios." };
   }
 
-  // El sistema GORI genera un UID único y robusto.
-  const newUid = `gori-user-uuid-${Date.now()}`;
-  
-  const newUser: User = { 
-    uid: newUid,
-    email,
-    name,
-    avatarUrl: avatarUrl || `https://i.pravatar.cc/150?u=${email}`,
-    role: email === GORI_SUPER_ADMIN_EMAIL ? 'admin' : role, 
-    status: "active", // New users created by admin are active by default
-    createdAt: new Date().toISOString(), 
-    updatedAt: new Date().toISOString(),
-    assignments: [{ branchId: 'B001', role: role, sector: sector || 'Asignación General' }] // Assign to default branch and sector
-  };
-  
-  gori_db_usuarios.push(newUser);
-  
-  // GORI's auth service securely hashes and stores the password.
-  gori_db_passwords[email] = password;
-  
-  return { success: true, message: "Usuario creado exitosamente.", user: JSON.parse(JSON.stringify(newUser)) };
+  try {
+    const userRecord = await adminAuth.createUser({
+      email,
+      password,
+      displayName: name,
+      photoURL: avatarUrl || undefined,
+    });
+
+    const now = Timestamp.now();
+    const userProfileData = {
+      email,
+      name,
+      avatarUrl: userRecord.photoURL || avatarUrl || `https://i.pravatar.cc/150?u=${email}`,
+      role,
+      status: "active",
+      assignments: [{ branchId: 'B001', role: role, sector: sector || 'Asignación General' }],
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    await adminDb.collection('users').doc(userRecord.uid).set(userProfileData);
+
+    const createdUser: User = {
+      uid: userRecord.uid,
+      ...userProfileData,
+      createdAt: now.toDate().toISOString(),
+      updatedAt: now.toDate().toISOString(),
+    };
+
+    return { success: true, message: "Usuario creado exitosamente.", user: createdUser };
+
+  } catch (error: any) {
+    console.error("Error al crear usuario:", error);
+    if (error.code === 'auth/email-already-exists') {
+      return { success: false, message: "El email ya está registrado en Firebase Authentication." };
+    }
+    return { success: false, message: error.message || "Ocurrió un error al crear el usuario." };
+  }
 }
 
-export async function updateUser(uid: string, data: Partial<z.infer<typeof UserSchema>>): Promise<{ success: boolean; message: string; user?: User }> {
-  const validatedFields = UserSchema.partial().safeParse(data);
-  if (!validatedFields.success) {
-    return { success: false, message: "Datos de actualización inválidos." };
-  }
-
-  const userIndex = gori_db_usuarios.findIndex(u => u.uid === uid);
-  if (userIndex === -1) {
-    return { success: false, message: "Usuario no encontrado." };
-  }
+export async function updateUser(uid: string, values: Partial<Omit<z.infer<typeof UserSchema>, 'password'>> & { password?: string }): Promise<{ success: boolean; message: string; user?: User }> {
   
-  const { password, email, role, avatarUrl, sector, ...restData } = validatedFields.data;
-  const existingUser = gori_db_usuarios[userIndex];
+  if (!uid) return { success: false, message: "UID de usuario no proporcionado." };
 
-  if (existingUser.email === GORI_SUPER_ADMIN_EMAIL && (email && email !== GORI_SUPER_ADMIN_EMAIL || role && role !== 'admin')) {
-      return { success: false, message: "No se puede modificar el rol o email del super administrador." };
-  }
+  const { email, password, name, role, avatarUrl, sector, ...otherProfileData } = values;
+  const now = Timestamp.now();
+  const userProfileUpdate: any = { ...otherProfileData, updatedAt: now };
+  const authUpdate: any = {};
 
-  if (email && email !== existingUser.email && gori_db_usuarios.some(u => u.email === email && u.uid !== uid)) {
-    return { success: false, message: "El nuevo email ya está en uso por otro usuario." };
-  }
-  
-  const updatedUser: User = { ...existingUser, ...restData, updatedAt: new Date().toISOString() };
+  try {
+    const existingUserAuth = await adminAuth.getUser(uid);
 
-  if (avatarUrl !== undefined) updatedUser.avatarUrl = avatarUrl || undefined;
-  if (role) updatedUser.role = role;
-  
-  // Handle assignments update robustly
-  if (updatedUser.assignments && updatedUser.assignments.length > 0) {
-      if (role) updatedUser.assignments[0].role = role;
-      if (sector !== undefined) updatedUser.assignments[0].sector = sector;
-  } else {
-      updatedUser.assignments = [{ branchId: 'B001', role: role || updatedUser.role, sector: sector || 'Asignación General' }];
-  }
+    if (email && email !== existingUserAuth.email) authUpdate.email = email;
+    if (password && password.trim() !== "") authUpdate.password = password;
+    if (name && name !== existingUserAuth.displayName) authUpdate.displayName = name;
+    if (avatarUrl !== undefined && avatarUrl !== existingUserAuth.photoURL) authUpdate.photoURL = avatarUrl || null;
 
-  if (email && email !== existingUser.email) {
-    const oldEmail = existingUser.email;
-    if (gori_db_passwords[oldEmail]) {
-        gori_db_passwords[email] = gori_db_passwords[oldEmail];
-        delete gori_db_passwords[oldEmail];
+    if (Object.keys(authUpdate).length > 0) {
+      await adminAuth.updateUser(uid, authUpdate);
     }
-    updatedUser.email = email;
-  }
 
-  if (password && password.trim() !== "") { 
-    // GORI's auth service would handle secure hashing and update.
-    gori_db_passwords[updatedUser.email] = password;
+    if (email && email !== existingUserAuth.email) userProfileUpdate.email = email;
+    if (name && name !== existingUserAuth.displayName) userProfileUpdate.name = name;
+    if (avatarUrl !== undefined && avatarUrl !== existingUserAuth.photoURL) userProfileUpdate.avatarUrl = avatarUrl || null;
+    if (role) userProfileUpdate.role = role;
+
+    if (role || sector) {
+        const userDoc = await adminDb.collection('users').doc(uid).get();
+        const existingAssignments = userDoc.data()?.assignments || [];
+        if (existingAssignments.length > 0) {
+            const currentAssignment = { ...existingAssignments[0] };
+            if(role) currentAssignment.role = role;
+            if(sector !== undefined) currentAssignment.sector = sector;
+            userProfileUpdate.assignments = [currentAssignment, ...existingAssignments.slice(1)];
+        } else if (role) {
+             userProfileUpdate.assignments = [{ branchId: 'B001', role: role, sector: sector || 'General' }];
+        }
+    }
+
+    let hasProfileUpdates = false;
+    for(const key in userProfileUpdate){
+        if(key !== 'updatedAt' && userProfileUpdate[key] !== undefined){
+            hasProfileUpdates = true;
+            break;
+        }
+    }
+
+    if (hasProfileUpdates) {
+      await adminDb.collection('users').doc(uid).update(userProfileUpdate);
+    } else if (Object.keys(authUpdate).length > 0) {
+      // If only auth was updated, still update 'updatedAt' in Firestore
+      await adminDb.collection('users').doc(uid).update({updatedAt: now});
+    }
+
+    const updatedUserDoc = await adminDb.collection('users').doc(uid).get();
+    const finalUser = mapFirestoreDocToUser(updatedUserDoc);
+
+    return { success: true, message: "Usuario actualizado exitosamente.", user: finalUser ?? undefined };
+
+  } catch (error: any) {
+    console.error(`Error al actualizar usuario ${uid}:`, error);
+    if (error.code === 'auth/email-already-exists') {
+      return { success: false, message: "El nuevo email ya está en uso por otro usuario." };
+    }
+    return { success: false, message: error.message || "Ocurrió un error al actualizar el usuario." };
   }
-  
-  gori_db_usuarios[userIndex] = updatedUser;
-  
-  return { success: true, message: "Usuario actualizado exitosamente.", user: JSON.parse(JSON.stringify(updatedUser)) };
 }
 
 export async function deleteUser(uid: string): Promise<{ success: boolean; message: string }> {
-  const userIndex = gori_db_usuarios.findIndex(u => u.uid === uid);
-  if (userIndex === -1) {
-    return { success: false, message: "Usuario no encontrado." };
+  if (!uid) return { success: false, message: "UID de usuario no proporcionado." };
+  try {
+    await adminAuth.deleteUser(uid);
+    await adminDb.collection('users').doc(uid).delete();
+
+    return { success: true, message: "Usuario eliminado exitosamente." };
+  } catch (error: any) {
+    console.error(`Error al eliminar usuario ${uid}:`, error);
+    if (error.code === 'auth/user-not-found') {
+        try {
+            await adminDb.collection('users').doc(uid).delete();
+            return { success: true, message: "Usuario eliminado de Firestore (no encontrado en Auth)." };
+        } catch (dbError) {
+            console.error(`Error al eliminar usuario ${uid} de Firestore tras no encontrarlo en Auth:`, dbError);
+        }
+    }
+    return { success: false, message: error.message || "Error al eliminar el usuario." };
   }
-
-  if (gori_db_usuarios[userIndex].email === GORI_SUPER_ADMIN_EMAIL) {
-    return { success: false, message: "No se puede eliminar al super administrador." };
-  }
-
-  const deletedUserEmail = gori_db_usuarios[userIndex].email;
-  gori_db_usuarios.splice(userIndex, 1);
-  delete gori_db_passwords[deletedUserEmail];
-
-  return { success: true, message: "Usuario eliminado exitosamente." };
 }
 
 export async function updateUserStatus(uid: string, status: UserStatus): Promise<{ success: boolean; message: string; user?: User }> {
-  const userIndex = gori_db_usuarios.findIndex(u => u.uid === uid);
-  if (userIndex === -1) {
-    return { success: false, message: "Usuario no encontrado." };
-  }
+  if (!uid) return { success: false, message: "UID de usuario no proporcionado." };
+  try {
+    const userRef = adminDb.collection('users').doc(uid);
+    await userRef.update({ status: status, updatedAt: Timestamp.now() });
 
-  const user = gori_db_usuarios[userIndex];
-  if (user.email === GORI_SUPER_ADMIN_EMAIL && status !== 'active') {
-    return { success: false, message: "No se puede cambiar el estado del super administrador." };
-  }
+    const updatedUserDoc = await userRef.get();
+    const finalUser = mapFirestoreDocToUser(updatedUserDoc);
 
-  user.status = status;
-  user.updatedAt = new Date().toISOString();
-  
-  const message = status === 'active' ? 'Usuario aprobado exitosamente.' :
+    const message = status === 'active' ? 'Usuario aprobado/activado exitosamente.' :
                   status === 'denied' ? 'Usuario denegado exitosamente.' :
                   'Estado de usuario actualizado.';
-  
-  return { success: true, message, user: JSON.parse(JSON.stringify(user)) };
+
+    return { success: true, message, user: finalUser ?? undefined };
+  } catch (error: any) {
+    console.error(`Error al actualizar estado del usuario ${uid}:`, error);
+    return { success: false, message: error.message || "Error al actualizar estado del usuario." };
+  }
 }

@@ -1,15 +1,15 @@
 // src/components/orders/OrderForm.tsx
 "use client";
 
-import { useForm, Controller, useFieldArray } from "react-hook-form";
+import { useForm, useFieldArray } from "react-hook-form"; // Controller no se usa directamente
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { useState, useTransition, useEffect } from "react";
-import type { z } from "zod";
+import { useState, useTransition, useEffect, useMemo } from "react";
 
 import { OrderSchema, type OrderFormData } from "@/lib/schemas";
 import { createOrder, updateOrder, getOrderById } from "@/lib/actions/order.actions";
 import { getClientById } from "@/lib/actions/client.actions";
+import { getBranches, type Branch } from "@/lib/actions/branch.actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -18,11 +18,12 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/providers/AuthProvider";
-import { type Order, type Checklist, Part, Client } from "@/types";
+import { useAuth } from "@/providers/AuthProvider"; // Importante para el idToken
+import { type Checklist, type Part, type Client } from "@/types"; // Order y Branch ya están en otros imports
 import { CHECKLIST_ITEMS, YES_NO_OPTIONS, LEGAL_TEXTS } from "@/lib/constants";
-import { AlertCircle, Bot, DollarSign, Info, ListChecks, LucideSparkles, User, Wrench, Clock, Lock, LockOpen, InfoIcon, Package, PackagePlus, Trash2, Edit } from "lucide-react";
+import { AlertCircle, Building, DollarSign, InfoIcon, ListChecks, User, Wrench, Clock, Lock, LockOpen, Package, PackagePlus, Trash2, Edit } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import { DeclaredFaultInput } from "./DeclaredFaultInput";
@@ -42,30 +43,36 @@ interface OrderFormProps {
 }
 
 export function OrderForm({ orderId }: OrderFormProps) {
-  const { user } = useAuth();
+  const { user, getIdToken } = useAuth(); // Obtener getIdToken
   const router = useRouter();
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
-  const [isLoading, setIsLoading] = useState(!!orderId);
+  const [isLoadingInitialData, setIsLoadingInitialData] = useState(!!orderId);
   const [isPartSelectorOpen, setIsPartSelectorOpen] = useState(false);
   const [isClientSelectorOpen, setIsClientSelectorOpen] = useState(false);
   const [isClientEditModalOpen, setIsClientEditModalOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [branches, setBranches] = useState<Branch[]>([]);
 
-  const currentBranchId = user?.role === 'admin' ? 'B001' : user?.assignments?.[0]?.branchId;
+  const defaultUserBranchId = useMemo(() => {
+    if (user && user.role !== 'admin' && user.assignments && user.assignments.length > 0) {
+        return user.assignments[0].branchId;
+    }
+    return undefined;
+  }, [user]);
 
   const defaultChecklistValues = CHECKLIST_ITEMS.reduce((acc, item) => {
-    (acc as any)[item.id] = item.type === 'boolean' ? 'sc' : ''; // Default to 'Sin Comprobar'
+    (acc as any)[item.id] = item.type === 'boolean' ? 'sc' : '';
     return acc;
   }, {} as OrderFormData['checklist']);
 
   const form = useForm<OrderFormData>({
     resolver: zodResolver(OrderSchema),
     defaultValues: {
-      branchId: currentBranchId || "",
+      branchId: defaultUserBranchId || "",
       clientId: "", deviceBrand: "", deviceModel: "", deviceIMEI: "", declaredFault: "",
       imeiNotVisible: false,
-      unlockPatternProvided: true, // Default to true for convenience
+      unlockPatternProvided: true,
       checklist: defaultChecklistValues,
       damageRisk: "", costSparePart: 0, costLabor: 0,
       observations: "",
@@ -74,6 +81,7 @@ export function OrderForm({ orderId }: OrderFormProps) {
     },
   });
   
+  const watchedBranchId = form.watch("branchId");
   const unlockPatternProvided = form.watch("unlockPatternProvided");
   const imeiNotVisible = form.watch("imeiNotVisible");
   const partsUsed = form.watch("partsUsed");
@@ -82,6 +90,25 @@ export function OrderForm({ orderId }: OrderFormProps) {
     control: form.control,
     name: "partsUsed",
   });
+
+  // Helper para obtener idToken
+  const getToken = async () => {
+    if (!user || !getIdToken) {
+      toast({ variant: "destructive", title: "Error de Autenticación", description: "Usuario no autenticado." });
+      return null;
+    }
+    try {
+      const token = await getIdToken();
+      if (!token) {
+        toast({ variant: "destructive", title: "Error de Autenticación", description: "No se pudo obtener el token. Intente re-iniciar sesión." });
+        return null;
+      }
+      return token;
+    } catch (error) {
+      toast({ variant: "destructive", title: "Error de Autenticación", description: "No se pudo obtener el token de usuario." });
+      return null;
+    }
+  };
 
   useEffect(() => {
     if (partsUsed) {
@@ -98,45 +125,78 @@ export function OrderForm({ orderId }: OrderFormProps) {
     }
   }, [unlockPatternProvided, form]);
 
-
   useEffect(() => {
-    if (orderId) {
-      setIsLoading(true);
-      getOrderById(orderId)
-        .then(async (data) => {
-          if (data) {
-            form.reset(data);
-             if (data.clientId) { // if order has a client, fetch and set it
-              const clientData = await getClientById(data.clientId);
-              if (clientData) setSelectedClient(clientData);
+    if (user?.role === 'admin') {
+        getBranches().then(fetchedBranches => {
+            setBranches(fetchedBranches);
+            if (!orderId && fetchedBranches.length === 1 && !form.getValues("branchId")) {
+                form.setValue('branchId', fetchedBranches[0].id, { shouldValidate: true });
             }
+        }).catch(err => {
+            console.error("Error fetching branches:", err);
+            toast({ variant: "destructive", title: "Error al cargar sucursales", description: (err as Error).message || "No se pudieron cargar las sucursales." });
+        });
+    }
+
+    if (orderId) {
+      setIsLoadingInitialData(true);
+      // getOrderById no necesita token ya que es una lectura que no depende del usuario logueado directamente,
+      // sino del ID de la orden. La seguridad de quién puede ver qué orden se manejaría en la página que lista las órdenes.
+      getOrderById(orderId)
+        .then(async (orderDataResult) => {
+          if (orderDataResult) {
+            form.reset(orderDataResult);
+            if (orderDataResult.clientId) {
+              return getClientById(orderDataResult.clientId)
+                .then(clientDataResult => {
+                  if (clientDataResult) {
+                    setSelectedClient(clientDataResult);
+                  } else {
+                    toast({ variant: "warning", title: "Advertencia", description: `No se encontró el cliente con ID ${orderDataResult.clientId} asociado a la orden.` });
+                  }
+                })
+                .catch(clientError => {
+                  console.error("Error fetching client for order:", clientError);
+                  toast({ variant: "destructive", title: "Error al cargar cliente", description: "No se pudo cargar el cliente asociado a la orden." });
+                });
+            }
+          } else {
+            toast({ variant: "destructive", title: "Error", description: `No se encontró la orden con ID ${orderId}. Es posible que haya sido eliminada.` });
+            // Considerar redirigir si la orden no existe y el usuario no debería estar aquí
+            // router.push("/orders");
           }
         })
-        .finally(() => setIsLoading(false));
+        .catch(orderError => {
+          console.error("Error fetching order:", orderError);
+          toast({ variant: "destructive", title: "Error al cargar orden", description: (orderError as Error).message || "No se pudo cargar la información de la orden." });
+        })
+        .finally(() => setIsLoadingInitialData(false));
     } else {
-        if(currentBranchId) {
-            form.setValue('branchId', currentBranchId);
+        if (user?.role !== 'admin' && defaultUserBranchId) {
+            form.setValue('branchId', defaultUserBranchId);
         }
+        setIsLoadingInitialData(false);
     }
-  }, [orderId, form, currentBranchId]);
+  }, [orderId, form, user, defaultUserBranchId, toast, router]); // Añadido router
 
-  const onSubmit = (values: OrderFormData) => {
-    if (!user) {
-      toast({ variant: "destructive", title: "Error", description: "Debe iniciar sesión." });
-      return;
-    }
-    const userBranchContext = user?.role === 'admin' ? values.branchId : user?.assignments?.[0]?.branchId;
-    if (!userBranchContext) {
-        toast({ variant: "destructive", title: "Error", description: "No se pudo determinar su sucursal. Contacte al administrador." });
+
+  const onSubmit = async (values: OrderFormData) => { // onSubmit ahora es async
+    const idToken = await getToken();
+    if (!idToken) return; // getToken ya muestra el toast
+
+    const branchForOrder = values.branchId;
+    if (!branchForOrder) {
+        toast({ variant: "destructive", title: "Error", description: "Debe seleccionar o tener asignada una sucursal para la orden." });
         return;
     }
 
     startTransition(async () => {
       let result;
+      // El userNameForAction se obtiene en el backend a partir del idToken
       if (orderId) {
-        result = await updateOrder(orderId, values, user.name);
+        result = await updateOrder({ idToken, orderId, values });
       } else {
-        result = await createOrder(values, user.name, userBranchContext);
+        result = await createOrder({ idToken, values, branchIdFromUserContext: branchForOrder });
       }
 
       if (result.success && result.order?.id) {
@@ -167,8 +227,7 @@ export function OrderForm({ orderId }: OrderFormProps) {
     setSelectedClient(updatedClient);
   };
 
-
-  if (isLoading) {
+  if (isLoadingInitialData && orderId) {
     return <div className="flex justify-center items-center h-64"><LoadingSpinner size={48}/> <p className="ml-4">Cargando orden...</p></div>;
   }
   
@@ -177,11 +236,47 @@ export function OrderForm({ orderId }: OrderFormProps) {
     return acc;
   }, {} as Record<string, typeof CHECKLIST_ITEMS>);
 
-
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-        <FormField control={form.control} name="branchId" render={({ field }) => ( <FormItem className="hidden"><FormControl><Input type="hidden" {...field} /></FormControl><FormMessage /></FormItem> )} />
+        {user?.role === 'admin' && !orderId && (
+            <Card>
+                <CardHeader><CardTitle className="flex items-center gap-2"><Building className="text-primary"/> Sucursal de la Orden</CardTitle></CardHeader>
+                <CardContent>
+                    <FormField
+                        control={form.control}
+                        name="branchId"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Asignar a Sucursal</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value || ""} defaultValue={field.value || ""}>
+                                    <FormControl>
+                                        <SelectTrigger disabled={branches.length === 0}>
+                                            <SelectValue placeholder={branches.length > 0 ? "Seleccione una sucursal" : (isLoadingInitialData ? "Cargando..." : "No hay sucursales")} />
+                                        </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        {branches.length === 0 && !isLoadingInitialData && <SelectItem value="" disabled>No hay sucursales disponibles</SelectItem>}
+                                        {branches.map(branch => (
+                                            <SelectItem key={branch.id} value={branch.id}>
+                                                {branch.name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <FormDescription>
+                                    La orden será creada y gestionada bajo esta sucursal.
+                                </FormDescription>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                </CardContent>
+            </Card>
+        )}
+        { (user?.role !== 'admin' || orderId ) && (
+            <FormField control={form.control} name="branchId" render={({ field }) => ( <FormItem className="hidden"><FormControl><Input type="hidden" {...field} /></FormControl></FormItem> )} />
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div className="space-y-6">
@@ -210,7 +305,13 @@ export function OrderForm({ orderId }: OrderFormProps) {
                                         <Edit className="mr-2 h-4 w-4"/> Editar
                                     </Button>
                                 )}
-                                <Button type="button" variant="outline" onClick={() => setIsClientSelectorOpen(true)}>
+                                <Button type="button" variant="outline" onClick={() => {
+                                    if (!watchedBranchId && user?.role === 'admin' && !orderId) { // Solo verificar al crear
+                                        toast({variant: "destructive", title:"Seleccione Sucursal", description: "Por favor, seleccione una sucursal antes de elegir un cliente."});
+                                        return;
+                                    }
+                                    setIsClientSelectorOpen(true)
+                                }}>
                                     {selectedClient ? "Cambiar" : "Seleccionar"}
                                 </Button>
                             </div>
@@ -259,7 +360,6 @@ export function OrderForm({ orderId }: OrderFormProps) {
                 />
               </CardContent>
             </Card>
-
           </div>
 
           <div className="space-y-6">
@@ -456,8 +556,8 @@ export function OrderForm({ orderId }: OrderFormProps) {
         <Separator />
         
         <div className="flex justify-end">
-          <Button type="submit" className="w-full sm:w-auto" disabled={isPending || isLoading}>
-            {(isPending || isLoading) && <LoadingSpinner size={16} className="mr-2"/>}
+          <Button type="submit" className="w-full sm:w-auto" disabled={isPending || isLoadingInitialData || (user?.role === 'admin' && !orderId && !watchedBranchId) }>
+            {(isPending || isLoadingInitialData) && <LoadingSpinner size={16} className="mr-2"/>}
             {orderId ? "Actualizar Orden" : "Crear Orden de Servicio"}
           </Button>
         </div>
@@ -469,15 +569,15 @@ export function OrderForm({ orderId }: OrderFormProps) {
         onSelectPart={handleSelectPart}
         currentParts={fields.map(f => f.partId)}
       />
-      {currentBranchId && (
+      {watchedBranchId && (
         <ClientSelector
           isOpen={isClientSelectorOpen}
           onOpenChange={setIsClientSelectorOpen}
           onSelectClient={handleSelectClient}
-          branchId={currentBranchId}
+          branchId={watchedBranchId}
         />
       )}
-      {(selectedClient && currentBranchId) && (
+      {(selectedClient && watchedBranchId) && (
         <ClientEditModal
             isOpen={isClientEditModalOpen}
             onOpenChange={setIsClientEditModalOpen}
